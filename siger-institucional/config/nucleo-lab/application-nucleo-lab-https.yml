@@ -1,0 +1,12 @@
+# Solo se importa explícitamente desde Nucleo-Local.ps1. Puerto HTTP ligado a loopback.
+server:
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: '127\.0\.0\.1'
+      protocol-header: x-forwarded-proto
+      remote-ip-header: x-forwarded-for
+  servlet:
+    session:
+      cookie:
+        secure: true

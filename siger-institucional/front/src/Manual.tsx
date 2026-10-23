@@ -1,0 +1,10 @@
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import type { Catalog } from './api';
+import type { Run } from './ui';
+export function ManualForm({ catalog, run, busy }: { catalog: Catalog; run: Run; busy: boolean }) {
+  const [texto, setTexto] = useState(''); const [canal, setCanal] = useState(''); const [fecha, setFecha] = useState(''); const [sede, setSede] = useState(catalog.sedes[0]?.id ?? ''); const [respondida, setRespondida] = useState(false); const [respuesta, setRespuesta] = useState('');
+  function submit(e: FormEvent) { e.preventDefault(); void run('/nucleo/comunicaciones/manual', { texto, canalDeclarado: canal, recibidaEnDeclarada: new Date(fecha).toISOString(), sede, respuestaYaEntregada: respondida ? respuesta : null }).catch(() => {}); }
+  return <section className="card"><h2>Registrar Comunicación manual</h2><p>Registra la atención recibida por otro canal. Si ya fue respondida, conserva la respuesta sin abrir un Caso.</p><form onSubmit={submit}><label>Canal declarado<input required maxLength={100} value={canal} onChange={e => setCanal(e.target.value)} /></label><label>Fecha de recepción declarada<input type="datetime-local" required value={fecha} onChange={e => setFecha(e.target.value)} /></label><label>Sede de ingreso<select required value={sede} onChange={e => setSede(e.target.value)}>{catalog.sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label><label>Antecedente recibido<textarea required maxLength={2000} rows={5} value={texto} onChange={e => setTexto(e.target.value)} /></label><label className="check"><input type="checkbox" checked={respondida} onChange={e => setRespondida(e.target.checked)} /> La atención ya fue respondida</label>{respondida && <label>Respuesta ya entregada<textarea required maxLength={2000} value={respuesta} onChange={e => setRespuesta(e.target.value)} /></label>}<button className="primary" disabled={busy}>Registrar atención{respondida ? ' y respuesta, sin Caso' : ''}</button></form></section>;
+}
+

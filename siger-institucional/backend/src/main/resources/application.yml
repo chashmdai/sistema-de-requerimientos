@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: siger-institucional
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+server:
+  servlet:
+    session:
+      timeout: 20m
+      tracking-modes: cookie
+      cookie:
+        name: SIGERSTAFFSESSION
+        secure: true
+        http-only: true
+        same-site: strict
+  max-http-request-header-size: 8KB
+  tomcat:
+    threads:
+      max: 80
+      min-spare: 8
+    max-connections: 512
+    accept-count: 256
+    connection-timeout: 10s
+    max-swallow-size: 8KB
+  address: ${SIGER_INST_BIND_ADDRESS:127.0.0.1}
+  port: ${SIGER_INST_PORT:8081}
+  forward-headers-strategy: none
+logging:
+  level:
+    org.springframework.security: WARN
+    org.springframework.web.client: WARN
+institucional:
+  nucleo:
+    habilitado: ${NUCLEO_LAB_ENABLED:false}
+    entorno: ${NUCLEO_ENVIRONMENT:CERRADO}
+    password-laboratorio: ${NUCLEO_LAB_PASSWORD:}
+  integracion:
+    habilitada: ${SIGER_PULL_ENABLED:false}
+    origen-publico: ${SIGER_PUBLIC_SOURCE:}
+    token: ${SIGER_INTEGRATION_TOKEN:}
+  demo:
+    directorio: ${SIGER_DEMO_DIRECTORY:}
+
+operacion:
+  token: ${SIGER_OPERATIONS_TOKEN:}
+  http-local: ${OPERATIONS_LOCAL_HTTP:false}

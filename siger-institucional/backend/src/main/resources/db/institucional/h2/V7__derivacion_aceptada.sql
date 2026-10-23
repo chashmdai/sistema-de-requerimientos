@@ -1,0 +1,4 @@
+ALTER TABLE core_case ALTER COLUMN responsible_id DROP NOT NULL;
+CREATE TABLE core_transfer(id VARCHAR(36) PRIMARY KEY,origin_case_id VARCHAR(36) NOT NULL UNIQUE,target_unit VARCHAR(8) NOT NULL,target_site VARCHAR(40) NOT NULL,requested_by VARCHAR(64) NOT NULL,requested_ms BIGINT NOT NULL,origin_revision_at_request BIGINT NOT NULL,reason_text TEXT NOT NULL,evaluation_text TEXT NOT NULL,state VARCHAR(16) NOT NULL,revision BIGINT NOT NULL,decided_by VARCHAR(64),decided_ms BIGINT,decision_text TEXT,target_case_id VARCHAR(36) UNIQUE,FOREIGN KEY(origin_case_id) REFERENCES core_case(id),FOREIGN KEY(target_unit,target_site) REFERENCES core_unit_site(unit_code,site_id),FOREIGN KEY(requested_by) REFERENCES core_actor(id),FOREIGN KEY(decided_by) REFERENCES core_actor(id),FOREIGN KEY(target_case_id) REFERENCES core_case(id),CHECK(state IN ('PENDIENTE','ACEPTADA')));
+CREATE INDEX ix_core_transfer_target ON core_transfer(target_unit,target_site,state);
+

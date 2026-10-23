@@ -1,0 +1,22 @@
+institucional:
+  db:
+    url: ${SIGER_DB_URL:}
+    user: ${SIGER_DB_USER:}
+    password: ${SIGER_DB_PASSWORD:}
+    pool: ${SIGER_DB_POOL:12}
+  comprobante:
+    key-id: ${SIGER_RECEIPT_KEY_ID:}
+    private-key: ${SIGER_RECEIPT_PRIVATE_KEY_PATH:}
+    own-trusted-keys: ${SIGER_RECEIPT_TRUSTED_KEYS_PATH:}
+    trusted-keys: ${RECEIPT_TRUSTED_KEYS_PATH:}
+  v2:
+    paralelismo: ${SIGER_REGISTRATION_PARALLELISM:4}
+    ca-certificado: ${SIGER_V2_CA_PATH:}
+    habilitada: ${SIGER_V2_ENABLED:false}
+    http-local: ${SIGER_V2_LOCAL_HTTP:false}
+  folio:
+    prefix: ${SIGER_FOLIO_PREFIX:COM}
+    width: ${SIGER_FOLIO_WIDTH:6}
+
+datos:
+  mysql-local: ${LOCAL_DB_ALLOWED:false}
