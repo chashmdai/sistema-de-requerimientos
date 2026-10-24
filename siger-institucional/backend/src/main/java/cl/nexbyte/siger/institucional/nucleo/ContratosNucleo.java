@@ -31,7 +31,9 @@ public final class ContratosNucleo {
     public record Pagina<T>(List<T> items,long total,int pagina,int limite){}
     public record Bandeja(long comunicaciones,long casosAsignados,long antecedentesPendientes,long sinEncaminar,long reaperturasPendientes,long derivacionesPendientes,long revisionesPendientes){}
     public record Resumen(UUID id,long secuencia,String folio,Instant registradaEn,String canal,String estado,long revision,UUID requerimientoId,String estadoRequerimiento,int casosAbiertos,int destinosPendientes){}
-    public record Contenido(String texto,String tipoIdentidad,SobreComunicacion.Identidad identidad,DeclaracionNna declaracionNna,Instant recibidaEnDeclarada,String canalDeclarado,String registradoPor){}
+    public record Contenido(String texto,String tipoIdentidad,SobreComunicacion.Identidad identidad,DeclaracionNna declaracionNna,Instant recibidaEnDeclarada,String canalDeclarado,String registradoPor,tools.jackson.databind.JsonNode formularioCompleto){
+        public Contenido(String texto,String tipo,SobreComunicacion.Identidad i,DeclaracionNna n,Instant fecha,String canal,String actor){this(texto,tipo,i,n,fecha,canal,actor,null);}
+    }
     public record Destino(UUID id,String unidad,String sede,String evaluador,String estado,long revision,String decision,String textoDecision,String decididoPor,Instant decididoEn,int casos){}
     public record Actuacion(UUID id,String autor,Instant fecha,String texto){}
     public record Revision(UUID id,String autor,Instant fecha,String decision,String texto){}

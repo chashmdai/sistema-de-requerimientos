@@ -39,3 +39,5 @@ docs/evidencias/
 # La otra aplicación se conecta localmente, no pertenece a este repositorio.
 /formulario-publico/
 
+
+**/__pycache__/

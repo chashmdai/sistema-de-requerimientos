@@ -9,7 +9,7 @@ public final class HabilitacionNucleo {
         if(enabled&&(!env.matchesProfiles("nucleo-lab")||!env.matchesProfiles("jdbc-reception")||env.matchesProfiles("prod","production")
             ||!"LABORATORIO".equals(env.getProperty("institucional.nucleo.entorno"))||!"127.0.0.1".equals(env.getProperty("server.address"))
             ||!env.getProperty("datos.mysql-local",Boolean.class,false)||!env.getProperty("server.servlet.session.cookie.secure",Boolean.class,true)
-            ||!env.getProperty("institucional.db.url","").matches("jdbc:mysql://127\\.0\\.0\\.1:13306/robust_inst_(local|test)\\?.*")))
+            ||!env.getProperty("institucional.db.url","").matches("jdbc:mysql://127\\.0\\.0\\.1:13306/robust_inst_(local|test|formulario_lab)\\?.*")))
             throw new IllegalStateException("Núcleo provisional: identidades sintéticas solo en laboratorio MySQL loopback, perfil explícito y cookie Secure");
     }
     public boolean habilitado(){return enabled;}

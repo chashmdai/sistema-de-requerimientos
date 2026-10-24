@@ -25,7 +25,7 @@ public class SeguridadInstitucional {
         // Authentication erases credentials on its principal; never return the shared template.
         return name->{var user=users.get(name);if(user==null)throw new UsernameNotFoundException("Acceso no habilitado");return User.withUserDetails(user).build();};
     }
-    @Bean SecurityFilterChain institucional(HttpSecurity http,HabilitacionNucleo gate) throws Exception {
+    @Bean SecurityFilterChain institucional(HttpSecurity http,HabilitacionNucleo gate,Environment env) throws Exception {
         if(!gate.habilitado())return http.sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).requestCache(c->c.disable())
             .authorizeHttpRequests(a->a.requestMatchers("/api/estado").permitAll().anyRequest().denyAll())
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->r.setStatus(401))).build();
@@ -34,10 +34,10 @@ public class SeguridadInstitucional {
             .requestCache(c->c.disable())
             .authorizeHttpRequests(a->a.requestMatchers("/api/estado","/","/index.html","/assets/**","/nucleo/session","/nucleo/csrf","/nucleo/login").permitAll()
                 .requestMatchers("/nucleo/**").hasRole("FUNCIONARIO_LAB").anyRequest().denyAll())
-            .headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")))
+            .headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")))
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->r.setStatus(401)).accessDeniedHandler((q,r,x)->r.setStatus(403)))
             .formLogin(f->f.loginProcessingUrl("/nucleo/login").successHandler((q,r,a)->r.setStatus(204)).failureHandler((q,r,e)->r.setStatus(401)))
-            .logout(l->l.logoutUrl("/nucleo/logout").invalidateHttpSession(true).clearAuthentication(true).deleteCookies("SIGERSTAFFSESSION").logoutSuccessHandler((q,r,a)->r.setStatus(204)))
+            .logout(l->l.logoutUrl("/nucleo/logout").invalidateHttpSession(true).clearAuthentication(true).deleteCookies(env.getProperty("server.servlet.session.cookie.name","SIGERSTAFFSESSION")).logoutSuccessHandler((q,r,a)->r.setStatus(204)))
             .addFilterBefore(new OncePerRequestFilter(){
                 protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest q,jakarta.servlet.http.HttpServletResponse r,jakarta.servlet.FilterChain chain)throws java.io.IOException,jakarta.servlet.ServletException{
                     r.setHeader("Cache-Control","no-store");

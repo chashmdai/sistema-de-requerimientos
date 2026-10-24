@@ -1,0 +1,40 @@
+package cl.nexbyte.siger.institucional.formulario;
+import cl.nexbyte.siger.institucional.nucleo.*;import cl.nexbyte.siger.institucional.robustez.*;
+import java.io.*;import java.nio.channels.FileChannel;import java.nio.file.*;import java.util.*;
+import org.springframework.web.bind.annotation.*;import org.springframework.security.core.Authentication;import org.springframework.http.*;import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+@RestController @RequestMapping("/nucleo/comunicaciones/{comunicacion}/documentos")
+@ConditionalOnProperty(name={"institucional.formulario-completo.habilitado","institucional.nucleo.habilitado"},havingValue="true")
+public class DocumentosIngresoController {
+    public record Documento(UUID id,String origen,EntregaCompleta.Adjunto original,String representacion,boolean descargable){}
+    private final BaseJdbc db;private final NucleoInstitucional core;private final CatalogoLaboratorio catalog;private final ArchivoInstitucional files;private final RecepcionInstitucionalJdbc receiver;
+    public DocumentosIngresoController(BaseJdbc db,NucleoInstitucional core,CatalogoLaboratorio catalog,ArchivoInstitucional files,RecepcionInstitucionalJdbc receiver){this.db=db;this.core=core;this.catalog=catalog;this.files=files;this.receiver=receiver;}
+    private CatalogoLaboratorio.Operador actor(Authentication auth,UUID communication,UUID caso){
+        var a=SesionFuncionario.actual(auth,catalog);
+        if(caso==null||a.distribuidor())core.autorizarLectura(a,communication);
+        else{var c=core.caso(a,caso);if(!c.comunicacionId().equals(communication)){var antecedente=core.antecedente(a,communication);if(!caso.equals(antecedente.casoId())||antecedente.contenido()==null)throw new FalloTecnico(404);}else core.autorizarLectura(a,communication);}
+        return a;
+    }
+    @GetMapping public List<Documento> listar(Authentication auth,@PathVariable UUID comunicacion,@RequestParam(required=false)UUID caso){actor(auth,comunicacion,caso);if(!receiver.esCompleta(comunicacion))return List.of();var e=receiver.completaRegistrada(comunicacion);return db.sql.queryForList("SELECT id,attachment_id FROM institution_document WHERE communication_id=? AND origin='INGRESO_CIUDADANO' ORDER BY id",comunicacion.toString()).stream().map(r->{var a=e.adjuntos().stream().filter(f->f.id().toString().equals(r.get("attachment_id"))).findFirst().orElseThrow(()->new FalloTecnico(409));return new Documento(UUID.fromString(r.get("id").toString()),"INGRESO_CIUDADANO",a,representacion(e,a),true);}).toList();}
+    private static String representacion(EntregaCompleta e,EntregaCompleta.Adjunto a){if(!e.comunicacion().path("version").asString().equals("1.1"))return "DESCARGA";return switch(a.tipo()){case "audio/mpeg","audio/ogg","audio/wav","audio/mp4","audio/webm"->"AUDIO";case "video/mp4","video/webm"->"VIDEO";default->"DESCARGA";};}
+    @RequestMapping(value={"/{documento}/original","/{documento}/representacion"},method={RequestMethod.GET,RequestMethod.HEAD})
+    public ResponseEntity<StreamingResponseBody> bytes(Authentication auth,@PathVariable UUID comunicacion,@PathVariable UUID documento,jakarta.servlet.http.HttpServletRequest request)throws IOException{
+        var actor=actor(auth,comunicacion,request.getParameter("caso")==null?null:UUID.fromString(request.getParameter("caso")));var delivery=receiver.completaRegistrada(comunicacion);
+        var rows=db.sql.queryForList("SELECT * FROM institution_document WHERE id=? AND communication_id=? AND origin='INGRESO_CIUDADANO'",documento.toString(),comunicacion.toString());if(rows.isEmpty())throw new FalloTecnico(404);var row=rows.getFirst();
+        var a=delivery.adjuntos().stream().filter(d->d.id().toString().equals(row.get("attachment_id"))).findFirst().orElseThrow(()->new FalloTecnico(409));boolean inline=request.getRequestURI().endsWith("/representacion");
+        if(inline&&representacion(delivery,a).equals("DESCARGA"))throw new FalloTecnico(404);
+        Path path;try{path=files.verificar(row.get("storage_key").toString(),a);}catch(IOException corrupt){throw new FalloTecnico(409);}
+        long from=0,to=a.tamanio()-1;boolean partial=false;String etag="\""+a.sha256()+"\"",range=request.getHeader("Range");
+        var headers=new HttpHeaders();headers.setCacheControl("no-store");headers.set("X-Content-Type-Options","nosniff");headers.set("Content-Security-Policy","default-src 'none'; sandbox");headers.set("Cross-Origin-Resource-Policy","same-origin");headers.set("Referrer-Policy","no-referrer");headers.setETag(etag);headers.set("Accept-Ranges","bytes");headers.setContentType(inline?MediaType.parseMediaType(a.tipo()):MediaType.APPLICATION_OCTET_STREAM);headers.setContentDisposition((inline?ContentDisposition.inline():ContentDisposition.attachment()).filename(a.nombre(),java.nio.charset.StandardCharsets.UTF_8).build());
+        if(request.getMethod().equals("GET")&&range!=null&&(request.getHeader("If-Range")==null||request.getHeader("If-Range").equals(etag))){try{
+            if(!range.matches("bytes=[0-9]*-[0-9]*")||range.equals("bytes=-"))throw new IllegalArgumentException();var parts=range.substring(6).split("-",-1);
+            if(parts[0].isEmpty()){long count=Long.parseLong(parts[1]);if(count<1)throw new IllegalArgumentException();from=Math.max(0,a.tamanio()-count);}else{from=Long.parseLong(parts[0]);if(!parts[1].isEmpty())to=Math.min(to,Long.parseLong(parts[1]));}
+            if(from>to||from>=a.tamanio())throw new IllegalArgumentException();partial=true;
+        }catch(IllegalArgumentException invalid){headers.set("Content-Range","bytes */"+a.tamanio());audit(documento,comunicacion,actor.id(),"RANGO_INVALIDO");return new ResponseEntity<>(null,headers,HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE);}}
+        long start=from,length=to-from+1;if(partial)headers.set("Content-Range","bytes "+from+"-"+to+"/"+a.tamanio());headers.setContentLength(length);
+        audit(documento,comunicacion,actor.id(),inline?"REPRESENTACION":"ORIGINAL");
+        StreamingResponseBody body=request.getMethod().equals("HEAD")?null:out->{try(var channel=FileChannel.open(path,StandardOpenOption.READ)){channel.position(start);var input=java.nio.channels.Channels.newInputStream(channel);byte[] buffer=new byte[65536];long left=length;while(left>0){int n=input.read(buffer,0,(int)Math.min(buffer.length,left));if(n<0)throw new EOFException();out.write(buffer,0,n);left-=n;}}};
+        return new ResponseEntity<>(body,headers,partial?HttpStatus.PARTIAL_CONTENT:HttpStatus.OK);
+    }
+    private void audit(UUID doc,UUID com,String actor,String representation){db.sql.update("INSERT INTO institution_document_access(document_id,communication_id,actor_id,at_ms,representation) VALUES(?,?,?,?,?)",doc.toString(),com.toString(),actor,System.currentTimeMillis(),representation);}
+}

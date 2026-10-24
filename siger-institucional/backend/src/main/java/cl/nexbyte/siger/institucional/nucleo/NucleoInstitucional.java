@@ -62,6 +62,7 @@ public final class NucleoInstitucional {
     }
     private boolean canCase(Operador a,Map<String,Object> row){return a.alcance(str(row,"unit_code"),str(row,"site_id"))&&(a.jefatura()||a.id().equals(str(row,"responsible_id")));}
     private void head(Operador a,Map<String,Object> row){if(!a.jefatura()||!a.alcance(str(row,"unit_code"),str(row,"site_id")))throw new FalloTecnico(404);}
+    public void autorizarLectura(Operador a,UUID communication){actor(a);readable(a,communication);}
     private void readable(Operador a,UUID communication){
         registry(communication,false);if(a.distribuidor())return;
         long count=a.jefatura()?db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND unit_code=? AND site_id=?",Long.class,id(communication),a.unidad(),a.sede()):db.sql.queryForObject("SELECT COUNT(*) FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.communication_id=? AND c.responsible_id=? AND d.unit_code=? AND d.site_id=?",Long.class,id(communication),a.id(),a.unidad(),a.sede());
@@ -414,6 +415,10 @@ public final class NucleoInstitucional {
             var manual=new Manual(str(m,"body_text"),str(m,"channel_declared"),date(m,"received_declared_ms"),str(root.getFirst(),"site_id"),null);
             if(!contentHash(communication,number(r,"registrada_ms"),manual).equals(r.get("content_hash"))||!hash(List.of("REGISTRO_FUNCIONARIO_1",str(m,"actor_id"),number(r,"registrada_ms"))).equals(r.get("provenance_hash")))throw new FalloTecnico(409);
             content=new Contenido(manual.texto(),"REGISTRO_POR_OPERADOR",null,null,manual.recibidaEnDeclarada(),manual.canalDeclarado(),str(m,"actor_id"));
+        }else if(recepcion.esCompleta(communication)){
+            var e=recepcion.completaRegistrada(communication);var c=e.comunicacion();var fields=c.path("datos").path("campos");String story=fields.path("nna-story").asString("");
+            for(var key:List.of("relato","consulta-general-detalle","entrevista-motivo","stats-descripcion"))if(!fields.path(key).asString("").isBlank())story=fields.path(key).asString();
+            content=new Contenido(story,e.tipo().equals("ADULTO_CU")?"AUTENTICADA_CLAVE_UNICA":e.tipo().equals("NNA")?"DECLARADA_NNA":"DECLARADA_ADULTO",null,null,Instant.parse(c.path("recibidaEn").asString()),e.canal(),null,c);
         }else{var e=recepcion.entregaRegistrada(communication);content=new Contenido(e.comunicacion().mensaje(),e.comunicacion().declaracionNna()!=null?"DECLARADA_NNA":"AUTENTICADA_CLAVE_UNICA",e.comunicacion().identidad(),e.comunicacion().declaracionNna(),e.comunicacion().recibidaEn(),null,null);}
         return content;
     }

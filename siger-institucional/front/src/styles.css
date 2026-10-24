@@ -10,3 +10,7 @@
 .context-link{display:inline-block;font-size:.8rem;font-weight:600;padding:.4rem 0}
 .state-REAPERTURA_PENDIENTE{background:#fff2df;color:#765015}
 @media(max-width:760px){.dialog-heading{top:-1rem}}
+
+.ingreso-video {max-width:100%;}
+
+.formulario-recibido dl{display:block}.formulario-recibido dl>div{margin-bottom:1rem}.formulario-recibido dt{margin-bottom:.3rem}.formulario-recibido audio{max-width:100%}
