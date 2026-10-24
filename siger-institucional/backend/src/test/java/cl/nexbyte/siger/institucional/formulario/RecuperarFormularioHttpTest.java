@@ -7,7 +7,7 @@ import org.junit.jupiter.api.*;import org.junit.jupiter.api.io.TempDir;import st
 class RecuperarFormularioHttpTest {
     @TempDir Path dir;DatosFormularioTest d;HttpServer server;FuenteFormulario source;RecuperarFormulario job;EntregaCompleta delivery;UUID lease;
     final AtomicInteger acks=new AtomicInteger(),downloads=new AtomicInteger(),badHeaders=new AtomicInteger();final AtomicReference<RegistroInstitucional> firstAck=new AtomicReference<>();
-    boolean lost,expired,broken,reject,large,stall;byte[] content="Archivo sintético institucional".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    boolean lost,expired,broken,reject,large,stall,malformed;byte[] content="Archivo sintético institucional".getBytes(java.nio.charset.StandardCharsets.UTF_8);
     @BeforeEach void open()throws Exception{
         d=new DatosFormularioTest(dir);var file=FormularioCompletoInstitucionalTest.attachment(content);delivery=d.delivery("1.1","ADULTO_DECLARADO",List.of(file),true,1);lease=UUID.randomUUID();
         server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);server.createContext("/integracion/v3/formulario-completo/entregas",this::handle);server.start();
@@ -17,7 +17,7 @@ class RecuperarFormularioHttpTest {
         try{
             if(!("Bearer "+"t".repeat(64)).equals(exchange.getRequestHeaders().getFirst("Authorization"))){badHeaders.incrementAndGet();reply(exchange,401,new byte[0]);return;}
             String path=exchange.getRequestURI().getPath();
-            if(path.endsWith("/reclamar")){if(!"1.0,1.1".equals(exchange.getRequestHeaders().getFirst("X-Formulario-Versiones")))badHeaders.incrementAndGet();var body=d.mapper.readTree(exchange.getRequestBody().readAllBytes());if(body.path("limite").asInt()!=1)badHeaders.incrementAndGet();reply(exchange,200,d.mapper.writeValueAsBytes(Map.of("entregas",List.of(new FuenteFormulario.Reserva(lease,System.currentTimeMillis()+(stall?2000:300000),1,delivery)))));}
+            if(path.endsWith("/reclamar")){if(malformed){reply(exchange,200,"{NO_REGISTRAR_CONTENIDO".getBytes(java.nio.charset.StandardCharsets.UTF_8));return;}if(!"1.0,1.1".equals(exchange.getRequestHeaders().getFirst("X-Formulario-Versiones")))badHeaders.incrementAndGet();var body=d.mapper.readTree(exchange.getRequestBody().readAllBytes());if(body.path("limite").asInt()!=1)badHeaders.incrementAndGet();reply(exchange,200,d.mapper.writeValueAsBytes(Map.of("entregas",List.of(new FuenteFormulario.Reserva(lease,System.currentTimeMillis()+(stall?2000:300000),1,delivery)))));}
             else if(path.contains("/adjuntos/")){downloads.incrementAndGet();if(!lease.toString().equals(exchange.getRequestHeaders().getFirst("X-Reserva"))){reply(exchange,409,new byte[0]);return;}if(stall){exchange.sendResponseHeaders(200,content.length);exchange.getResponseBody().write(content,0,1);exchange.getResponseBody().flush();try{Thread.sleep(1500);}catch(InterruptedException e){Thread.currentThread().interrupt();}}else if(large){exchange.sendResponseHeaders(200,12L*1024*1024);byte[] buffer=new byte[65536];Arrays.fill(buffer,(byte)90);for(int i=0;i<192;i++)exchange.getResponseBody().write(buffer);}else{exchange.sendResponseHeaders(200,content.length);exchange.getResponseBody().write(broken?Arrays.copyOf(content,3):content);}}
             else if(path.endsWith("/confirmacion")){
                 var body=d.mapper.readTree(exchange.getRequestBody().readAllBytes());var ack=d.mapper.treeToValue(body.path("recepcion"),RegistroInstitucional.class);
@@ -46,5 +46,6 @@ class RecuperarFormularioHttpTest {
         var a=new EntregaCompleta.Adjunto(UUID.randomUUID(),"sintetico12MiB.wav",12L*1024*1024,HexFormat.of().formatHex(digest.digest()),"audio/wav","VALIDADO");delivery=d.delivery("1.1","NNA",List.of(a),false,1);
         assertEquals(1,job.ejecutar().confirmadas());assertEquals(12L*1024*1024,Files.size(d.files.verificar(d.files.key(delivery.id(),a.id()),a)));assertEquals(1,downloads.get());
     }
+    @Test void jsonMalformadoNoPropagaContenidoNiExcepcionDelProductor(){malformed=true;var error=assertThrows(FalloTecnico.class,()->job.ejecutar());assertEquals(502,error.status);assertFalse(error.toString().contains("NO_REGISTRAR_CONTENIDO"));assertEquals(0,acks.get());}
     @Test void exigeHttpsParaOrigenNoExpresamenteLocal(){assertThrows(IllegalArgumentException.class,()->new FuenteFormulario(URI.create("http://127.0.0.1:9000"),"t".repeat(64),null,false));assertThrows(IllegalArgumentException.class,()->new FuenteFormulario(URI.create("https://usuario:clave@example.invalid"),"t".repeat(64),null,false));}
 }

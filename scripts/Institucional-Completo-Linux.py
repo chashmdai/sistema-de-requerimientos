@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Arranque aislado del consumidor institucional; nunca modifica la instancia pública."""
-import argparse,json,os,signal,socket,subprocess,time,shutil
+import argparse,json,os,signal,socket,subprocess,time,shutil,ssl,urllib.request
 from pathlib import Path
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('private',type=Path);parser.add_argument('--jar',type=Path);parser.add_argument('--migrar',action='store_true');parser.add_argument('--detener',action='store_true')
@@ -32,4 +32,14 @@ if args.migrar:
  with (p/'migration.log').open('ab') as log:result=subprocess.run(['java','-Xmx256m','-jar',str(jar),'--migrate'],env=env,stdout=log,stderr=subprocess.STDOUT)
  if result.returncode:raise SystemExit('Migración no completada; revisar diagnóstico privado')
 with (p/'app.log').open('ab') as log:process=subprocess.Popen(['java','-Djava.net.preferIPv4Stack=true','-Xms64m','-Xmx384m','-jar',str(jar)],env=dict(os.environ,SPRING_CONFIG_ADDITIONAL_LOCATION='file:'+str(p/'application.properties')),stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
-pidfile.write_text(str(process.pid));print('Laboratorio institucional iniciado en HTTPS loopback 20443; PID',process.pid)
+pidfile.write_text(str(process.pid))
+tls=ssl.create_default_context(cafile=props['institucional.formulario-completo.ca-certificado'])
+for _ in range(40):
+ if process.poll() is not None:raise SystemExit('Arranque no completado; revisar app.log privado')
+ try:
+  with urllib.request.urlopen('https://claveunica.formularioadulto.defensorianinez.gob.cl:20443/api/estado',context=tls,timeout=1) as response:
+   if response.status==200:break
+ except OSError:pass
+ time.sleep(.25)
+else:raise SystemExit('HTTPS todavía no disponible; no ejecutar verificadores con credenciales hasta revisar el laboratorio')
+print('Laboratorio institucional listo en HTTPS loopback 20443; PID',process.pid)
