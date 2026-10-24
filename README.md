@@ -4,6 +4,8 @@ Código vigente de laboratorio de SIGER 2026, desarrollado por Nexbyte para vali
 
 - **[Manual Windows: instalación, configuración, compilación y arranque](docs/MANUAL_REPOSITORIOS.md)**.
 - [Guía de esta aplicación](siger-institucional/README.md).
+- [Integración completa 1.0/1.1: custodia, documentos y verificación](docs/INTEGRACION_FORMULARIO_COMPLETO_2026-10-24.md).
+- [Checkpoint de integración institucional](docs/CHECKPOINT_INSTITUCIONAL_2026-10-24.md).
 - [Contratos de integración](contratos/README.md).
 - [Arquitectura de las dos aplicaciones](docs/ARQUITECTURA_APLICACIONES.md).
 - [Reglas y operación del núcleo V8](docs/ANTECEDENTES_Y_REAPERTURAS_LAB.md).

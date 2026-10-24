@@ -1,3 +1,7 @@
+# Actualización 24-10-2026
+
+El consumidor [Formulario Público completo 1.0/1.1](consumidor-formulario-completo-1.1.md) incorpora la ruta HTTPS `/integracion/v3/formulario-completo/entregas`, originales privados, documento íntegro y ACK institucional firmado. El consumidor histórico `/integracion/v3/entregas` se conserva independiente. Las notas anteriores siguen como referencia histórica; no describen las capacidades nuevas del formulario completo.
+
 # Actualización 19-10-2026
 
 Contrato vigente: transporte [V3](registro-comunicacion-v3.md) y variante [NNA declarada](comunicacion-nna-v2.0.md). HTTP `/integracion/v2` está retirado (410, sin reservas); la representación de entrega adulta 2.0 sigue siendo válida dentro de HTTP V3. Nuevos ingresos HTTP requieren la sesión originadora para estado/comprobante. No existe restauración automática ni recuperación entre sesiones. Las descripciones V1 siguientes son históricas.
