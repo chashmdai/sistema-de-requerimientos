@@ -1,3 +1,7 @@
+# Unidad documental institucional — 24-10-2026
+
+[Documentos de gestión y visor](documental-institucional-v1.md): autorización por recurso, originales privados, referencias sin copia, páginas PNG e historial contextual. Esta extensión institucional no modifica la recepción pública ni sus firmas/COM/ACK.
+
 # Actualización 24-10-2026
 
 El consumidor [Formulario Público completo 1.0/1.1](consumidor-formulario-completo-1.1.md) incorpora la ruta HTTPS `/integracion/v3/formulario-completo/entregas`, originales privados, documento íntegro y ACK institucional firmado. El consumidor histórico `/integracion/v3/entregas` se conserva independiente. Las notas anteriores siguen como referencia histórica; no describen las capacidades nuevas del formulario completo.

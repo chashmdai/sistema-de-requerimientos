@@ -1,0 +1,11 @@
+# Reversión no destructiva — unidad documental
+
+1. Detener exclusivamente la instancia institucional nueva con el lanzador verificado `Institucional-Completo-Linux.py <directorio-privado> --detener`. No detener MySQL, ClamAV, inspector ni servicios públicos compartidos.
+2. Para retirar funciones documentales, cambiar solamente `institucional.documental.habilitada=false` en su configuración privada y reiniciar un artefacto compatible. Las rutas de gestión/renderer quedan inactivas; las demás funciones conservan sus reglas. La interfaz documental puede quedar temporalmente indisponible. Conservar todas las rutas privadas restantes para reactivación.
+3. No ejecutar DOWN ni modificar V1–V10, checksums, firmas o comprobantes. No borrar tablas, Casos, actuaciones, documentos, páginas, referencias, comandos, auditoría, claves, backups ni volúmenes. No reducir columnas.
+4. No usar una reversión de código para eliminar vínculos ya confirmados o reescribir el documento ciudadano. `objects/gestion/` y `objects/vistas/` son contenido privado del mismo almacén; conservarlo junto con metadatos y auditoría. Las referencias no requieren copiar archivos.
+5. No reemplazar un original alterado con una derivada ni actualizar su SHA para forzar lectura. El servicio rechaza integridad inválida. Restaurar únicamente desde respaldo autorizado o fuente íntegra comprobada; conservar el incidente y los registros.
+6. Los fallos entre fsync y SQL pueden dejar originales/páginas sin vínculo. No se eliminan automáticamente: revisar contra metadatos y políticas de retención. Un reintento exacto reutiliza el original conservado y su clave de idempotencia.
+7. Para reactivar, comprobar workers/sockets existentes, helper revisado, permisos y disponibilidad HTTPS; activar el flag, validar Flyway con el migrador separado y reutilizar esquema/almacén existentes. Repetir pruebas funcionales acotadas y la comparación de custodia.
+
+La unidad no cambió Windows, DNS, TLS, configuración privada pública ni los contenedores compartidos. No hay infraestructura duplicada que retirar. Las decisiones de retención/depuración requieren su política específica; esta guía no autoriza borrar evidencia.

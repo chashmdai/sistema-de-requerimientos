@@ -1,0 +1,74 @@
+{
+  "comunicacionesPrevias": 7,
+  "custodiaComAckSinCambios": true,
+  "originalesCiudadanos": 16,
+  "originalesGestion": 2,
+  "paginasDerivadas": 6,
+  "integridadOriginalesYDerivadas": true,
+  "archivosGestionFisicos": 2,
+  "temporalesAbiertos": 0,
+  "casos": 2,
+  "links": 3,
+  "eventos": 74,
+  "comandos": 3,
+  "gestiones": 2,
+  "migraciones": 10,
+  "requerimientos": 1,
+  "fallosMigracion": 0,
+  "implementacion": "2e54eddddfdb99d77a134cf257ddb3119138b53d",
+  "base": "29428e0",
+  "backendH2": 142,
+  "backendMySQL": 142,
+  "frontend": 26,
+  "lint": true,
+  "build": true,
+  "workersReales": 5,
+  "pruebasNuevasBackend": 24,
+  "e2e": {
+    "simulado": false,
+    "proveedoresGubernamentales": 0,
+    "historialContextual": true,
+    "correcto": true,
+    "pdfPaginas": 3,
+    "zoom": 200,
+    "sinDescargaManual": true,
+    "ingresoImagenPdf": true,
+    "gestionImagenPdf": true,
+    "originalCompartido": true,
+    "idempotencia": true,
+    "rechazos": [
+      {
+        "tipo": "activo.pdf",
+        "status": 422
+      },
+      {
+        "tipo": "falso.png",
+        "status": 422
+      }
+    ],
+    "controlAntivirusHTTP": "WSL_separado",
+    "permisos": {
+      "sinSesion": 401,
+      "otraUnidad": 404,
+      "otroCaso": 404,
+      "sinCsrf": 403,
+      "origenManipulado": 400
+    }
+  },
+  "antivirusHTTP": {
+    "cliente": "WSL",
+    "https": true,
+    "antivirusReal": true,
+    "status": 422,
+    "receptor": "institucional",
+    "simulado": false
+  },
+  "repetidoTrasReinicio": true,
+  "migracionesPreviasIntactas": true,
+  "contratosPublicosIntactos": true,
+  "formularioWebSinCambios": true,
+  "jarSha256": "a82b6289d6bc2545991207abc44f8f626de1875ffff4f487f2ffd1337500b85e",
+  "helperSha256": "9031ed433ae36c282b07640b90027bd533935e7469330e0364095f00a73792d1",
+  "migracion10MySQLSha256": "58531d4e07ddf92c1f04c09747e61a792b624020b9c0daa17d8b5a44302a9e0d",
+  "migracion10H2Sha256": "58531d4e07ddf92c1f04c09747e61a792b624020b9c0daa17d8b5a44302a9e0d"
+}
