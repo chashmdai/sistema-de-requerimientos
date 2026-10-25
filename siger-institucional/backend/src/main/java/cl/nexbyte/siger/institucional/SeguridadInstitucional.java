@@ -15,8 +15,11 @@ import org.springframework.web.bind.annotation.*;
 
 @Configuration
 public class SeguridadInstitucional {
-    @Bean UserDetailsService funcionarios(HabilitacionNucleo gate,Environment env) {
+    @Bean UserDetailsService funcionarios(HabilitacionNucleo gate,Environment env,org.springframework.beans.factory.ObjectProvider<cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional> provider) {
         if(!gate.habilitado())return name->{throw new UsernameNotFoundException("Acceso no habilitado");};
+        var identity=provider.getIfAvailable();
+        if(identity!=null)return identity::autenticar;
+        if(!env.getProperty("institucional.identidad.legado-pruebas",Boolean.class,false))return name->{throw new UsernameNotFoundException("Acceso cerrado");};
         var password=env.getRequiredProperty("institucional.nucleo.password-laboratorio");
         if(password.length()<32||password.length()>128)throw new IllegalStateException("Se requiere una credencial externa de laboratorio");
         var hash="{bcrypt}"+new BCryptPasswordEncoder().encode(password);
@@ -25,7 +28,7 @@ public class SeguridadInstitucional {
         // Authentication erases credentials on its principal; never return the shared template.
         return name->{var user=users.get(name);if(user==null)throw new UsernameNotFoundException("Acceso no habilitado");return User.withUserDetails(user).build();};
     }
-    @Bean SecurityFilterChain institucional(HttpSecurity http,HabilitacionNucleo gate,Environment env) throws Exception {
+    @Bean SecurityFilterChain institucional(HttpSecurity http,HabilitacionNucleo gate,Environment env,org.springframework.beans.factory.ObjectProvider<cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional> provider) throws Exception {
         if(!gate.habilitado())return http.sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).requestCache(c->c.disable())
             .authorizeHttpRequests(a->a.requestMatchers("/api/estado").permitAll().anyRequest().denyAll())
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->r.setStatus(401))).build();
@@ -46,11 +49,24 @@ public class SeguridadInstitucional {
                         long minute=System.currentTimeMillis()/60000;attempts.entrySet().removeIf(e->e.getValue()[0]!=minute);
                         if(attempts.size()>1024){r.setStatus(429);return;}
                         var count=attempts.computeIfAbsent(q.getRemoteAddr(),k->new long[]{minute,0});
-                        if(++count[1]>30){r.setStatus(429);r.setHeader("Retry-After","60");return;}
+                        var login=q.getParameter("username");if(login==null||login.length()>64){r.setStatus(401);return;}
+                        var account=attempts.computeIfAbsent("cuenta:"+login.toLowerCase(Locale.ROOT),k->new long[]{minute,0});
+                        if(++count[1]>30||++account[1]>8){r.setStatus(429);r.setHeader("Retry-After","60");return;}
                     }
                     chain.doFilter(q,r);
                 }
             },UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(new OncePerRequestFilter(){
+            protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest q,jakarta.servlet.http.HttpServletResponse r,jakarta.servlet.FilterChain chain)throws java.io.IOException,jakarta.servlet.ServletException{
+                var identity=provider.getIfAvailable();var auth=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                if(identity!=null&&auth!=null&&auth.isAuthenticated()){
+                    if(!(auth.getPrincipal() instanceof cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional.Principal p)||!identity.vigente(p)){
+                        org.springframework.security.core.context.SecurityContextHolder.clearContext();var session=q.getSession(false);if(session!=null)session.invalidate();r.setStatus(401);r.setHeader("Cache-Control","no-store");return;
+                    }
+                }
+                chain.doFilter(q,r);
+            }
+        },org.springframework.security.web.context.SecurityContextHolderFilter.class);
         return http.build();
     }
     @RestController static class EstadoController {

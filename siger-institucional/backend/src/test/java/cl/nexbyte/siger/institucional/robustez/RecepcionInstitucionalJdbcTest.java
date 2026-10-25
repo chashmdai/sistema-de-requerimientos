@@ -13,7 +13,7 @@ class RecepcionInstitucionalJdbcTest {
   if(supplied!=null&&!url.startsWith("jdbc:mysql://127.0.0.1:13306/robust_inst_test?"))throw new IllegalStateException("Solo esquema local aislado");
   try(var ddl=new BaseJdbc(url,supplied==null?"sa":System.getenv("ROBUST_DB_MIGRATION_USER"),supplied==null?"":System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){ddl.migrate("institucional");}
   db=new BaseJdbc(url,supplied==null?"sa":System.getenv("ROBUST_DB_USER"),supplied==null?"":System.getenv("ROBUST_DB_PASSWORD"),12);
-  if(supplied!=null){for(var table:List.of("communication_registry","institutional_inbox","control_audit","external_operation","operational_event"))db.sql.update("DELETE FROM "+table);db.sql.update("UPDATE operation_control SET revision=0,accept_new=FALSE,pull_enabled=FALSE,contingency='SOLO_CONSULTA'");}
+  if(supplied!=null){for(var table:List.of("communication_origin","communication_registry","institutional_inbox","control_audit","external_operation","operational_event"))db.sql.update("DELETE FROM "+table);db.sql.update("UPDATE operation_control SET revision=0,accept_new=FALSE,pull_enabled=FALSE,contingency='SOLO_CONSULTA'");}
   new ControlesOperacion(db).cambiar(0,true,true,"NORMAL","PRUEBA_LOCAL");
   fixture=mapper.readValue(getClass().getResourceAsStream("/contratos/entrega-v2.json"),EntregaVerificada.class);
   var tree=mapper.readTree(getClass().getResourceAsStream("/contratos/receipt-public-test.json"));var values=new HashMap<String,PublicKey>();

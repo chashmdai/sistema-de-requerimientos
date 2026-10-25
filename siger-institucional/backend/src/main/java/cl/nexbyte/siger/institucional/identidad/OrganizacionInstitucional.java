@@ -1,0 +1,20 @@
+package cl.nexbyte.siger.institucional.identidad;
+import cl.nexbyte.siger.institucional.robustez.*;import java.time.*;import java.util.*;
+/** Coberturas con vigencia, sin atribuir automáticamente origen ni permisos territoriales. */
+public final class OrganizacionInstitucional {
+ private final BaseJdbc db;private final IdentidadInstitucional identidad;private final Clock clock;
+ public OrganizacionInstitucional(BaseJdbc db,IdentidadInstitucional identidad,Clock clock){this.db=db;this.identidad=identidad;this.clock=clock;}
+ public record Cobertura(String region,String sede,Instant desde,Instant hasta){}
+ public record Oficina(String id,String nombre,List<String> unidades,Instant desde,Instant hasta){}
+ private void ti(String actor){if(!identidad.operador(actor).ti())throw new FalloTecnico(403);}
+ public Map<String,Object> catalogo(){return Map.of("regiones",db.sql.queryForList("SELECT * FROM org_region ORDER BY id"),"macrozonas",db.sql.queryForList("SELECT * FROM org_macrozone ORDER BY id"),"coberturas",db.sql.queryForList("SELECT * FROM org_coverage ORDER BY valid_from,id"),"sedes",identidad.sedes(),"unidades",identidad.unidades(),"presencias",identidad.presencias(),"laboratorio",true);}
+ public String cubrir(String actor,Cobertura c){ti(actor);if(c.desde()==null||c.hasta()!=null&&!c.hasta().isAfter(c.desde()))throw new FalloTecnico(400);
+  return db.transaction(()->{db.sql.queryForObject("SELECT id FROM identity_guard WHERE id=1 FOR UPDATE",Integer.class);ti(actor);
+   if(db.sql.queryForObject("SELECT COUNT(*) FROM org_region WHERE id=?",Integer.class,c.region())!=1||identidad.sedes().stream().noneMatch(s->s.id().equals(c.sede())))throw new FalloTecnico(400);
+   if(db.sql.queryForObject("SELECT COUNT(*) FROM org_coverage WHERE region_id=? AND valid_from<? AND (valid_until IS NULL OR valid_until>?)",Integer.class,c.region(),c.hasta()==null?Long.MAX_VALUE:c.hasta().toEpochMilli(),c.desde().toEpochMilli())>0)throw new FalloTecnico(409);
+   String id=UUID.randomUUID().toString();db.sql.update("INSERT INTO org_coverage VALUES(?,?,?,?,?,?,?)",id,c.region(),c.sede(),c.desde().toEpochMilli(),c.hasta()==null?null:c.hasta().toEpochMilli(),actor,clock.millis());audit(actor,"COBERTURA_CREADA",id);return id;});
+ }
+ public void terminarCobertura(String actor,String id,Instant hasta){ti(actor);db.transaction(()->{db.sql.queryForObject("SELECT id FROM identity_guard WHERE id=1 FOR UPDATE",Integer.class);ti(actor);var rows=db.sql.queryForList("SELECT * FROM org_coverage WHERE id=?",id);if(rows.isEmpty())throw new FalloTecnico(404);var r=rows.getFirst();if(hasta==null||hasta.toEpochMilli()<=((Number)r.get("valid_from")).longValue()||r.get("valid_until")!=null)throw new FalloTecnico(409);db.sql.update("UPDATE org_coverage SET valid_until=?,changed_by=?,changed_ms=? WHERE id=?",hasta.toEpochMilli(),actor,clock.millis(),id);audit(actor,"COBERTURA_FINALIZADA",id);return null;});}
+ public void oficina(String actor,Oficina o){ti(actor);if(o.id()==null||!o.id().matches("LAB_[A-Z0-9_]{1,30}")||o.nombre()==null||o.nombre().isBlank()||o.nombre().length()>90||o.desde()==null||o.hasta()!=null&&!o.hasta().isAfter(o.desde())||o.unidades()==null||o.unidades().isEmpty()||new HashSet<>(o.unidades()).size()!=o.unidades().size())throw new FalloTecnico(400);db.transaction(()->{db.sql.queryForObject("SELECT id FROM identity_guard WHERE id=1 FOR UPDATE",Integer.class);ti(actor);for(var u:o.unidades())if(identidad.unidades().stream().noneMatch(x->x.codigo().equals(u)))throw new FalloTecnico(400);db.sql.update("INSERT INTO core_site VALUES(?,?)",o.id(),o.nombre()+" · laboratorio");db.sql.update("INSERT INTO org_site_validity VALUES(?,?,?,TRUE)",o.id(),o.desde().toEpochMilli(),o.hasta()==null?null:o.hasta().toEpochMilli());for(var u:o.unidades())db.sql.update("INSERT INTO core_unit_site VALUES(?,?)",u,o.id());audit(actor,"SEDE_LAB_CREADA",o.id());return null;});}
+ private void audit(String a,String code,String resource){db.sql.update("INSERT INTO identity_event(actor_id,subject_id,event_code,resource_id,at_ms) VALUES(?,?,?,?,?)",a,a,code,resource,clock.millis());}
+}

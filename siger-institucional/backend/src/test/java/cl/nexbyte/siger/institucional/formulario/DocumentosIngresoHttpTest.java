@@ -10,7 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(classes=DocumentosIngresoHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.formulario-completo.habilitado=true","institucional.nucleo.password-laboratorio=SoloPruebasSinteticasClaveDeMasDe32Caracteres"})
+@SpringBootTest(classes=DocumentosIngresoHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.formulario-completo.habilitado=true","institucional.identidad.legado-pruebas=true","institucional.nucleo.password-laboratorio=SoloPruebasSinteticasClaveDeMasDe32Caracteres"})
 @AutoConfigureMockMvc @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_CLASS)
 class DocumentosIngresoHttpTest {
     @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,DocumentosIngresoController.class,NucleoController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class}) static class Application{}

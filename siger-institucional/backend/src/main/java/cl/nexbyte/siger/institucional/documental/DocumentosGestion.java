@@ -50,6 +50,7 @@ public final class DocumentosGestion {
     public Documento vincular(Operador actor,UUID key,UUID documento,UUID origen,UUID destino,UUID action){
         referencia(actor,origen,documento);policy.leerCaso(actor,destino);String digest=hash(List.of("GESTION_VINCULO_1",documento,origen,destino,Objects.toString(action,"")));
         return db.transaction(()->{
+            policy.bloquearMutacion(actor);
             var roots=db.sql.queryForList("SELECT communication_id FROM core_case WHERE id=? OR id=? ORDER BY communication_id",String.class,sid(origen),sid(destino));
             for(var root:new LinkedHashSet<>(roots))db.sql.queryForList("SELECT comunicacion_id FROM communication_registry WHERE comunicacion_id=? FOR UPDATE",root);
             referencia(actor,origen,documento);var previous=anterior(key,actor,destino,"VINCULAR",digest);if(previous!=null)return documento(actor,destino,previous);

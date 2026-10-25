@@ -8,6 +8,7 @@ import java.util.UUID;
 public final class AutorizacionNucleo implements AutorizacionDocumental {
     private final NucleoInstitucional core;
     public AutorizacionNucleo(NucleoInstitucional core) { this.core=core; }
+    public void bloquearMutacion(Operador a){core.bloquearAcceso(a);}
     public void ingreso(Operador a, UUID com, UUID caso) {
         if(caso==null || a.distribuidor()) { core.autorizarLectura(a,com); return; }
         var context=core.caso(a,caso);

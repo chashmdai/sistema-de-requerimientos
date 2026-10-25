@@ -4,8 +4,8 @@ import org.springframework.context.annotation.*;import org.springframework.boot.
 import cl.nexbyte.siger.institucional.robustez.*;import tools.jackson.databind.json.JsonMapper;
 @Configuration @ConditionalOnProperty(name="institucional.nucleo.habilitado",havingValue="true")
 public class NucleoConfiguration {
-    @Bean CatalogoLaboratorio catalogoLaboratorio(BaseJdbc db,HabilitacionNucleo gate){
-        if(!gate.habilitado())throw new IllegalStateException("Núcleo cerrado");var c=new CatalogoLaboratorio();c.instalar(db);return c;
+    @Bean CatalogoLaboratorio catalogoLaboratorio(BaseJdbc db,HabilitacionNucleo gate,org.springframework.beans.factory.ObjectProvider<cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional> identidad){
+        if(!gate.habilitado())throw new IllegalStateException("Núcleo cerrado");var c=new CatalogoLaboratorio(identidad.getIfAvailable());c.instalar(db);return c;
     }
     @Bean @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(cl.nexbyte.siger.institucional.documental.AutorizacionDocumental.class)
     cl.nexbyte.siger.institucional.documental.AutorizacionDocumental autorizacionDocumental(NucleoInstitucional core){return new cl.nexbyte.siger.institucional.documental.AutorizacionNucleo(core);}

@@ -12,15 +12,15 @@ public class NucleoController {
     private CatalogoLaboratorio.Operador actor(Authentication auth){return SesionFuncionario.actual(auth,catalogo);}
     public record Sesion(boolean autenticado,CatalogoLaboratorio.Operador operador,String modo){}
     public record Csrf(String token,String headerName,String parameterName){}
-    public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores){}
+    public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores,List<CatalogoLaboratorio.Region> regiones){}
     @GetMapping("/session") Sesion session(Authentication auth){
         boolean valid=auth!=null&&auth.isAuthenticated()&&auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails;
-        return new Sesion(valid,valid?actor(auth):null,"LABORATORIO_PROVISIONAL");
+        return new Sesion(valid,valid?actor(auth):null,catalogo.individual()?"LABORATORIO_INDIVIDUAL":"PRUEBAS_HISTORICAS");
     }
     @GetMapping("/csrf") Csrf csrf(CsrfToken token){return new Csrf(token.getToken(),token.getHeaderName(),token.getParameterName());}
     @GetMapping("/catalogo") Catalogo catalogo(Authentication auth){
-        var a=actor(auth);return new Catalogo(CatalogoLaboratorio.UNIDADES,CatalogoLaboratorio.SEDES,CatalogoLaboratorio.PRESENCIAS,
-            a.distribuidor()?CatalogoLaboratorio.OPERADORES:CatalogoLaboratorio.OPERADORES.stream().filter(u->a.alcance(u.unidad(),u.sede())).toList());
+        var a=actor(auth);return new Catalogo(catalogo.unidades(),catalogo.sedes(),catalogo.presencias(),
+            catalogo.operadores(),catalogo.regiones());
     }
     @GetMapping("/comunicaciones") List<Resumen> buzon(Authentication auth,@RequestParam(defaultValue="0")long despues,@RequestParam(defaultValue="100")int limite){return core.buzon(actor(auth),despues,limite);}
     @GetMapping("/comunicaciones/{id}") Detalle detalle(Authentication auth,@PathVariable UUID id){return core.detalle(actor(auth),id);}

@@ -12,7 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(classes=NucleoHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.nucleo.password-laboratorio=SoloPruebasSinteticasClaveDeMasDe32Caracteres"})
+@SpringBootTest(classes=NucleoHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.identidad.legado-pruebas=true","institucional.nucleo.password-laboratorio=SoloPruebasSinteticasClaveDeMasDe32Caracteres"})
 @AutoConfigureMockMvc @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_CLASS)
 class NucleoHttpTest {
     @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class}) static class Application{}

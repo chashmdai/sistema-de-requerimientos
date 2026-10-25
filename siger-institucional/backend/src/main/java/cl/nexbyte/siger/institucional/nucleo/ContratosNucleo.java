@@ -7,7 +7,7 @@ import cl.nexbyte.siger.institucional.integracion.SobreComunicacion;
 public final class ContratosNucleo {
     private ContratosNucleo(){}
     public record Resultado(UUID id,long revision){}
-    public record Manual(String texto,String canalDeclarado,Instant recibidaEnDeclarada,String sede,String respuestaYaEntregada){@Override public String toString(){return "Manual[datos protegidos]";}}
+    public record Manual(String texto,String canalDeclarado,Instant recibidaEnDeclarada,String sede,String respuestaYaEntregada,String regionAsunto){public Manual(String texto,String canalDeclarado,Instant recibidaEnDeclarada,String sede,String respuestaYaEntregada){this(texto,canalDeclarado,recibidaEnDeclarada,sede,respuestaYaEntregada,null);}@Override public String toString(){return "Manual[datos protegidos]";}}
     public record NuevoDestino(String unidad,String sede,String evaluador){}
     public record Distribucion(long revision,List<NuevoDestino> destinos){}
     public record Decision(long revision,String texto){@Override public String toString(){return "Decision[datos protegidos]";}}
@@ -30,7 +30,7 @@ public final class ContratosNucleo {
     public record CasoResumen(UUID id,UUID comunicacionId,String folio,UUID requerimientoId,String unidad,String sede,String responsable,String clasificacion,String estado,long revision,boolean derivacionPendiente,boolean reaperturaPendiente){}
     public record Pagina<T>(List<T> items,long total,int pagina,int limite){}
     public record Bandeja(long comunicaciones,long casosAsignados,long antecedentesPendientes,long sinEncaminar,long reaperturasPendientes,long derivacionesPendientes,long revisionesPendientes){}
-    public record Resumen(UUID id,long secuencia,String folio,Instant registradaEn,String canal,String estado,long revision,UUID requerimientoId,String estadoRequerimiento,int casosAbiertos,int destinosPendientes){}
+    public record Resumen(UUID id,long secuencia,String folio,Instant registradaEn,String canal,String estado,long revision,UUID requerimientoId,String estadoRequerimiento,int casosAbiertos,int destinosPendientes,String origen,String sedeOrigen,String regionAsunto,String canalDeclarado){}
     public record Contenido(String texto,String tipoIdentidad,SobreComunicacion.Identidad identidad,DeclaracionNna declaracionNna,Instant recibidaEnDeclarada,String canalDeclarado,String registradoPor,tools.jackson.databind.JsonNode formularioCompleto){
         public Contenido(String texto,String tipo,SobreComunicacion.Identidad i,DeclaracionNna n,Instant fecha,String canal,String actor){this(texto,tipo,i,n,fecha,canal,actor,null);}
     }
