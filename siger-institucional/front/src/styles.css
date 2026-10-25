@@ -16,3 +16,5 @@
 .formulario-recibido dl{display:block}.formulario-recibido dl>div{margin-bottom:1rem}.formulario-recibido dt{margin-bottom:.3rem}.formulario-recibido audio{max-width:100%}
 
 .visor-documental{min-width:0}.visor-documental label{margin:.4rem 0}.visor-superficie{overflow:auto;max-height:60vh;max-width:100%;background:#e6e8ec;border:1px solid var(--border);padding:.5rem}.visor-superficie img{display:block;width:100%;height:auto;max-width:none}.visor-superficie[data-zoom="50"] img{width:50%}.visor-superficie[data-zoom="75"] img{width:75%}.visor-superficie[data-zoom="125"] img{width:125%}.visor-superficie[data-zoom="150"] img{width:150%}.visor-superficie[data-zoom="200"] img{width:200%}.visor-superficie[data-zoom="250"] img{width:250%}.visor-superficie[data-zoom="300"] img{width:300%}.documentos-gestion input[type=file]{max-width:100%}
+
+.notification-bell{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .7rem;border:1px solid var(--border,#d5d9e2);border-radius:6px;color:inherit;text-decoration:none}.notification-bell strong{min-width:1.5rem;text-align:center;border-radius:1rem;background:#a71858;color:white;padding:.1rem .35rem}

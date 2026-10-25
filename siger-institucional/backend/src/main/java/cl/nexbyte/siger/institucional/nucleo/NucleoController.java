@@ -7,15 +7,15 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @RestController @RequestMapping("/nucleo") @ConditionalOnProperty(name="institucional.nucleo.habilitado",havingValue="true")
 public class NucleoController {
-    private final NucleoInstitucional core;private final CatalogoLaboratorio catalogo;
-    public NucleoController(NucleoInstitucional core,CatalogoLaboratorio catalogo){this.core=core;this.catalogo=catalogo;}
+    private final NucleoInstitucional core;private final CatalogoLaboratorio catalogo;private final org.springframework.core.env.Environment env;
+    public NucleoController(NucleoInstitucional core,CatalogoLaboratorio catalogo,org.springframework.core.env.Environment env){this.core=core;this.catalogo=catalogo;this.env=env;}
     private CatalogoLaboratorio.Operador actor(Authentication auth){return SesionFuncionario.actual(auth,catalogo);}
-    public record Sesion(boolean autenticado,CatalogoLaboratorio.Operador operador,String modo){}
+    public record Sesion(boolean autenticado,CatalogoLaboratorio.Operador operador,String modo,boolean notificacionesHabilitadas){}
     public record Csrf(String token,String headerName,String parameterName){}
     public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores,List<CatalogoLaboratorio.Region> regiones){}
     @GetMapping("/session") Sesion session(Authentication auth){
         boolean valid=auth!=null&&auth.isAuthenticated()&&auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails;
-        return new Sesion(valid,valid?actor(auth):null,catalogo.individual()?"LABORATORIO_INDIVIDUAL":"PRUEBAS_HISTORICAS");
+        return new Sesion(valid,valid?actor(auth):null,catalogo.individual()?"LABORATORIO_INDIVIDUAL":"PRUEBAS_HISTORICAS",env.getProperty("institucional.notificaciones.habilitadas",Boolean.class,false));
     }
     @GetMapping("/csrf") Csrf csrf(CsrfToken token){return new Csrf(token.getToken(),token.getHeaderName(),token.getParameterName());}
     @GetMapping("/catalogo") Catalogo catalogo(Authentication auth){

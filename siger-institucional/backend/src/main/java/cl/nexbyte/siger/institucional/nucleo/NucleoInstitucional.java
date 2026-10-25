@@ -70,6 +70,12 @@ public final class NucleoInstitucional {
         return caso(a,caseId);
     }
     public void bloquearAcceso(Operador a){if(catalogo.individual())db.sql.queryForObject("SELECT id FROM identity_guard WHERE id=1 FOR UPDATE",Integer.class);actor(a);}
+    /** Autorización sin abrir otra TransactionTemplate: utilizable dentro de un outbox o de otro recurso. */
+    public void autorizarCaso(Operador a,UUID id){actor(a);if(!canCase(a,caseRow(id)))throw new FalloTecnico(404);}
+    public Caso contextoCaso(Operador a,UUID id){actor(a);var c=caseRow(id);if(!canCase(a,c))throw new FalloTecnico(404);return caseView(c,false);}
+    public void autorizarAntecedente(Operador a,UUID id){actor(a);linkReader(a,linkRow(id));}
+    public void autorizarDerivacion(Operador a,UUID id){actor(a);transferReader(a,transferRow(id));}
+    public void autorizarReapertura(Operador a,UUID id){actor(a);var r=reopenRow(id);if(!canCase(a,caseRow(uuid(r.get("case_id")))))throw new FalloTecnico(404);}
     public void autorizarLectura(Operador a,UUID communication){actor(a);readable(a,communication);}
     private void readable(Operador a,UUID communication){
         registry(communication,false);if(a.distribuidor())return;
@@ -83,7 +89,8 @@ public final class NucleoInstitucional {
         }
         return "("+String.join(" OR ",terms.isEmpty()?List.of("1=0"):terms)+")";
     }
-    private String caseScope(Operador a){return a.distribuidor()?"1=1":"("+grantSql(a,"d.unit_code","d.site_id",true)+" OR (c.responsible_id="+literal(a.id())+" AND "+grantSql(a,"d.unit_code","d.site_id",false)+"))";}
+    private String caseScopeGestion(Operador a){return "("+grantSql(a,"d.unit_code","d.site_id",true)+" OR (c.responsible_id="+literal(a.id())+" AND "+grantSql(a,"d.unit_code","d.site_id",false)+"))";}
+    private String caseScope(Operador a){return a.distribuidor()?"1=1":caseScopeGestion(a);}
     private ArrayList<Object> caseArgs(Operador a){return new ArrayList<>();}
     private String communicationScope(Operador a){
         if(a.distribuidor())return "1=1";
@@ -355,8 +362,8 @@ public final class NucleoInstitucional {
     private List<UUID> reopenEvidence(UUID requestId){return db.sql.queryForList("SELECT child_id FROM core_reopen_evidence WHERE request_id=? ORDER BY child_id",id(requestId)).stream().map(r->uuid(r.get("child_id"))).toList();}
     private Reapertura reopenView(Map<String,Object> r){var c=caseRow(uuid(r.get("case_id")));return new Reapertura(uuid(r.get("id")),uuid(c.get("id")),uuid(c.get("requirement_id")),str(c,"unit_code"),str(c,"site_id"),str(r,"requested_by"),date(r,"requested_ms"),number(r,"case_revision"),number(c,"revision"),str(c,"responsible_id"),date(r,"closed_ms"),str(r,"closure_mode"),str(r,"reason_text"),reopenEvidence(uuid(r.get("id"))),str(r,"state"),number(r,"revision"),str(r,"decided_by"),date(r,"decided_ms"),str(r,"decision_text"),uuid(r.get("supersedes_id")));}
     public Reapertura reapertura(Operador a,UUID requestId){actor(a);return lectura.execute(s->{var r=reopenRow(requestId);if(!canCase(a,caseRow(uuid(r.get("case_id")))))throw new FalloTecnico(404);return reopenView(r);});}
-    public Pagina<Reapertura> reaperturas(Operador a,UUID caseId,boolean pending,int page,int size){actor(a);page(page,size);if(a.distribuidor())throw new FalloTecnico(403);return lectura.execute(s->{
-        String from=" FROM core_reopen r JOIN core_case c ON c.id=r.case_id JOIN core_destination d ON d.id=c.destination_id WHERE "+caseScope(a);var args=caseArgs(a);
+    public Pagina<Reapertura> reaperturas(Operador a,UUID caseId,boolean pending,int page,int size){actor(a);page(page,size);if(a.distribuidor()&&!a.jefatura()&&a.accesos().stream().noneMatch(x->x.rol().equals("PROFESIONAL")))throw new FalloTecnico(403);return lectura.execute(s->{
+        String from=" FROM core_reopen r JOIN core_case c ON c.id=r.case_id JOIN core_destination d ON d.id=c.destination_id WHERE "+caseScopeGestion(a);var args=caseArgs(a);
         if(caseId!=null){from+=" AND c.id=?";args.add(id(caseId));}if(pending)from+=" AND r.state='PENDIENTE'";
         long total=db.sql.queryForObject("SELECT COUNT(*)"+from,Long.class,args.toArray());args.add(size);args.add(page*size);return new Pagina<>(db.sql.queryForList("SELECT r.*"+from+" ORDER BY r.requested_ms DESC,r.id LIMIT ? OFFSET ?",args.toArray()).stream().map(this::reopenView).toList(),total,page,size);
     });}
@@ -421,7 +428,7 @@ public final class NucleoInstitucional {
     public Bandeja bandeja(Operador a){actor(a);return lectura.execute(s->{
         long communications=buscar(a,"",false,0,1).total();long cases=casos(a,"EN_GESTION",0,1).total();long reviews=casos(a,"REVISION_TERMINO",0,1).total();long links=antecedentes(a,null,true,0,1).total();
         long unassigned=a.distribuidor()?db.sql.queryForObject("SELECT COUNT(*) FROM core_link WHERE case_reference IS NULL",Long.class):0;
-        long reopen=a.distribuidor()?0:reaperturas(a,null,true,0,1).total();long transfers=a.jefatura()?db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE state='PENDIENTE' AND "+grantSql(a,"target_unit","target_site",true),Long.class):0;
+        long reopen=a.distribuidor()&&!a.jefatura()&&a.accesos().stream().noneMatch(x->x.rol().equals("PROFESIONAL"))?0:reaperturas(a,null,true,0,1).total();long transfers=a.jefatura()?db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE state='PENDIENTE' AND "+grantSql(a,"target_unit","target_site",true),Long.class):0;
         return new Bandeja(communications,cases,links,unassigned,reopen,transfers,reviews);
     });}
     public List<Resumen> buzon(Operador a,long despues,int limite){return lectura.execute(status->buzonSnapshot(a,despues,limite));}

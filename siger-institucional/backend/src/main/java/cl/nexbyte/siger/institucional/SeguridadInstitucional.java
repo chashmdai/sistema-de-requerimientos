@@ -37,7 +37,12 @@ public class SeguridadInstitucional {
             .requestCache(c->c.disable())
             .authorizeHttpRequests(a->a.requestMatchers("/api/estado","/","/index.html","/assets/**","/nucleo/session","/nucleo/csrf","/nucleo/login").permitAll()
                 .requestMatchers("/nucleo/**").hasRole("FUNCIONARIO_LAB").anyRequest().denyAll())
-            .headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")))
+            .headers(h->{h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"));
+                // La respuesta puede comenzar en otro hilo: fijar cabeceras antes del streaming.
+                h.addObjectPostProcessor(new org.springframework.security.config.ObjectPostProcessor<org.springframework.security.web.header.HeaderWriterFilter>(){
+                    public <O extends org.springframework.security.web.header.HeaderWriterFilter> O postProcess(O filter){filter.setShouldWriteHeadersEagerly(true);return filter;}
+                });
+            })
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->r.setStatus(401)).accessDeniedHandler((q,r,x)->r.setStatus(403)))
             .formLogin(f->f.loginProcessingUrl("/nucleo/login").successHandler((q,r,a)->r.setStatus(204)).failureHandler((q,r,e)->r.setStatus(401)))
             .logout(l->l.logoutUrl("/nucleo/logout").invalidateHttpSession(true).clearAuthentication(true).deleteCookies(env.getProperty("server.servlet.session.cookie.name","SIGERSTAFFSESSION")).logoutSuccessHandler((q,r,a)->r.setStatus(204)))

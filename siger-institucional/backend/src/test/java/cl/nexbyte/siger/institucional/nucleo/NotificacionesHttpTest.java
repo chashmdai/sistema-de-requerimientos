@@ -1,0 +1,33 @@
+package cl.nexbyte.siger.institucional.nucleo;
+import cl.nexbyte.siger.institucional.*;import cl.nexbyte.siger.institucional.identidad.*;import cl.nexbyte.siger.institucional.notificaciones.*;import cl.nexbyte.siger.institucional.robustez.*;
+import java.nio.file.*;import java.util.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringBootConfiguration;import org.springframework.boot.autoconfigure.EnableAutoConfiguration;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;import org.springframework.context.annotation.*;import org.springframework.test.annotation.DirtiesContext;import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;import static org.junit.jupiter.api.Assertions.*;
+@SpringBootTest(classes=NotificacionesHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.identidad.habilitada=true","institucional.notificaciones.habilitadas=true"})
+@AutoConfigureMockMvc @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_CLASS)
+class NotificacionesHttpTest {
+ @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NotificacionesController.class,NucleoController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
+ @Configuration static class Fixture{
+  @Bean(destroyMethod="close") DatosAvisosTest data()throws Exception{return new DatosAvisosTest(Files.createTempDirectory("avisos-http-"));}
+  @Bean IdentidadInstitucional ids(DatosAvisosTest d){return d.ids;}@Bean CatalogoLaboratorio cat(DatosAvisosTest d){return d.cat;}@Bean NucleoInstitucional core(DatosAvisosTest d){return d.core;}@Bean TareasPersonales tareas(DatosAvisosTest d){return d.tareas;}@Bean NotificacionesInstitucionales notices(DatosAvisosTest d){return d.notices;}
+  @Bean HabilitacionNucleo gate(){return new HabilitacionNucleo(HabilitacionNucleoTest.valid());}
+  @Bean CorreosInstitucionales correos(DatosAvisosTest d){return new CorreosInstitucionales(d.d.db,d.cat,d.notices,new TransporteCorreo(){public Resultado enviar(Mensaje m){return new Resultado("SIMULADO","SIMULADO",null,0,null);}public boolean real(){return false;}},Set.of("prof.avisos@example.invalid"),d.tiempo,"http_simulado");}
+ }
+ @Autowired MockMvc http;@Autowired DatosAvisosTest x;
+ org.springframework.test.web.servlet.request.RequestPostProcessor prof(){return user(x.ids.autenticar("prof.avisos"));}
+ @Test void crearDesdeCasoExigeCsrfYSesionIndividualYReintentoConservaIdentidad()throws Exception{
+  var c=x.caso();String body=x.d.mapper.writeValueAsString(x.edit(c,null,null));var key=UUID.randomUUID();
+  http.perform(post("/nucleo/tareas").secure(true).with(prof()).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  String id=null;for(int i=0;i<2;i++){var r=http.perform(post("/nucleo/tareas").secure(true).with(prof()).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isOk()).andReturn();String got=x.d.mapper.readTree(r.getResponse().getContentAsString()).path("id").asString();if(id!=null)assertEquals(id,got);id=got;}
+  http.perform(get("/nucleo/tareas/"+id).secure(true).with(prof())).andExpect(jsonPath("$.creador").value(x.prof)).andExpect(jsonPath("$.responsable").value(x.prof)).andExpect(jsonPath("$.recurso").value(c.toString()));
+ }
+ @Test void noHayTareasSueltasNiAsignadasPorTi()throws Exception{
+  var c=x.caso();var body=x.d.mapper.writeValueAsString(new TareasPersonales.Edicion(0,"Tarea","",null,null,null,null,"NORMAL","CASO",c,x.prof));
+  http.perform(post("/nucleo/tareas").secure(true).with(user(x.ids.autenticar("head.avisos"))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  http.perform(post("/nucleo/tareas").secure(true).with(prof()).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":0,\"titulo\":\"Sin Caso\",\"descripcion\":\"\",\"prioridad\":\"NORMAL\"}")).andExpect(status().isBadRequest());
+ }
+ @Test void otroFuncionarioYTiNoLeenTareaPorUuid()throws Exception{var t=x.tareas.crear(x.a(x.prof),UUID.randomUUID(),x.edit(x.caso(),null,null));for(var name:List.of("ti.avisos","head.avisos","otro.avisos"))http.perform(get("/nucleo/tareas/"+t.id()).secure(true).with(user(x.ids.autenticar(name)))).andExpect(status().isNotFound());http.perform(get("/nucleo/tareas/"+t.id()).secure(false).with(prof())).andExpect(status().isForbidden());}
+ @Test void notificacionAjenaNoSeMarcaNiEnviaYLecturaNoConfirmaGestiones()throws Exception{var n=x.recordatorio(x.caso());http.perform(post("/nucleo/notificaciones/"+n+"/leer").secure(true).with(user(x.ids.autenticar("head.avisos"))).with(csrf())).andExpect(status().isNotFound());http.perform(post("/nucleo/notificaciones/"+n+"/correo").secure(true).with(user(x.ids.autenticar("ti.avisos"))).with(csrf())).andExpect(status().isNotFound());http.perform(post("/nucleo/notificaciones/"+n+"/leer").secure(true).with(prof()).with(csrf())).andExpect(status().isOk());http.perform(get("/nucleo/notificaciones/"+n+"/correo").secure(true).with(prof())).andExpect(jsonPath("$.confirmacion").value("NO_ENVIADO"));}
+ @Test void enviosExigenCsrfYSimuladoNuncaAfirmaGraphOEntrega()throws Exception{var n=x.recordatorio(x.caso());http.perform(post("/nucleo/notificaciones/"+n+"/correo").secure(true).with(prof())).andExpect(status().isForbidden());http.perform(post("/nucleo/notificaciones/"+n+"/correo").secure(true).with(prof()).with(csrf())).andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("SIMULADO")).andExpect(jsonPath("$.confirmacion").value("NO_ENVIADO"));http.perform(post("/nucleo/notificaciones/"+n+"/confirmar-recepcion").secure(true).with(prof()).with(csrf())).andExpect(status().isConflict());}
+ @Test void capacidadDeSesionYProcesamientoRespetanTi()throws Exception{http.perform(get("/nucleo/session").secure(true).with(prof())).andExpect(jsonPath("$.notificacionesHabilitadas").value(true));http.perform(post("/nucleo/notificaciones/operacion/procesar").secure(true).with(prof()).with(csrf())).andExpect(status().isForbidden());http.perform(get("/nucleo/notificaciones").secure(true)).andExpect(status().isUnauthorized());}
+}
