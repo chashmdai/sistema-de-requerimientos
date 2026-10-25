@@ -1,0 +1,106 @@
+{
+  "unidad": "Identidad institucional y operación territorial de laboratorio",
+  "fechaUTC": "2026-10-25T03:05:14.999486+00:00",
+  "commitImplementacion": "e0b002c66afb974f7357766245a0113716eedd22",
+  "rama": "identidad-territorial-laboratorio-2026",
+  "backend": {
+    "h2": {
+      "pruebas": 160,
+      "fallos": 0,
+      "errores": 0,
+      "omitidas": 0
+    },
+    "mysql": {
+      "pruebas": 160,
+      "fallos": 0,
+      "errores": 0,
+      "omitidas": 0
+    },
+    "workersRealesPorMotor": 5,
+    "metodosCargaExcluidos": [
+      "vectorInteroperableYDuplicadosConcurrentesTienenUnaConfirmacionEstable",
+      "doscientosFoliosDistintosBajoConcurrenciaYFormatoHistoricoEstable",
+      "consumidorParaleloAcotadoConservaUnicidadYConfirmaCadaRegistro"
+    ]
+  },
+  "frontend": {
+    "pruebas": 33,
+    "fallos": 0,
+    "lint": true,
+    "build": true
+  },
+  "navegadorReal": {
+    "simulado": false,
+    "proveedoresGubernamentales": 0,
+    "pruebasCarga": false,
+    "correcto": true,
+    "tiCreaCuentaUI": true,
+    "rolesPersistentes": true,
+    "rolesMultiplesSinCruzarAlcances": true,
+    "loginIndividual": true,
+    "accesoCompartidoDeshabilitado": true,
+    "csrfTI": 403,
+    "manualFuncionario": true,
+    "distribucionRegionalPropia": true,
+    "distribucionAjenaDenegada": 403,
+    "distribucionCentral": true,
+    "comUnicoIdempotencia": true,
+    "sinCasoAutomatico": true,
+    "operacionProfesional": true,
+    "otraUnidadDenegada": 404,
+    "tiContenidoDenegado": 404,
+    "documentoHistoricoIntegro": true,
+    "revocacionSesion": 401,
+    "revocacionReautenticada": 404,
+    "desactivacionSesion": 401,
+    "coberturaMultipleHistorica": true,
+    "escritorioMovil": true
+  },
+  "custodia": {
+    "comunicacionesPrevias": 7,
+    "custodiaComFirmasAckSinCambios": true,
+    "originalesCiudadanos": 16,
+    "originalesGestion": 2,
+    "paginasDerivadas": 6,
+    "integridadOriginalesYDerivadas": true,
+    "temporalesAbiertos": 0,
+    "casos": 3,
+    "activas": 8,
+    "cuentas": 8,
+    "migraciones": 11,
+    "foliosUnicos": 9,
+    "comunicaciones": 9,
+    "requerimientos": 2,
+    "fallosMigracion": 0,
+    "vinculosGestion": 3,
+    "documentosGestion": 2,
+    "hashesIndividuales": 8,
+    "webConSedeInventada": 0,
+    "coberturasHistoricas": 3,
+    "comandosDocumentales": 3,
+    "distribucionesNuevas": 2
+  },
+  "migracionesHistoricasSinCambios": 20,
+  "flywayActual": 11,
+  "jarActivoCoincideConBuild": true,
+  "sha256JarActivo": "4de031098b0a496d892821708f4f77e1d8f36d878c32617ec0e31345bbcebb70",
+  "secretosFueraGit": true,
+  "credencialesPrivadas0600": true,
+  "publicoModificado": false,
+  "push": false,
+  "produccion": false,
+  "incidenciasCorregidas": [
+    "Selectores accesibles en navegador",
+    "Reanudación de QA por comando confirmado y visibilidad de destinos",
+    "Credenciales QA generadas exclusivamente desde Linux con modo 0600",
+    "Filtro preliminar incluyó test H2 de 72 duplicados; batería detenida y filtros finales corregidos/validados"
+  ],
+  "pendientes": [
+    "Catálogo institucional definitivo",
+    "SSO autorizado y política de credenciales/recuperación",
+    "Equipos y subrogancias",
+    "Tareas y notificaciones",
+    "Auditoría transversal detallada",
+    "Hardening/capacidad/recuperación productiva"
+  ]
+}
