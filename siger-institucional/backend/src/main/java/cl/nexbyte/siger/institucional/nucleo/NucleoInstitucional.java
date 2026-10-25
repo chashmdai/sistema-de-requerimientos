@@ -62,6 +62,13 @@ public final class NucleoInstitucional {
     }
     private boolean canCase(Operador a,Map<String,Object> row){return a.alcance(str(row,"unit_code"),str(row,"site_id"))&&(a.jefatura()||a.id().equals(str(row,"responsible_id")));}
     private void head(Operador a,Map<String,Object> row){if(!a.jefatura()||!a.alcance(str(row,"unit_code"),str(row,"site_id")))throw new FalloTecnico(404);}
+    /** Misma facultad/estado que registrar actuación; el llamador mantiene la transacción y su auditoría documental. */
+    public Caso autorizarGestionDocumental(Operador a,UUID caseId){
+        actor(a);var first=caseRow(caseId);lock(uuid(first.get("communication_id")));var current=caseRow(caseId);
+        if(!canCase(a,current))throw new FalloTecnico(404);
+        if(!"EN_GESTION".equals(current.get("state")))throw new FalloTecnico(409);
+        return caso(a,caseId);
+    }
     public void autorizarLectura(Operador a,UUID communication){actor(a);readable(a,communication);}
     private void readable(Operador a,UUID communication){
         registry(communication,false);if(a.distribuidor())return;

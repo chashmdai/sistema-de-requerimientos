@@ -7,5 +7,7 @@ public class NucleoConfiguration {
     @Bean CatalogoLaboratorio catalogoLaboratorio(BaseJdbc db,HabilitacionNucleo gate){
         if(!gate.habilitado())throw new IllegalStateException("Núcleo cerrado");var c=new CatalogoLaboratorio();c.instalar(db);return c;
     }
+    @Bean @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(cl.nexbyte.siger.institucional.documental.AutorizacionDocumental.class)
+    cl.nexbyte.siger.institucional.documental.AutorizacionDocumental autorizacionDocumental(NucleoInstitucional core){return new cl.nexbyte.siger.institucional.documental.AutorizacionNucleo(core);}
     @Bean NucleoInstitucional nucleoInstitucional(BaseJdbc db,CatalogoLaboratorio catalogo,RecepcionInstitucionalJdbc recepcion,JsonMapper mapper,org.springframework.core.env.Environment env){return new NucleoInstitucional(db,catalogo,recepcion,mapper,Clock.systemUTC(),env.getProperty("institucional.folio.prefix","COM"),env.getProperty("institucional.folio.width",Integer.class,6));}
 }

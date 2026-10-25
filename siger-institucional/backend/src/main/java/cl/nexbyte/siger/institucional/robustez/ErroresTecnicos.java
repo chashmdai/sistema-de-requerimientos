@@ -4,6 +4,7 @@ import org.springframework.dao.DataAccessException;import org.springframework.ht
 public class ErroresTecnicos{
     @ExceptionHandler(FalloTecnico.class) ResponseEntity<ProblemDetail> tecnico(FalloTecnico e){var response=respuesta(e.status);if(e.code!=null)response.getBody().setProperty("code",e.code);return response;}
     @ExceptionHandler(DataAccessException.class) ResponseEntity<ProblemDetail> persistencia(DataAccessException e){return respuesta(503);}
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class) ResponseEntity<ProblemDetail> limiteMultipart(org.springframework.web.multipart.MaxUploadSizeExceededException e){return respuesta(413);}
     @ExceptionHandler(IllegalArgumentException.class) ResponseEntity<ProblemDetail> invalido(IllegalArgumentException e){return respuesta(400);}
     private ResponseEntity<ProblemDetail> respuesta(int code){
         var body=ProblemDetail.forStatusAndDetail(HttpStatus.valueOf(code),"Operación no completada. Conserve su clave o identificador para reintentar.");

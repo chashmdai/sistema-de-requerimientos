@@ -1,5 +1,5 @@
 package cl.nexbyte.siger.institucional.formulario;
-import cl.nexbyte.siger.institucional.nucleo.*;import cl.nexbyte.siger.institucional.robustez.*;
+import cl.nexbyte.siger.institucional.documental.*;import org.springframework.beans.factory.ObjectProvider;import cl.nexbyte.siger.institucional.nucleo.*;import cl.nexbyte.siger.institucional.robustez.*;
 import java.io.*;import java.nio.channels.FileChannel;import java.nio.file.*;import java.util.*;
 import org.springframework.web.bind.annotation.*;import org.springframework.security.core.Authentication;import org.springframework.http.*;import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
@@ -7,22 +7,17 @@ import org.springframework.web.bind.annotation.*;import org.springframework.secu
 @ConditionalOnProperty(name={"institucional.formulario-completo.habilitado","institucional.nucleo.habilitado"},havingValue="true")
 public class DocumentosIngresoController {
     public record Documento(UUID id,String origen,EntregaCompleta.Adjunto original,String representacion,boolean descargable){}
-    private final BaseJdbc db;private final NucleoInstitucional core;private final CatalogoLaboratorio catalog;private final ArchivoInstitucional files;private final RecepcionInstitucionalJdbc receiver;
-    public DocumentosIngresoController(BaseJdbc db,NucleoInstitucional core,CatalogoLaboratorio catalog,ArchivoInstitucional files,RecepcionInstitucionalJdbc receiver){this.db=db;this.core=core;this.catalog=catalog;this.files=files;this.receiver=receiver;}
-    private CatalogoLaboratorio.Operador actor(Authentication auth,UUID communication,UUID caso){
-        var a=SesionFuncionario.actual(auth,catalog);
-        if(caso==null||a.distribuidor())core.autorizarLectura(a,communication);
-        else{var c=core.caso(a,caso);if(!c.comunicacionId().equals(communication)){var antecedente=core.antecedente(a,communication);if(!caso.equals(antecedente.casoId())||antecedente.contenido()==null)throw new FalloTecnico(404);}else core.autorizarLectura(a,communication);}
-        return a;
-    }
+    private final BaseJdbc db;private final AutorizacionDocumental policy;private final ObjectProvider<VisorDocumento> visor;private final ObjectProvider<DocumentosGestion> gestion;private final CatalogoLaboratorio catalog;private final ArchivoInstitucional files;private final RecepcionInstitucionalJdbc receiver;
+    public DocumentosIngresoController(BaseJdbc db,NucleoInstitucional core,CatalogoLaboratorio catalog,ArchivoInstitucional files,RecepcionInstitucionalJdbc receiver,ObjectProvider<AutorizacionDocumental> policies,ObjectProvider<VisorDocumento> visor,ObjectProvider<DocumentosGestion> gestion){this.db=db;this.policy=policies.getIfAvailable(()->new AutorizacionNucleo(core));this.catalog=catalog;this.files=files;this.receiver=receiver;this.visor=visor;this.gestion=gestion;}
+    private CatalogoLaboratorio.Operador actor(Authentication auth,UUID communication,UUID caso){var a=SesionFuncionario.actual(auth,catalog);policy.ingreso(a,communication,caso);return a;}
     @GetMapping public List<Documento> listar(Authentication auth,@PathVariable UUID comunicacion,@RequestParam(required=false)UUID caso){actor(auth,comunicacion,caso);if(!receiver.esCompleta(comunicacion))return List.of();var e=receiver.completaRegistrada(comunicacion);return db.sql.queryForList("SELECT id,attachment_id FROM institution_document WHERE communication_id=? AND origin='INGRESO_CIUDADANO' ORDER BY id",comunicacion.toString()).stream().map(r->{var a=e.adjuntos().stream().filter(f->f.id().toString().equals(r.get("attachment_id"))).findFirst().orElseThrow(()->new FalloTecnico(409));return new Documento(UUID.fromString(r.get("id").toString()),"INGRESO_CIUDADANO",a,representacion(e,a),true);}).toList();}
-    private static String representacion(EntregaCompleta e,EntregaCompleta.Adjunto a){if(!e.comunicacion().path("version").asString().equals("1.1"))return "DESCARGA";return switch(a.tipo()){case "audio/mpeg","audio/ogg","audio/wav","audio/mp4","audio/webm"->"AUDIO";case "video/mp4","video/webm"->"VIDEO";default->"DESCARGA";};}
+    private String representacion(EntregaCompleta e,EntregaCompleta.Adjunto a){if(visor.getIfAvailable()!=null&&FormatosDocumento.paginable(a.tipo()))return "PAGINAS";if(!e.comunicacion().path("version").asString().equals("1.1"))return "DESCARGA";return switch(a.tipo()){case "audio/mpeg","audio/ogg","audio/wav","audio/mp4","audio/webm"->"AUDIO";case "video/mp4","video/webm"->"VIDEO";default->"DESCARGA";};}
     @RequestMapping(value={"/{documento}/original","/{documento}/representacion"},method={RequestMethod.GET,RequestMethod.HEAD})
     public ResponseEntity<StreamingResponseBody> bytes(Authentication auth,@PathVariable UUID comunicacion,@PathVariable UUID documento,jakarta.servlet.http.HttpServletRequest request)throws IOException{
         var actor=actor(auth,comunicacion,request.getParameter("caso")==null?null:UUID.fromString(request.getParameter("caso")));var delivery=receiver.completaRegistrada(comunicacion);
         var rows=db.sql.queryForList("SELECT * FROM institution_document WHERE id=? AND communication_id=? AND origin='INGRESO_CIUDADANO'",documento.toString(),comunicacion.toString());if(rows.isEmpty())throw new FalloTecnico(404);var row=rows.getFirst();
         var a=delivery.adjuntos().stream().filter(d->d.id().toString().equals(row.get("attachment_id"))).findFirst().orElseThrow(()->new FalloTecnico(409));boolean inline=request.getRequestURI().endsWith("/representacion");
-        if(inline&&representacion(delivery,a).equals("DESCARGA"))throw new FalloTecnico(404);
+        if(inline&&!Set.of("AUDIO","VIDEO").contains(representacion(delivery,a)))throw new FalloTecnico(404);
         Path path;try{path=files.verificar(row.get("storage_key").toString(),a);}catch(IOException corrupt){throw new FalloTecnico(409);}
         long from=0,to=a.tamanio()-1;boolean partial=false;String etag="\""+a.sha256()+"\"",range=request.getHeader("Range");
         var headers=new HttpHeaders();headers.setCacheControl("no-store");headers.set("X-Content-Type-Options","nosniff");headers.set("Content-Security-Policy","default-src 'none'; sandbox");headers.set("Cross-Origin-Resource-Policy","same-origin");headers.set("Referrer-Policy","no-referrer");headers.setETag(etag);headers.set("Accept-Ranges","bytes");headers.setContentType(inline?MediaType.parseMediaType(a.tipo()):MediaType.APPLICATION_OCTET_STREAM);headers.setContentDisposition((inline?ContentDisposition.inline():ContentDisposition.attachment()).filename(a.nombre(),java.nio.charset.StandardCharsets.UTF_8).build());
@@ -37,4 +32,14 @@ public class DocumentosIngresoController {
         return new ResponseEntity<>(body,headers,partial?HttpStatus.PARTIAL_CONTENT:HttpStatus.OK);
     }
     private void audit(UUID doc,UUID com,String actor,String representation){db.sql.update("INSERT INTO institution_document_access(document_id,communication_id,actor_id,at_ms,representation) VALUES(?,?,?,?,?)",doc.toString(),com.toString(),actor,System.currentTimeMillis(),representation);}
+    private DocumentoPrivado referencia(UUID com,UUID doc){
+        var e=receiver.completaRegistrada(com);var rows=db.sql.queryForList("SELECT storage_key,created_ms FROM institution_document WHERE id=? AND communication_id=? AND origin='INGRESO_CIUDADANO'",doc.toString(),com.toString());if(rows.isEmpty())throw new FalloTecnico(404);
+        var attachment=db.sql.queryForObject("SELECT attachment_id FROM institution_document WHERE id=?",String.class,doc.toString());var a=e.adjuntos().stream().filter(f->f.id().toString().equals(attachment)).findFirst().orElseThrow(()->new FalloTecnico(409));
+        return new DocumentoPrivado(doc,com,"INGRESO_CIUDADANO",rows.getFirst().get("storage_key").toString(),a,null,java.time.Instant.ofEpochMilli(((Number)rows.getFirst().get("created_ms")).longValue()));
+    }
+    private VisorDocumento visor(){var service=visor.getIfAvailable();if(service==null)throw new FalloTecnico(503,"VISTA_NO_DISPONIBLE");return service;}
+    private void eventoVista(CatalogoLaboratorio.Operador a,UUID doc,UUID caso,String code){var service=gestion.getIfAvailable();if(service!=null)service.evento(a,doc,caso,null,code);}
+    @GetMapping("/{documento}/vista") public VisorDocumento.Vista vista(Authentication auth,@PathVariable UUID comunicacion,@PathVariable UUID documento,@RequestParam(required=false)UUID caso){var a=actor(auth,comunicacion,caso);var response=visor().vista(referencia(comunicacion,documento));eventoVista(a,documento,caso,"VISTA_CONSULTADA");return response;}
+    @RequestMapping(value="/{documento}/paginas/{pagina}",method={RequestMethod.GET,RequestMethod.HEAD}) public ResponseEntity<StreamingResponseBody> pagina(Authentication auth,@PathVariable UUID comunicacion,@PathVariable UUID documento,@PathVariable int pagina,@RequestParam(required=false)UUID caso,jakarta.servlet.http.HttpServletRequest request){var a=actor(auth,comunicacion,caso);var p=visor().pagina(referencia(comunicacion,documento),pagina);return TransferenciaDocumento.responder(p.path(),p.tamanio(),p.sha256(),"pagina.png","image/png",true,request,mode->eventoVista(a,documento,caso,"PAGINA_SOLICITADA"));}
+
 }
