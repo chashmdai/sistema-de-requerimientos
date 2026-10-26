@@ -78,3 +78,14 @@ Ver [informe](VALIDACION_CLAMAV_WINDOWS_2026-10-26.md) y [checkpoint](CHECKPOINT
 - Un candidato Java con `av-*`/`pending`, mutex abandonado o fallo de restauración permanece cerrado. Conservar el journal privado y verificar identidad/proceso/ACL/perfil antes de una conciliación administrativa acotada. No eliminar esos marcadores a ciegas ni transformar el fallo en limpio. No habilitarlo como bean para sortear la validación pendiente.
 - No hay datos históricos que revertir. El MySQL de regresión es únicamente windows_qa y sus fixtures son descartables; no reimportarlos en windows_lab. Los24originales, COM/ACK/firmas, identidades y Graph histórico permanecen fuera del ensayo.
 - El JAR previo `siger-20ce34eea019f4f9.jar` sigue conservado e inactivo. El código nuevo no lo sustituyó. Para dejar esta unidad en reposo basta con conservar el checkout y los procesos propios terminados; no usar reset/clean/DROP o cambios en WSL como reversión.
+
+## Adenda — adaptador Java, corrección de herencia y Job al crear
+
+Código2a6c6d2; [checkpoint](CHECKPOINT_ADAPTADOR_AV_WINDOWS_2026-10-26.md). El AV Java pasó0/1/2 antes del refuerzo posterior JOB_LIST. Este último y la cadena completa aún requieren calificación; no habilitar el runtime ni sustituir su JAR.
+
+- Conservar logs/evidencia privada por GUID, incluidos los errores, y los checkpoints. El fallo0xC0000022 era acceso del hijo a archivos existentes, no una causa para borrar/reparar las bases AV o modificar Kaspersky. No revertir a SetFileSecurity para permisos heredables: no propaga a los hijos.
+- No modificar ACL de paquete/bases mientras haya un scanner o sonda activos. La actualización y retirada ahora usan SetNamedSecurityInfo y conservan la protección/herencia anterior. La auditoría de este corte terminó con0SID temporales residuales.
+- El directorio fallido `av-java-f226a15977fa4323a9224707e9ed05c1` conserva journal/entrada y salidas vacías; no tiene hijo activo. No borrar el marcador para hacer aprobar el constructor ni reutilizar esa raíz como un análisis limpio. Una conciliación debe verificar identidad/perfil, ausencia de procesos y descriptores, sin eliminar originales.
+- Los logs opt-in no incluyen copia del original y permanecen privados fuera de Git. Un fallo de limpieza sigue rechazando el resultado. La recuperación tras un aborto de JVM no está acreditada: conservar ese bloqueo y no asumir que JOB_LIST concilia por sí solo el filesystem.
+- El launcher JUnit nuevo utiliza dependencias ya existentes, ejecuta un único método real y no modifica el mecanismo de sandbox ni sus límites. No mezclar versiones de engine/launcher ni bajar la guarda4GiB ante un error de recursos.
+- No se creó servicio/tarea, puerto, JAR de ejecución o cambio de MySQL/WSL/Formulario Público. No hay datos de negocio que deshacer. Mantener las restricciones previas, las claves, los24objetos y todos los commits locales, sin reset/clean/importación o cambios a políticas del host.

@@ -1,5 +1,7 @@
 # Checkpoint U4.5 — capacidad ClamAV acreditada, adaptación Java por validar
 
+> Corte posterior: [adaptador Java y corrección ACL](CHECKPOINT_ADAPTADOR_AV_WINDOWS_2026-10-26.md). Pasada real Java0/1/2 aprobada antes del refuerzo JOB_LIST; refuerzo implementado y pruebas JUnit todavía bloqueadas por memoria. Cinco métodos documentales sin aprobación; runtime cerrado. Este corte se conserva.
+
 26/10/2026. `C:\req\repo`, rama `migracion-windows-laboratorio-2026`, continuación de `c224360`. Código **82cf340**; documentación en el commit posterior de este corte, consultable con `git log`. Sin push. **U4.5 sigue abierta, 100% Windows y producción deshabilitada. No U5.**
 
 ## Estado que conservar

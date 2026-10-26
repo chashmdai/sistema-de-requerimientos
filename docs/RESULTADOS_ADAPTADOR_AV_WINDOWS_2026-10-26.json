@@ -1,0 +1,165 @@
+{
+  "date": "2026-10-26",
+  "timezone": "America/Santiago",
+  "scope": "U45_ADAPTADOR_AV_REAL_CALIFICACION_ABIERTA",
+  "branch": "migracion-windows-laboratorio-2026",
+  "codeCommit": "2a6c6d2",
+  "fullU45Closed": false,
+  "realPassBeforeAtomicJobList": {
+    "scope": "JAVA_AV_WINDOWS_REAL_NO_RUNTIME_COMPLETO",
+    "root": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290",
+    "fullDocumentalRuntime": false,
+    "checks": [
+      {
+        "result": {
+          "scannerExit": 0,
+          "peakPrivateBytes": 1037467648,
+          "elapsedMillis": 17501,
+          "appContainer": true,
+          "capabilities": 0,
+          "processLimit": 1,
+          "memoryLimitBytes": 1610612736,
+          "cpuLimitTicks": 450000000,
+          "cleanupComplete": true
+        },
+        "correct": true,
+        "scenario": "CLEAN"
+      },
+      {
+        "result": {
+          "scannerExit": 1,
+          "peakPrivateBytes": 1037463552,
+          "elapsedMillis": 16358,
+          "appContainer": true,
+          "capabilities": 0,
+          "processLimit": 1,
+          "memoryLimitBytes": 1610612736,
+          "cpuLimitTicks": 450000000,
+          "cleanupComplete": true
+        },
+        "correct": true,
+        "scenario": "EICAR"
+      },
+      {
+        "result": {
+          "scannerExit": 2,
+          "peakPrivateBytes": 7458816,
+          "elapsedMillis": 87,
+          "appContainer": true,
+          "capabilities": 0,
+          "processLimit": 1,
+          "memoryLimitBytes": 1610612736,
+          "cpuLimitTicks": 450000000,
+          "cleanupComplete": true
+        },
+        "correct": true,
+        "scenario": "UNAVAILABLE"
+      }
+    ],
+    "state": "TRES_ESCENARIOS_CORRECTOS",
+    "diagnosticDirectory": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290\\evidence"
+  },
+  "realOutputs": [
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "path": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290\\evidence\\av-2579a2ce-5d7a-48a8-b21e-e7b55eeb1f28\\stderr",
+      "bytes": 0
+    },
+    {
+      "sha256": "428334fe4b080f83f30511354c7627b52fd7e822df82ef78fc91b74d1675e806",
+      "path": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290\\evidence\\av-2579a2ce-5d7a-48a8-b21e-e7b55eeb1f28\\stdout",
+      "bytes": 137
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "path": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290\\evidence\\av-5f3054d2-1180-46f6-860e-dd47fc2f3c79\\stderr",
+      "bytes": 0
+    },
+    {
+      "sha256": "2bb36cf9e859c88652e0999e7b711239c01e3eac8b630024ec81ac724a3877dc",
+      "path": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290\\evidence\\av-5f3054d2-1180-46f6-860e-dd47fc2f3c79\\stdout",
+      "bytes": 113
+    },
+    {
+      "sha256": "6046f65da911f74f74ad5e8fb60191468b19bc371028b3caf1f5de81770ccebf",
+      "path": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290\\evidence\\av-cdc469d1-7d35-4f70-aadc-63ffb3f52b70\\stderr",
+      "bytes": 174
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "path": "C:\\req\\testdata\\av-java-e89ba516a4b649b2aa75dc6c9d27f290\\evidence\\av-cdc469d1-7d35-4f70-aadc-63ffb3f52b70\\stdout",
+      "bytes": 0
+    }
+  ],
+  "currentJobList": {
+    "scope": "Job desde CreateProcess; verificar siguiente ventana",
+    "implemented": true,
+    "compiled": true,
+    "liveValidated": false
+  },
+  "guards": {
+    "log": "C:\\req\\logs\\guardas-av-job-creacion-windows.log",
+    "skipped": 0,
+    "failures": 0,
+    "selected": 5,
+    "passed": 5,
+    "errors": 0
+  },
+  "mutex": {
+    "scope": "MUTEX_AV_JAVA_DOS_JVM_SINTETICO",
+    "peers": 2,
+    "distinctRoots": true,
+    "rejectedBeforeScanner": true,
+    "released": true,
+    "realScannerExecuted": false
+  },
+  "junitReal": {
+    "skippedPerAttempt": 0,
+    "realDocumentaryMethodsStillNotApproved": 5,
+    "latestPreflight": {
+      "availablePhysicalBytes": 3742486528,
+      "fullDocumentalRuntime": false,
+      "scope": "JUNIT_AV_REAL_WINDOWS",
+      "state": "BLOQUEADO_RECURSOS",
+      "requiredFreeBytes": 4294967296,
+      "scannerExecuted": false
+    },
+    "lightweightLauncherCompiled": true,
+    "errorsPerAttempt": 1,
+    "surefireAttempts": 2,
+    "selectedMethod": "ServiciosDocumentalesRealesTest#controlAntivirusRealSeRechaza",
+    "latestEvidence": "C:\\req\\evidencias\\junit-av-real-e5a7f4af077d440f90900281dbc801be.json",
+    "passed": 0,
+    "cause": "MemoriaInsuficiente",
+    "root": "C:\\req\\testdata\\av-junit-b15c7a0cf3534270b7ab57f9e1f00513"
+  },
+  "custody": {
+    "aclCheckedObjects": 1932,
+    "sha256Verified": true,
+    "rootInheritanceDisabled": true,
+    "objects": 24,
+    "unexpectedAllowAces": 0,
+    "bytes": 16869263,
+    "referenced": 24
+  },
+  "toolAndDefinitionAcl": {
+    "checked": 48,
+    "unexpectedAllow": 0
+  },
+  "fullRegressionsRerun": false,
+  "historicalMigrationsModified": 0,
+  "mysqlConnectionsThisUnit": 0,
+  "graphRealSends": 0,
+  "publicPulls": 0,
+  "wslUsed": false,
+  "kasperskyModified": false,
+  "sharedServicesModified": false,
+  "runtimeDocumentalEnabled": false,
+  "pending": [
+    "Validar JOB_LIST en vivo con el mismo harness0/1/2",
+    "Ejecutar control AV JUnit con margen de RAM",
+    "Negativos completos del lanzador Java y conciliacion tras aborto",
+    "Inspector y renderizador Windows",
+    "Cinco metodos documentales y E2E completos"
+  ]
+}
