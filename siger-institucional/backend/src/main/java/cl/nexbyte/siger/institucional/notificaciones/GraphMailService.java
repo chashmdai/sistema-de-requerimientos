@@ -14,7 +14,7 @@ public final class GraphMailService implements TransporteCorreo {
  }
  private static String encode(String value){return URLEncoder.encode(value,StandardCharsets.UTF_8);}
  private String secreto()throws IOException{
-  Path p=settings.secreto().toAbsolutePath().normalize();if(!p.equals(p.toRealPath())||Files.isSymbolicLink(p)||!Files.isRegularFile(p,LinkOption.NOFOLLOW_LINKS)||Files.size(p)>1024||!Files.getPosixFilePermissions(p).equals(PosixFilePermissions.fromString("rw-------")))throw new IOException("Custodia no válida");
+  Path p=cl.nexbyte.siger.institucional.archivos.ArchivoPrivado.validar(settings.secreto(),1024);
   String value=Files.readString(p).strip();if(value.length()<20||value.length()>512||value.chars().anyMatch(Character::isISOControl))throw new IOException("Credencial no válida");return value;
  }
  private synchronized Respuesta obtener()throws IOException,InterruptedException{

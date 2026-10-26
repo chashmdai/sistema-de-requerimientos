@@ -10,7 +10,7 @@ class RecepcionInstitucionalJdbcTest {
  @BeforeEach void open()throws Exception{
   var supplied=System.getenv("ROBUST_DB_URL");
   var url=supplied==null?"jdbc:h2:file:"+dir.resolve("institucion").toString().replace('\\','/')+";DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0":supplied;
-  if(supplied!=null&&!url.startsWith("jdbc:mysql://127.0.0.1:13306/robust_inst_test?"))throw new IllegalStateException("Solo esquema local aislado");
+  if(supplied!=null)cl.nexbyte.siger.institucional.robustez.DestinoJdbcPruebas.validar(url);
   try(var ddl=new BaseJdbc(url,supplied==null?"sa":System.getenv("ROBUST_DB_MIGRATION_USER"),supplied==null?"":System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){ddl.migrate("institucional");}
   db=new BaseJdbc(url,supplied==null?"sa":System.getenv("ROBUST_DB_USER"),supplied==null?"":System.getenv("ROBUST_DB_PASSWORD"),12);
   if(supplied!=null){for(var table:List.of("communication_origin","communication_registry","institutional_inbox","control_audit","external_operation","operational_event"))db.sql.update("DELETE FROM "+table);db.sql.update("UPDATE operation_control SET revision=0,accept_new=FALSE,pull_enabled=FALSE,contingency='SOLO_CONSULTA'");}

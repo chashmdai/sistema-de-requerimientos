@@ -13,7 +13,7 @@ final class DatosNucleoTest implements AutoCloseable {
     DatosNucleoTest(Path dir)throws Exception{
         String supplied=System.getenv("ROBUST_DB_URL");
         String url=supplied==null?"jdbc:h2:file:"+dir.resolve("nucleo").toAbsolutePath().toString().replace('\\','/')+";DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0":supplied;
-        if(supplied!=null&&!url.startsWith("jdbc:mysql://127.0.0.1:13306/robust_inst_test?"))throw new IllegalStateException("Solo esquema de pruebas aislado");
+        if(supplied!=null)cl.nexbyte.siger.institucional.robustez.DestinoJdbcPruebas.validar(url);
         try(var migration=new BaseJdbc(url,supplied==null?"sa":System.getenv("ROBUST_DB_MIGRATION_USER"),supplied==null?"":System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){migration.migrate("institucional");}
         db=new BaseJdbc(url,supplied==null?"sa":System.getenv("ROBUST_DB_USER"),supplied==null?"":System.getenv("ROBUST_DB_PASSWORD"),12);
         if(supplied!=null)limpiar();catalogo.instalar(db);

@@ -6,6 +6,7 @@
   <name>SIGER Institucional</name><description>Defensoría de la Niñez — integración ClaveÚnica</description>
   <properties><java.version>25</java.version></properties>
   <dependencies>
+    <dependency><groupId>net.java.dev.jna</groupId><artifactId>jna-platform</artifactId><version>5.19.1</version></dependency>
     <dependency><groupId>org.springframework</groupId><artifactId>spring-jdbc</artifactId></dependency>
     <dependency><groupId>com.zaxxer</groupId><artifactId>HikariCP</artifactId></dependency>
     <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
