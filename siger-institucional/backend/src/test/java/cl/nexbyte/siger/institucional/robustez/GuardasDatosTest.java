@@ -1,6 +1,11 @@
 package cl.nexbyte.siger.institucional.robustez;
 import org.junit.jupiter.api.Test;import static org.assertj.core.api.Assertions.*;
 class GuardasDatosTest {
+ @Test void truststoreExplicitoSoloCApublicaLocalSinFallback(){
+  String base="jdbc:mysql://127.0.0.1:3306/siger_institucional_windows_qa?sslMode=VERIFY_IDENTITY&fallbackToSystemTrustStore=false&trustCertificateKeyStoreUrl=file:/C:/req/config/siger-mysql-truststore.p12&trustCertificateKeyStoreType=PKCS12&trustCertificateKeyStorePassword=public-trust&characterEncoding=UTF-8";
+  assertThatCode(()->ConfiguracionDatos.validar(base,false)).doesNotThrowAnyException();
+  for(String invalid:java.util.List.of(base.replace("fallbackToSystemTrustStore=false","fallbackToSystemTrustStore=true"),base.replace("file:/C:/req/config/siger-mysql-truststore.p12","https://no-autorizado.invalid/ca.p12"),base.replace("/config/","/../"),base.replace("PKCS12","JKS"),base.replace("public-trust","password-no-admitida"),base.replace("VERIFY_IDENTITY","REQUIRED"),base+"&sslMode=DISABLED",base.replace("&trustCertificateKeyStoreType=PKCS12","")))assertThatThrownBy(()->ConfiguracionDatos.validar(invalid,false)).isInstanceOf(IllegalArgumentException.class);
+ }
  @Test void baseFueraDelLaboratorioRequiereVerificarCAyHostname(){
   assertThatThrownBy(()->ConfiguracionDatos.validar("jdbc:mysql://servidor.institucion:3306/siger?sslMode=DISABLED",false)).isInstanceOf(IllegalArgumentException.class);
   assertThatCode(()->ConfiguracionDatos.validar("jdbc:mysql://servidor.institucion:3306/siger?sslMode=VERIFY_IDENTITY",false)).doesNotThrowAnyException();

@@ -10,7 +10,14 @@ public class JdbcInstitucionalConfiguration {
         var url=env.getRequiredProperty("institucional.db.url");
         ConfiguracionDatos.validar(url,env.getProperty("datos.mysql-local",Boolean.class,false)&&"127.0.0.1".equals(env.getProperty("server.address")));
         if(env.matchesProfiles("local-integration-demo"))throw new IllegalArgumentException("Perfiles de recepción incompatibles");
-        return new BaseJdbc(url,env.getRequiredProperty("institucional.db.user"),env.getRequiredProperty("institucional.db.password"),env.getProperty("institucional.db.pool",Integer.class,12));
+        var db=new BaseJdbc(url,env.getRequiredProperty("institucional.db.user"),env.getRequiredProperty("institucional.db.password"),env.getProperty("institucional.db.pool",Integer.class,12));
+        if(env.matchesProfiles("windows-lab"))try{
+            if(!"siger_windows_qa_app@localhost".equals(db.sql.queryForObject("SELECT CURRENT_USER()",String.class))||!"siger_institucional_windows_qa".equals(db.sql.queryForObject("SELECT DATABASE()",String.class)))throw new IllegalStateException();
+            for(String grant:db.sql.queryForList("SHOW GRANTS",String.class))if(!grant.startsWith("GRANT USAGE ON *.* TO ")){
+                int on=grant.indexOf(" ON ");if(on<0||!grant.substring(on).startsWith(" ON `siger_institucional_windows_qa`.* TO ")||!Set.of("SELECT","INSERT","UPDATE","DELETE").containsAll(Arrays.asList(grant.substring(6,on).split(", "))))throw new IllegalStateException();
+            }
+        }catch(Exception failure){db.close();throw new IllegalStateException("Runtime Windows exige identidad QA exclusivamente DML");}
+        return db;
     }
     @Bean ControlesOperacion controles(BaseJdbc db){return new ControlesOperacion(db);}
     @Bean RegistroOperacionesExternas operaciones(BaseJdbc db){return new RegistroOperacionesExternas(db);}

@@ -2,7 +2,6 @@ package cl.nexbyte.siger.institucional.formulario;
 import cl.nexbyte.siger.institucional.robustez.*;import java.nio.file.Path;import java.net.URI;import org.springframework.context.annotation.*;import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;import org.springframework.core.env.Environment;import org.springframework.scheduling.annotation.Scheduled;
 @Configuration @Profile("jdbc-reception") @ConditionalOnProperty(name="institucional.formulario-completo.habilitado",havingValue="true")
 public class FormularioInstitucionalConfiguration {
-    @Bean ArchivoInstitucional archivosInstitucionales(Environment e)throws java.io.IOException{return new ArchivoInstitucional(Path.of(e.getRequiredProperty("institucional.documentos.directorio")));}
     @Bean FuenteFormulario fuenteFormulario(Environment e)throws java.io.IOException{var ca=e.getProperty("institucional.formulario-completo.ca-certificado","");return new FuenteFormulario(URI.create(e.getRequiredProperty("institucional.formulario-completo.origen-publico")),e.getRequiredProperty("institucional.formulario-completo.token"),ca.isBlank()?null:Path.of(ca),false);}
     @Bean RecuperarFormulario recuperarFormulario(FuenteFormulario s,RecepcionInstitucionalJdbc r,ArchivoInstitucional a){return new RecuperarFormulario(s,r,a);}
     @Bean @ConditionalOnProperty(name="institucional.formulario-completo.automatico",havingValue="true") Planificador planificadorFormulario(RecuperarFormulario r,ControlesOperacion c){return new Planificador(r,c);}
