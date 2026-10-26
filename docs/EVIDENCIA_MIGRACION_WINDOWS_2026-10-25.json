@@ -1,0 +1,846 @@
+{
+  "date": "2026-10-25",
+  "unit": "U4.5",
+  "status": "PARCIAL_VERIFICADO_NO_RUNTIME_COMPLETO",
+  "branch": "migracion-windows-laboratorio-2026",
+  "implementation": "b4a41ab",
+  "sourceCommit": "78b7caf14129c95b63f3e63001d195a51abf2c51",
+  "sourceUnmodified": true,
+  "push": false,
+  "production": false,
+  "u5Started": false,
+  "gitSource": {
+    "head": "78b7caf14129c95b63f3e63001d195a51abf2c51",
+    "tree": "b77cc86cf66f3571b596388c8ec3bcf58ea669c4",
+    "refs": [
+      "f665a1cb2be75abfec8919419a9048413dab4cb3 refs/heads/identidad-territorial-laboratorio-2026",
+      "3e5af854f372061b97b3e50842979cdeeb781631 refs/heads/integracion-formulario-completo-multimedia-2026",
+      "86cfe31ff2bd285f8a187e7a037bcf39de3122e5 refs/heads/main",
+      "78b7caf14129c95b63f3e63001d195a51abf2c51 refs/heads/notificaciones-tareas-graph-laboratorio-2026",
+      "86cfe31ff2bd285f8a187e7a037bcf39de3122e5 refs/remotes/origin/HEAD",
+      "86cfe31ff2bd285f8a187e7a037bcf39de3122e5 refs/remotes/origin/main"
+    ],
+    "tracked": 287,
+    "caseCollisions": [],
+    "symlinks": [],
+    "longPaths": [],
+    "sourceStatus": "",
+    "bundleSha256": "bea61f00b09a32dcdd9dbccb7f62325fcbaa5eb15fb8e31c9a44b9b46b5acdad"
+  },
+  "gitDestinationBaseline": {
+    "bundleSha256": "bea61f00b09a32dcdd9dbccb7f62325fcbaa5eb15fb8e31c9a44b9b46b5acdad",
+    "refsConservadas": 6,
+    "branch": "migracion-windows-laboratorio-2026",
+    "tree": "b77cc86cf66f3571b596388c8ec3bcf58ea669c4"
+  },
+  "environment": {
+    "mysqlService": "Running",
+    "nativeSigerJavaPids": [],
+    "npm": "11.19.1",
+    "os": "Microsoft Windows Server 2022 Standard",
+    "powerShell": "7.6.5",
+    "migrations": [
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V1__recepcion_transaccional.sql",
+        "sha256": "2f6587715b7b6b20f4712ea690e726cbbf68abef81ea494c74fd5ed605df91bb"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V10__gestion_documental_y_representaciones.sql",
+        "sha256": "58531d4e07ddf92c1f04c09747e61a792b624020b9c0daa17d8b5a44302a9e0d"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V11__identidad_y_territorio.sql",
+        "sha256": "4b18ba44db8cf21a097d71078e511d7feea422d0e52998ac3cd7d42628dfb2e1"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V12__tareas_personales_y_notificaciones.sql",
+        "sha256": "32992ca10e9d58ab0c49b7b08518a33ce8917e5fb07a13e69d468863fd5e0cd8"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V2__auditoria_controles.sql",
+        "sha256": "ade69d9c32f5b584d3dabd797375bfc5d18016a2c7a530dc17cc6c1741b0876a"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V3__registro_comunicacion.sql",
+        "sha256": "6c63e46fb614c64068220d7bdad101bae49fc3a26361af36e86def36aedde91a"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V4__conciliacion_ack.sql",
+        "sha256": "ca3ef429d7a9321d5c928b66d2c2406a002c03114260892a9e6b689603a14b0b"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V5__nucleo_institucional.sql",
+        "sha256": "a9e1dd470684014b165e144e58ce3c1803454fc19e4a7ce8775670081670a996"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V6__complejidad_por_caso.sql",
+        "sha256": "e0e8b6b0c7b8593a36faf58d8aa8140f0594bc85b08f25d289bd29f2c32941b5"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V7__derivacion_aceptada.sql",
+        "sha256": "7acb8cac9fad1d431087918061da0c36b19396a86913190b0922b8ee81db3805"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V8__antecedentes_y_reaperturas.sql",
+        "sha256": "f7b4882ac3488122530198a47ea72bc29bd62acbce5d2ae719f1358f04e60080"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/h2/V9__formulario_completo_y_documentos.sql",
+        "sha256": "ab9cfdc8cc75a8f4f542eceeb680a615004aa6c5209a575708d7482d4f21bb32"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V1__recepcion_transaccional.sql",
+        "sha256": "3a19aa74e2120a412bd5565f470d56d53d0e4e1c8dacef251f3e38c715f04b7c"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V10__gestion_documental_y_representaciones.sql",
+        "sha256": "58531d4e07ddf92c1f04c09747e61a792b624020b9c0daa17d8b5a44302a9e0d"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V11__identidad_y_territorio.sql",
+        "sha256": "4b18ba44db8cf21a097d71078e511d7feea422d0e52998ac3cd7d42628dfb2e1"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V12__tareas_personales_y_notificaciones.sql",
+        "sha256": "32992ca10e9d58ab0c49b7b08518a33ce8917e5fb07a13e69d468863fd5e0cd8"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V2__auditoria_controles.sql",
+        "sha256": "2e31a32e5b36a594ef89b7cb6ab990d623c4411c117d522ad4ac6ea6120d669a"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V3__registro_comunicacion.sql",
+        "sha256": "0524319d2a0962a41c6426a113b44b6b04970c777426dfb169edbacff13a51d8"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V4__conciliacion_ack.sql",
+        "sha256": "ca3ef429d7a9321d5c928b66d2c2406a002c03114260892a9e6b689603a14b0b"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V5__nucleo_institucional.sql",
+        "sha256": "3ff911e59fc4c32cffb7a3d19ac263701cabe1e567b7ef5062600e4a47520f6c"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V6__complejidad_por_caso.sql",
+        "sha256": "e0e8b6b0c7b8593a36faf58d8aa8140f0594bc85b08f25d289bd29f2c32941b5"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V7__derivacion_aceptada.sql",
+        "sha256": "32960b39935f2f0d0af97bab9d0791b64685db90e30a7a3336fa610559b87887"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V8__antecedentes_y_reaperturas.sql",
+        "sha256": "f7b4882ac3488122530198a47ea72bc29bd62acbce5d2ae719f1358f04e60080"
+      },
+      {
+        "path": "siger-institucional/backend/src/main/resources/db/institucional/mysql/V9__formulario_completo_y_documentos.sql",
+        "sha256": "1107116ad156fb68cbdfc9335376401e2853db1f44137779393df40becc52b73"
+      }
+    ],
+    "maven": "3.10.0",
+    "javaSiger": "25.0.4.1+1-LTS",
+    "node": "v24.22.0",
+    "git": "git version 2.53.0.windows.3",
+    "javaGlobal": "21.0.3",
+    "user": "DEFENSORIANINEZ\\nexbyte.proveedor",
+    "build": "20348",
+    "localPorts8080_8081": []
+  },
+  "flywayExecution": {
+    "migrationsExecuted": 12,
+    "mode": "migrate",
+    "schema": "siger_institucional_windows_lab",
+    "tls": "TLSv1.3",
+    "user": "siger_windows_migrator@localhost",
+    "version": "8.0.46"
+  },
+  "flywayValidation": {
+    "mode": "validate",
+    "schema": "siger_institucional_windows_lab",
+    "tls": "TLSv1.3",
+    "user": "siger_windows_migrator@localhost",
+    "valid": true,
+    "version": "8.0.46"
+  },
+  "jdbcApp": {
+    "grants": [
+      "GRANT USAGE ON *.* TO `siger_windows_app`@`localhost`",
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON `siger_institucional_windows_lab`.* TO `siger_windows_app`@`localhost`"
+    ],
+    "mode": "inspect",
+    "objects": 62,
+    "schema": "siger_institucional_windows_lab",
+    "tls": "TLSv1.3",
+    "user": "siger_windows_app@localhost",
+    "version": "8.0.46"
+  },
+  "appDdlNegative": {
+    "appDdlDenied": true,
+    "mode": "probe-ddl",
+    "schema": "siger_institucional_windows_lab",
+    "tls": "TLSv1.3",
+    "user": "siger_windows_app@localhost",
+    "vendorCode": 1142,
+    "version": "8.0.46"
+  },
+  "createViewTemporaryAuthorized": true,
+  "createViewRevocationVerified": false,
+  "snapshot": {
+    "tables": 60,
+    "encrypted": "DPAPI CurrentUser",
+    "bytes": 233212,
+    "rows": 516,
+    "sourceHistoryRetained": true,
+    "sha256": "8ca8a981b5a196be6fcd32975d31cbe87e7c58d77a9062539b8d2186a05352f5"
+  },
+  "imported": {
+    "alreadyImported": false,
+    "rowsImported": 504,
+    "ok": true,
+    "runtimeStarted": false,
+    "tables": 59,
+    "allTableHashesVerified": true,
+    "foreignKeysVerified": true,
+    "mailSent": 0
+  },
+  "replayed": {
+    "foreignKeysVerified": true,
+    "mailSent": 0,
+    "alreadyImported": true,
+    "rowsImported": 0,
+    "ok": true,
+    "runtimeStarted": false,
+    "tables": 59,
+    "allTableHashesVerified": true
+  },
+  "comparison": {
+    "tableHashesMatched": true,
+    "businessTablesMatched": 59,
+    "physicalOriginalsAndPagesMatched": 24,
+    "businessRowsMatched": 504,
+    "newRealGraphSends": 0,
+    "windowsRuntimeStarted": false,
+    "nativeFlywayChecksumsMatched": 12,
+    "sourceFlywayRowsArchived": 12
+  },
+  "sourceStillIdentical": {
+    "sourceStillMatchesSnapshot": true,
+    "sourceTables": 60,
+    "sourceRows": 516,
+    "sourceSequenceCacheBypassed": true,
+    "matchingAutoIncrements": 10,
+    "sourceMutatedByMigration": false
+  },
+  "businessTableFingerprints": {
+    "communication_origin": {
+      "count": 11,
+      "sha256": "f5d5963969fc4206d3b2cf98be974e2ffa91777a21d2eb477057c202f0db9951"
+    },
+    "communication_registry": {
+      "count": 11,
+      "sha256": "3d7e1daefdb49d077ce079800fa8e0fa61aef52cfed7e4a5ea5175c8417548e5"
+    },
+    "control_audit": {
+      "count": 1,
+      "sha256": "8a72c6208ee238d14cf0b63cf71095e627f16df5cbe88c47907574c67f378f56"
+    },
+    "core_action": {
+      "count": 2,
+      "sha256": "292e5a40fa288bcc853b508c98c93bbdb944fab54e17a6370a5f9e682587e395"
+    },
+    "core_actor": {
+      "count": 19,
+      "sha256": "6293eb2238723d23775422c13d32fe63b3f8cded78edcc5b92894c7e3d7db77f"
+    },
+    "core_assignment": {
+      "count": 6,
+      "sha256": "656713b4a230cfb19fbbb2c326d5157a9e9c3f81e497c884a28262f834419106"
+    },
+    "core_case": {
+      "count": 5,
+      "sha256": "f4599faef6ed0e5dfe024ff97cba5b243ec99990d2a69b9078e88114e9115a9c"
+    },
+    "core_command": {
+      "count": 17,
+      "sha256": "50011d5e0fcdf8a6a2d587433f3c27c92215943192e37e7ee6fe2b14054d2a24"
+    },
+    "core_communication": {
+      "count": 5,
+      "sha256": "6f3d8a0561553f2cb6021331c752334e8bb168e93bceee923932cf452950e902"
+    },
+    "core_complexity": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core_destination": {
+      "count": 5,
+      "sha256": "067e16679f39d08ca2af4a770a008157f030c5c3d3bfcf238847175d21dd17c8"
+    },
+    "core_event": {
+      "count": 22,
+      "sha256": "c6aad76b24db647a1423e45cf81c8fdf14614d531e83f43512fdfb2a7474f25a"
+    },
+    "core_link": {
+      "count": 1,
+      "sha256": "bbe83541dd3cdb40ff3dab9ab7bcce176746540fbc7aea9b0d64de00f960f6d8"
+    },
+    "core_link_evaluation": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core_link_guard": {
+      "count": 1,
+      "sha256": "ef098d4667c31629e05e1faaebca294382445707915d641551d7fd0ac7b2d4b2"
+    },
+    "core_management_period": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core_manual": {
+      "count": 4,
+      "sha256": "e4dd9f79d40668bbfc17d67fcdf8df35d49bc9cbaf77ed4219ac9d3a555d872d"
+    },
+    "core_notice": {
+      "count": 1,
+      "sha256": "b14daa599ce952c2a1fe7a5612a02e01f49af8fe48ab3060fa82a0fff4012e84"
+    },
+    "core_reopen": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core_reopen_evidence": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core_requirement": {
+      "count": 3,
+      "sha256": "97c2b342334ac2f05f9aea0409c591d18d7e737ff87878b570bae023ca147c1d"
+    },
+    "core_review": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core_site": {
+      "count": 2,
+      "sha256": "d7fb263a85a8bd3c9d6fa71e1fe20f8bb374736172d36496929ecdd9824352d1"
+    },
+    "core_transfer": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core_unit": {
+      "count": 4,
+      "sha256": "6acf5bfc5ee5c5b6dd60f7c038ce916a649ecb57dfcc7f50a645f563359374d0"
+    },
+    "core_unit_site": {
+      "count": 4,
+      "sha256": "62801f350001d7d253be744a199f91c64bb1707c4e5360a733b5638796655995"
+    },
+    "distribution_event": {
+      "count": 4,
+      "sha256": "95b65326c7c39e25309df256ac6a9eb9082f65dfe82b74ebd13a3967f157d9c8"
+    },
+    "document_command": {
+      "count": 3,
+      "sha256": "daf7ae5c14f0ecf68b037920df972f2a2d2f93a10ee1e16a1d65c18ec934331c"
+    },
+    "document_event": {
+      "count": 97,
+      "sha256": "dc87d1666e4aa962b5ca1f36e15a0b5783627ee86efc5fdb75d7d337f94bbc23"
+    },
+    "document_page": {
+      "count": 6,
+      "sha256": "dfa0a5052d3f6a0a06b6fb8d569ec6cc0ea42bcafbe1da1a9b4d9b63b4b4d987"
+    },
+    "document_representation": {
+      "count": 4,
+      "sha256": "8bec4b5930857edc31f6c421a44ee3b4e6879a401094a90838bfbfc02ec8e6b1"
+    },
+    "external_operation": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "identity_event": {
+      "count": 41,
+      "sha256": "09a170d716c4cac5339ef393e41cd910c5d5e751d8a1a40db6524407b3c5ce80"
+    },
+    "identity_guard": {
+      "count": 1,
+      "sha256": "ef098d4667c31629e05e1faaebca294382445707915d641551d7fd0ac7b2d4b2"
+    },
+    "institution_document": {
+      "count": 18,
+      "sha256": "38461e7efdd4a5e4ed5f502ef6ec93a9a3b37d89630c383928cb1f1720784955"
+    },
+    "institution_document_access": {
+      "count": 24,
+      "sha256": "5b85835729a5021f95193d88a2315276680ef00190b804c71b5a13edd9a0fafd"
+    },
+    "institution_notification": {
+      "count": 16,
+      "sha256": "6f2c62b5ed78c84367df2748e33b14d5e09782fab589077c16e75b8e05b92bc9"
+    },
+    "institution_task": {
+      "count": 3,
+      "sha256": "9bb859c61bee39ffaa802c9949f876f172e73201a1a8c7037ef96a3a1d35f090"
+    },
+    "institutional_inbox": {
+      "count": 7,
+      "sha256": "b1479d7a3efce57fd54246e9558f9569723a548d586d0626ade1e99988228b13"
+    },
+    "mail_attempt": {
+      "count": 4,
+      "sha256": "4afbf49e320e225cd62931c072c05fdbf7d865e23445fe7b74893a2d7203bedc"
+    },
+    "mail_campaign": {
+      "count": 1,
+      "sha256": "8c6f14460bda55301b47a4f11135d02aa056459f43dd1ec55deb009cb473d7df"
+    },
+    "management_document_link": {
+      "count": 3,
+      "sha256": "f5ae1ee8783762875579293242a86d4aa9a61e5071bbb5ca6855ca24f3f0675c"
+    },
+    "notification_guard": {
+      "count": 1,
+      "sha256": "ef098d4667c31629e05e1faaebca294382445707915d641551d7fd0ac7b2d4b2"
+    },
+    "notification_outbox": {
+      "count": 16,
+      "sha256": "67f92be741e00518f4b9b3a72f76fc4d88057895cebbd9fc96ef383ddccad8c0"
+    },
+    "notification_source": {
+      "count": 44,
+      "sha256": "b7df34d88f2517703b5c436c77385becbb87c8cf0efd1ae037963e4f9640ffae"
+    },
+    "operation_control": {
+      "count": 1,
+      "sha256": "d9916064576abd15d2742d3f816ed64fed5df6f4bec725b3c32e592829bec645"
+    },
+    "operational_event": {
+      "count": 15,
+      "sha256": "a588544afd4698c5caafeb47186e032f1c51beda3b1db14226d5c99ea62b65ed"
+    },
+    "org_coverage": {
+      "count": 3,
+      "sha256": "b82617288f0ab3c7f84d2f2d0bbab03d8340646eb4d4e6e053790b28845544e7"
+    },
+    "org_macrozone": {
+      "count": 1,
+      "sha256": "41234adc7d55ace99ecb3809bdd687fcd936e89ab1f2b7f23e8796c8588e2b21"
+    },
+    "org_region": {
+      "count": 3,
+      "sha256": "c38c1d6c019817d9430cbe123aacf7b8abd0f82f3e865e43b0e3cf577232fb1e"
+    },
+    "org_region_macrozone": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "org_site_validity": {
+      "count": 2,
+      "sha256": "f1fd813957aef6d43fd41ad6b5500871440d0595e46ab74663a62377aaa0bf64"
+    },
+    "org_unit_validity": {
+      "count": 4,
+      "sha256": "bbe746c9106a794598febf40af560c63bc2f73d66ec243c066d59271a750cfcc"
+    },
+    "staff_account": {
+      "count": 9,
+      "sha256": "307c0e0950aad27acf021e105d3db849f550c11946334e24bc27cc90406d50e6"
+    },
+    "staff_assignment": {
+      "count": 19,
+      "sha256": "7230cf858b207250c1b720576cc51ed70c649e6954eb5a6ee7ded55afa670d1c"
+    },
+    "staff_profile_history": {
+      "count": 15,
+      "sha256": "681d63b9cb839feee993b1f785a364bd02b35fa719153ecf6ffe5f34bd588478"
+    },
+    "task_command": {
+      "count": 4,
+      "sha256": "1e6c5e412f00540b4be45ce6052159f5ff24b2c903603bf7eb22e108fcaf60fb"
+    },
+    "task_history": {
+      "count": 4,
+      "sha256": "279e7fea452362bb124b2fabbc72f1e88526daf87407b76977645f8cae89572e"
+    },
+    "workflow_event": {
+      "count": 7,
+      "sha256": "56955b30467d6cd162c9926febc17c561d36b7767f287d2843291bcfed6da7ad"
+    }
+  },
+  "sqlAudit": {
+    "acceptedGraphHistorical": 4,
+    "ackPending": 0,
+    "autoIncrement": {
+      "communication_registry": 12,
+      "core_event": 23,
+      "document_event": 98,
+      "identity_event": 42,
+      "institution_document_access": 25,
+      "institution_notification": 17,
+      "operational_event": 16,
+      "staff_profile_history": 16,
+      "task_history": 5,
+      "workflow_event": 8
+    },
+    "campaignSendsStarted": 4,
+    "cases": 5,
+    "communications": 11,
+    "humanConfirmedHistorical": 4,
+    "invalidTasks": 0,
+    "migrations": [
+      {
+        "success": true,
+        "checksum": 1376122347,
+        "script": "V1__recepcion_transaccional.sql",
+        "version": "1"
+      },
+      {
+        "success": true,
+        "checksum": 892722086,
+        "script": "V2__auditoria_controles.sql",
+        "version": "2"
+      },
+      {
+        "success": true,
+        "checksum": 586656987,
+        "script": "V3__registro_comunicacion.sql",
+        "version": "3"
+      },
+      {
+        "success": true,
+        "checksum": 1356918377,
+        "script": "V4__conciliacion_ack.sql",
+        "version": "4"
+      },
+      {
+        "success": true,
+        "checksum": 1384754318,
+        "script": "V5__nucleo_institucional.sql",
+        "version": "5"
+      },
+      {
+        "success": true,
+        "checksum": 931681250,
+        "script": "V6__complejidad_por_caso.sql",
+        "version": "6"
+      },
+      {
+        "success": true,
+        "checksum": -1612737475,
+        "script": "V7__derivacion_aceptada.sql",
+        "version": "7"
+      },
+      {
+        "success": true,
+        "checksum": -155477422,
+        "script": "V8__antecedentes_y_reaperturas.sql",
+        "version": "8"
+      },
+      {
+        "success": true,
+        "checksum": -2147298905,
+        "script": "V9__formulario_completo_y_documentos.sql",
+        "version": "9"
+      },
+      {
+        "success": true,
+        "checksum": -1628829918,
+        "script": "V10__gestion_documental_y_representaciones.sql",
+        "version": "10"
+      },
+      {
+        "success": true,
+        "checksum": 222757728,
+        "script": "V11__identidad_y_territorio.sql",
+        "version": "11"
+      },
+      {
+        "success": true,
+        "checksum": 427770227,
+        "script": "V12__tareas_personales_y_notificaciones.sql",
+        "version": "12"
+      }
+    ],
+    "mode": "audit",
+    "nexbyteAccounts": 1,
+    "nexbyteRoles": 7,
+    "requirements": 3,
+    "schema": "siger_institucional_windows_lab",
+    "tls": "TLSv1.3",
+    "uniqueCom": 11,
+    "user": "siger_windows_app@localhost",
+    "version": "8.0.46"
+  },
+  "custody": {
+    "unexpectedAllowAces": 0,
+    "objects": 24,
+    "rootInheritanceDisabled": true,
+    "bytes": 16869263,
+    "sha256Verified": true,
+    "referenced": 24,
+    "aclCheckedObjects": 109
+  },
+  "sourcePrivateFilesDpapi": {
+    "roundtripVerified": true,
+    "files": 10,
+    "secretsShown": false
+  },
+  "snapshotsDpapi": {
+    "sha256Verified": true,
+    "plaintextRetained": false,
+    "snapshots": 2,
+    "dpapi": "CurrentUser"
+  },
+  "nativeCompatibility": {
+    "atomicMove": true,
+    "directoryFsync": "AccessDeniedException",
+    "exclusiveWriterLock": true,
+    "fileForce": true,
+    "filesystem": "NTFS",
+    "java": "25.0.4.1+1-LTS",
+    "linuxDevNull": false,
+    "linuxPrlimit": false,
+    "os": "Windows Server 2022",
+    "posixPermissions": "UnsupportedOperationException",
+    "unixSocketApi": true
+  },
+  "artifact": {
+    "started": false,
+    "libraries": "C:\\req\\bin\\lib",
+    "sha256": "a8bed7746c55ea4f17a2c9edf31dbf9c4105931eb9825e43feb9d531bdb49d1e",
+    "artifact": "C:\\req\\bin\\siger-a8bed7746c55ea4f.jar"
+  },
+  "tests": {
+    "mysqlFullRegression": "PENDIENTE_QA_AISLADO",
+    "frontend": {
+      "build": true,
+      "passed": 42,
+      "lint": true
+    },
+    "mysqlMigrationImportAndReadAudit": "CORRECTO_NATIVO",
+    "excludedStressMethods": [
+      "vectorInteroperableYDuplicadosConcurrentesTienenUnaConfirmacionEstable",
+      "doscientosFoliosDistintosBajoConcurrenciaYFormatoHistoricoEstable",
+      "consumidorParaleloAcotadoConservaUnicidadYConfirmaCadaRegistro"
+    ],
+    "graph": {
+      "simulatedOutboxTestsPassed": 8,
+      "automatic": false,
+      "historicalAccepted": 4,
+      "clientTestsBlockedByPosix": 6,
+      "historicalHumanConfirmed": 4,
+      "newRealSends": 0
+    },
+    "realWorkersWindows": "NO_EJECUTADOS",
+    "h2": {
+      "selected": 194,
+      "errors": 61,
+      "passed": 128,
+      "failures": 0,
+      "suites": [
+        {
+          "suite": "cl.nexbyte.siger.contrato.IdentidadComponentesContratoTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.formulario.DocumentalHttpTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 7,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.formulario.DocumentalInstitucionalTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 12,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.formulario.DocumentosIngresoHttpTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 5,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.formulario.FormularioCompletoInstitucionalTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 16,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.formulario.IdentidadDocumentalTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 3,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.formulario.RecuperarFormularioHttpTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 12,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.formulario.ServiciosDocumentalesRealesTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 5
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.IndependenciaTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.integracion.ContratoDigestTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.integracion.RecuperacionHttpTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.notificaciones.GraphMailServiceTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 6,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.AntecedentesReaperturaTest",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.CorreosOutboxTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.DerivacionComplejidadTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.HabilitacionNucleoTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.IdentidadHttpTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.IdentidadInstitucionalTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.NotificacionesHttpTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.NucleoHttpTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.NucleoInstitucionalTest",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.nucleo.TareasNotificacionesTest",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.robustez.ContratoRegistroV3Test",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.robustez.FuenteHttpV2Test",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.robustez.GuardasDatosTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.robustez.NodoPiseeLecturaTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "cl.nexbyte.siger.institucional.robustez.RecepcionInstitucionalJdbcTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "skipped": 5,
+      "status": "NO_CORRECTO"
+    },
+    "e2eWindows": "NO_EJECUTADO"
+  },
+  "pending": [
+    "Adaptador NTFS: ACL/reparse points, publicacion y durabilidad",
+    "Broker/ClamAV/inspector/render Windows aislados, pruebas reales",
+    "Guards privados y configuracion runtime Windows DPAPI",
+    "QA MySQL separado y seleccion segura de fixtures",
+    "HTTPS/runtime/nexbyte/funciones/E2E y reinicios Windows",
+    "Cutover autorizado tras comprobar deltas de origen"
+  ]
+}
