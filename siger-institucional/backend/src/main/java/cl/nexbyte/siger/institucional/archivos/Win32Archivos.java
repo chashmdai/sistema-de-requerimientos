@@ -23,6 +23,7 @@ final class Win32Archivos {
     static void validarCadena(Path input)throws IOException{
         Path p=input.toAbsolutePath().normalize();
         if(p.getRoot()==null||!p.getRoot().toString().matches("[A-Za-z]:\\\\")||p.toString().substring(2).contains(":"))throw new IOException("Ruta NTFS local requerida");
+        if(Kernel32.INSTANCE.GetDriveType(p.getRoot().toString())!=3)throw new IOException("Unidad local fija requerida");
         for(var part:p){String n=part.toString();if(n.endsWith(".")||n.endsWith(" ")||n.matches("(?i)(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\\..*)?"))throw new IOException("Nombre de ruta no permitido");}
         for(var a=p;a!=null;a=a.getParent()){
             int attributes=Kernel32.INSTANCE.GetFileAttributes(a.toString());
