@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 class IdentidadHttpTest {
  @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,IdentidadController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
  @Configuration static class Fixture{
+  @Bean Clock relojLimitesLogin(){return Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"),ZoneOffset.UTC);}
   static String tiPassword=UUID.randomUUID()+"AZ",tiId;
   @Bean(destroyMethod="close") DatosNucleoTest datos()throws Exception{return new DatosNucleoTest(Files.createTempDirectory("identidad-http-"));}
   @Bean IdentidadInstitucional identidad(DatosNucleoTest d){for(var t:List.of("staff_profile_history","identity_event","staff_assignment","staff_account","org_coverage"))d.db.sql.update("DELETE FROM "+t);var i=new IdentidadInstitucional(d.db,Clock.systemUTC());tiId=i.bootstrap(new IdentidadInstitucional.Crear("ti.http","TI HTTP sintético","ti.http@example.invalid","TI",null,null,tiPassword)).id();return i;}

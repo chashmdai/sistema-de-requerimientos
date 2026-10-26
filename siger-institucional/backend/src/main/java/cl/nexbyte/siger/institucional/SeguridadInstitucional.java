@@ -28,10 +28,11 @@ public class SeguridadInstitucional {
         // Authentication erases credentials on its principal; never return the shared template.
         return name->{var user=users.get(name);if(user==null)throw new UsernameNotFoundException("Acceso no habilitado");return User.withUserDetails(user).build();};
     }
-    @Bean SecurityFilterChain institucional(HttpSecurity http,HabilitacionNucleo gate,Environment env,org.springframework.beans.factory.ObjectProvider<cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional> provider) throws Exception {
+    @Bean SecurityFilterChain institucional(HttpSecurity http,HabilitacionNucleo gate,Environment env,org.springframework.beans.factory.ObjectProvider<cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional> provider,org.springframework.beans.factory.ObjectProvider<java.time.Clock> clocks) throws Exception {
         if(!gate.habilitado())return http.sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).requestCache(c->c.disable())
             .authorizeHttpRequests(a->a.requestMatchers("/api/estado").permitAll().anyRequest().denyAll())
             .exceptionHandling(e->e.authenticationEntryPoint((q,r,x)->r.setStatus(401))).build();
+        var clock=clocks.getIfAvailable(java.time.Clock::systemUTC);
         var attempts=new HashMap<String,long[]>();
         http.sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED).sessionFixation(f->f.changeSessionId()))
             .requestCache(c->c.disable())
@@ -51,7 +52,7 @@ public class SeguridadInstitucional {
                     r.setHeader("Cache-Control","no-store");
                     if(!q.getRequestURI().equals("/api/estado")&&!q.isSecure()){r.setStatus(403);return;}
                     if(q.getRequestURI().equals("/nucleo/login")&&q.getMethod().equals("POST"))synchronized(attempts){
-                        long minute=System.currentTimeMillis()/60000;attempts.entrySet().removeIf(e->e.getValue()[0]!=minute);
+                        long minute=clock.millis()/60000;attempts.entrySet().removeIf(e->e.getValue()[0]!=minute);
                         if(attempts.size()>1024){r.setStatus(429);return;}
                         var count=attempts.computeIfAbsent(q.getRemoteAddr(),k->new long[]{minute,0});
                         var login=q.getParameter("username");if(login==null||login.length()>64){r.setStatus(401);return;}
