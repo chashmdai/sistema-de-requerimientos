@@ -1,0 +1,300 @@
+{
+  "scope": "U45_CLAMAV_INDEPENDIENTE_NO_RUNTIME_DOCUMENTAL",
+  "date": "2026-10-26",
+  "timezone": "America/Santiago",
+  "branch": "migracion-windows-laboratorio-2026",
+  "codeCommit": "82cf340",
+  "fullU45Closed": false,
+  "kaspersky": {
+    "policyChangedByAgent": false,
+    "exclusionReportedByTI": "C:\\req\\testdata",
+    "previousKasperskyAttribution": "Informada por usuario/TI; no auditoria del producto leida",
+    "previousInputFailure": "ClamAV no pudo abrir el archivo; entrada posteriormente ausente",
+    "fixturePersistenceSeconds": 10,
+    "scannerInterferenceNotSeenInNewControl": true
+  },
+  "independentScanner": {
+    "scope": "QA_AV_CAPACIDAD",
+    "utc": "2026-10-26T15:11:55.7572984-03:00",
+    "state": "SCANNER_PROBADO_NO_INTEGRADO",
+    "availablePhysicalBytes": 5028102144,
+    "requiredFreeBytes": 4294967296,
+    "plannedJobLimitBytes": 1610612736,
+    "cpuLimitSeconds": 45,
+    "deadlineMilliseconds": 90000,
+    "processLimit": 1,
+    "scannerExecuted": true,
+    "fullDocumentalRuntime": false,
+    "root": "C:\\req\\testdata\\isolation-475e581eb13d4ba38833037657a85b5f",
+    "results": [
+      {
+        "mode": "av-capacity-clean",
+        "brokerExit": 0,
+        "expectedScannerExit": 0,
+        "inputBytes": 9,
+        "logs": [
+          {
+            "sha256": "10123b0af6868e234f50a28da3988ac14c52591d4348f4f0ded0a10a10ca6906",
+            "stream": "stdout",
+            "bytes": 97,
+            "path": "C:\\req\\testdata\\isolation-475e581eb13d4ba38833037657a85b5f\\work-av-capacity-clean\\salida.log"
+          },
+          {
+            "sha256": "5d19b68ca294930dcf19058e90d800247ad92ee311637fea0f9d45d54b363901",
+            "stream": "stderr",
+            "bytes": 64435,
+            "path": "C:\\req\\testdata\\isolation-475e581eb13d4ba38833037657a85b5f\\work-av-capacity-clean\\stderr.log"
+          }
+        ],
+        "inputExists": true,
+        "temporaries": [
+          {
+            "Name": "input.txt",
+            "Length": 9,
+            "Attributes": 32
+          },
+          {
+            "Name": "salida.log",
+            "Length": 97,
+            "Attributes": 32
+          },
+          {
+            "Name": "stderr.log",
+            "Length": 64435,
+            "Attributes": 32
+          }
+        ],
+        "orphan": false,
+        "inputSha256": "e5f791779f5021634eace3d4551578f84814a9a673f3304c351893f50ff6a6a7",
+        "fields": {
+          "result": "NONE",
+          "killOnJobClose": "true",
+          "mode": "av-capacity-clean",
+          "timeout": "False",
+          "availablePhysicalBeforeBytes": "5171535872",
+          "elapsedMilliseconds": "17419",
+          "pid": "223952",
+          "cpuLimitTicks": "450000000",
+          "peakPrivateBytes": "1037164544",
+          "appContainer": "true",
+          "capabilities": "0",
+          "processLimit": "1",
+          "exit": "0",
+          "profileDeleted": "true",
+          "memoryLimitBytes": "1610612736"
+        },
+        "correct": true
+      },
+      {
+        "mode": "av-capacity-eicar",
+        "brokerExit": 0,
+        "expectedScannerExit": 1,
+        "inputBytes": 68,
+        "logs": [
+          {
+            "sha256": "2e1b64d2479cb371bbd76c791abb5f68075110f64e18443890039d414bdb60ba",
+            "stream": "stdout",
+            "bytes": 121,
+            "path": "C:\\req\\testdata\\isolation-475e581eb13d4ba38833037657a85b5f\\work-av-capacity-eicar\\salida.log"
+          },
+          {
+            "sha256": "84e21db1d1b809b6f3913cc1c27d209c48acc99d33aaa061ce19d84154e41fb2",
+            "stream": "stderr",
+            "bytes": 64129,
+            "path": "C:\\req\\testdata\\isolation-475e581eb13d4ba38833037657a85b5f\\work-av-capacity-eicar\\stderr.log"
+          }
+        ],
+        "inputExists": true,
+        "temporaries": [
+          {
+            "Name": "input.txt",
+            "Length": 68,
+            "Attributes": 32
+          },
+          {
+            "Name": "salida.log",
+            "Length": 121,
+            "Attributes": 32
+          },
+          {
+            "Name": "stderr.log",
+            "Length": 64129,
+            "Attributes": 32
+          }
+        ],
+        "orphan": false,
+        "inputSha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+        "fields": {
+          "result": "NONE",
+          "killOnJobClose": "true",
+          "mode": "av-capacity-eicar",
+          "timeout": "False",
+          "availablePhysicalBeforeBytes": "5328420864",
+          "elapsedMilliseconds": "18541",
+          "pid": "181072",
+          "cpuLimitTicks": "450000000",
+          "peakPrivateBytes": "1037139968",
+          "appContainer": "true",
+          "capabilities": "0",
+          "processLimit": "1",
+          "exit": "1",
+          "profileDeleted": "true",
+          "memoryLimitBytes": "1610612736"
+        },
+        "correct": true
+      },
+      {
+        "mode": "av-unavailable",
+        "brokerExit": 0,
+        "expectedScannerExit": 2,
+        "inputBytes": 9,
+        "logs": [
+          {
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "stream": "stdout",
+            "bytes": 0,
+            "path": "C:\\req\\testdata\\isolation-475e581eb13d4ba38833037657a85b5f\\work-av-unavailable\\salida.log"
+          },
+          {
+            "sha256": "838446a3b188189c66f926176aca70d76d7ef425b9c0b4ea4291e321d0ad8f02",
+            "stream": "stderr",
+            "bytes": 395,
+            "path": "C:\\req\\testdata\\isolation-475e581eb13d4ba38833037657a85b5f\\work-av-unavailable\\stderr.log"
+          }
+        ],
+        "inputExists": true,
+        "temporaries": [
+          {
+            "Name": "input.txt",
+            "Length": 9,
+            "Attributes": 32
+          },
+          {
+            "Name": "salida.log",
+            "Length": 0,
+            "Attributes": 32
+          },
+          {
+            "Name": "stderr.log",
+            "Length": 395,
+            "Attributes": 32
+          }
+        ],
+        "orphan": false,
+        "inputSha256": "e5f791779f5021634eace3d4551578f84814a9a673f3304c351893f50ff6a6a7",
+        "fields": {
+          "result": "NONE",
+          "killOnJobClose": "true",
+          "mode": "av-unavailable",
+          "timeout": "False",
+          "availablePhysicalBeforeBytes": "0",
+          "elapsedMilliseconds": "34",
+          "pid": "194640",
+          "cpuLimitTicks": "450000000",
+          "peakPrivateBytes": "6578176",
+          "appContainer": "true",
+          "capabilities": "0",
+          "processLimit": "1",
+          "exit": "2",
+          "profileDeleted": "true",
+          "memoryLimitBytes": "805306368"
+        },
+        "correct": true
+      }
+    ],
+    "failure": null,
+    "evidence": "C:\\req\\evidencias\\capacidad-av-475e581eb13d4ba38833037657a85b5f.json",
+    "aclResidualAllowCount": 0
+  },
+  "nativeJavaAdapter": {
+    "latestPreflight": {
+      "plannedJobLimitBytes": 1610612736,
+      "state": "BLOQUEADO_RECURSOS",
+      "fullDocumentalRuntime": false,
+      "requiredFreeBytes": 4294967296,
+      "utc": "2026-10-26T15:43:34.6982961-03:00",
+      "scannerExecuted": false,
+      "scope": "JAVA_AV_WINDOWS_REAL_NO_RUNTIME_COMPLETO",
+      "availablePhysicalBytes": 2211160064
+    },
+    "implemented": true,
+    "finalGuards": {
+      "skipped": 0,
+      "errors": 0,
+      "log": "C:\\req\\logs\\guardas-antivirus-final-windows.log",
+      "tests": 4,
+      "failed": 0,
+      "passed": 4
+    },
+    "runtimeEnabled": false,
+    "realHarnessInitial": "C:\\req\\testdata\\av-java-5387e72ce4ab44438f50ab7e2a7069b0\\resultado.json",
+    "springBeanEnabled": false,
+    "realQualification": false
+  },
+  "regressions": {
+    "fiveRealDocumentaryTestsStillPending": true,
+    "stressExclusionsUnchanged": 3,
+    "H2": {
+      "skipped": 5,
+      "errors": 0,
+      "passed": 218,
+      "log": "C:\\req\\logs\\backend-h2-clamav-final-2026-10-26.log",
+      "failed": 0,
+      "selected": 223
+    },
+    "MySQL_QA": {
+      "skipped": 5,
+      "appAndMigratorSeparate": true,
+      "passed": 218,
+      "selected": 223,
+      "schema": "siger_institucional_windows_qa",
+      "tls": "VERIFY_IDENTITY",
+      "errors": 0,
+      "log": "C:\\req\\logs\\backend-mysql-clamav-final-2026-10-26.log",
+      "failed": 0
+    },
+    "frontendRerun": false,
+    "previousFrontendIsNewEvidence": false,
+    "previousFrontendPassed": 42
+  },
+  "canary": {
+    "workerSecurityEquivalence": false,
+    "scope": "SONDA_QA_NO_BROKER",
+    "evidence": "C:\\req\\evidencias\\sonda-proceso-clamav-2026-10-26.json",
+    "passed": 6,
+    "root": "C:\\req\\testdata\\isolation-cf80cd9aa99447ceb4cc4261636a5db0",
+    "modes": 6
+  },
+  "historical": {
+    "source": "sql-destino-importado.json",
+    "historicalRows": 504,
+    "unchanged": true,
+    "compared": "historico-clamav-2026-10-26.json",
+    "currentTables": 59,
+    "historicalTables": 59,
+    "differences": []
+  },
+  "custody": {
+    "referenced": 24,
+    "bytes": 16869263,
+    "unexpectedAllowAces": 0,
+    "objects": 24,
+    "sha256Verified": true,
+    "rootInheritanceDisabled": true,
+    "aclCheckedObjects": 1931
+  },
+  "realGraphSends": 0,
+  "realPublicPulls": 0,
+  "wslUsed": false,
+  "sharedHostPoliciesChanged": false,
+  "publicRepoChanged": false,
+  "jarReplaced": false,
+  "pending": [
+    "Calificar en real el adaptador Java con margen de RAM",
+    "Concurrencia e interrupcion/recuperacion del adaptador definitivo",
+    "Inspector y renderizador nativos",
+    "Ocho controles con la cadena definitiva",
+    "Cinco tests documentales reales",
+    "Runtime y E2E documental Windows"
+  ]
+}

@@ -1,3 +1,5 @@
+> **Reanudación posterior de ClamAV:** scanner independiente0/1/2 acreditado;218 correctas H2 y218 MySQL QA,5 documentales pendientes. Candidato Java no activado y bloqueado por RAM. Ver [checkpoint vigente](CHECKPOINT_CLAMAV_WINDOWS_2026-10-26.md). U4.5 sigue abierta; el corte anterior se conserva abajo.
+
 > **Último corte 26/10/2026:** ver [checkpoint de runtime QA Windows](CHECKPOINT_RUNTIME_WINDOWS_2026-10-26.md).214 correctas H2/214 MySQL,42 frontend; HTTPS/Edge y reinicio verificados. Cinco documentales pendientes; ensayo AV ampliado aplazado por decisión del usuario. 100% nativo mantenido, U4.5 abierta.
 
 > **Continuación anterior 26/10/2026:** [checkpoint NTFS](CONTINUACION_NTFS_WINDOWS_2026-10-26.md) y [evaluación inicial](EVALUACION_WORKERS_WINDOWS_2026-10-26.md). El corte original del 25/10 se conserva íntegro a continuación.

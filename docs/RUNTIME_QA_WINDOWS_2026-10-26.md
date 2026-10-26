@@ -1,5 +1,7 @@
 # U4.5 — Runtime QA Windows verificado; documental pendiente
 
+> Continuación posterior: [validación ClamAV](VALIDACION_CLAMAV_WINDOWS_2026-10-26.md) y [checkpoint vigente](CHECKPOINT_CLAMAV_WINDOWS_2026-10-26.md). Scanner independiente0/1/2 acreditado; adaptador Java por validar, sin modo documental completo. Los resultados y decisiones del corte anterior permanecen abajo.
+
 Corte 26/10/2026. Implementación `b95345f`, rama `migracion-windows-laboratorio-2026`. **No es cierre de U4.5:** funciona un runtime institucional preliminar nativo, con el documental deshabilitado explícitamente. No hay producción, cutover, servicio permanente ni U5.
 
 Al recuperar Git se encontró el avance posterior `e13e5ea` en `verificacion-recepcion-sin-agente-2026-10-26`. Se conservó y se incorporó por fast-forward a la rama solicitada. No se perdieron cambios, no se repitió bundle/importación ni se modificó main. Las evidencias de recepción sin agente siguen disponibles y se distinguen de este corte.

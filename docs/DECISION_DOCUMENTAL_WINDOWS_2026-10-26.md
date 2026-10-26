@@ -1,5 +1,7 @@
 # Procesamiento documental: dictamen de ingeniería U4.5
 
+> Actualización posterior: el usuario reabrió la ventana y TI excluyó solo testdata. [ClamAV independiente pasó los tres escenarios](VALIDACION_CLAMAV_WINDOWS_2026-10-26.md), sin cambios de políticas por el agente. La memoria volvió a bloquear el candidato Java; inspector/renderizador y ocho controles definitivos siguen abiertos. La evaluación histórica siguiente no describe el resultado más reciente del scanner.
+
 Corte 26/10/2026. **Decisión expresa del usuario: mantener100% nativo Windows. La alternativa híbrida fue descartada.** SIGER QA arrancó nativamente en Windows; su procesamiento documental continúa cerrado. No se declara producción ni cierre de U4.5. Se conserva abajo la evaluación presentada para trazabilidad; no autoriza ni implementa una dependencia Linux.
 
 ## Evidencia nueva

@@ -1,5 +1,7 @@
 # Checkpoint U4.5 — runtime QA nativo, documental bloqueado
 
+> Corte posterior: [checkpoint ClamAV](CHECKPOINT_CLAMAV_WINDOWS_2026-10-26.md). Tras la exclusión de testdata aplicada por TI, el scanner independiente pasó0/1/2. El candidato Java todavía necesita su validación real y el resto de la cadena documental sigue pendiente. Este checkpoint anterior se conserva íntegro.
+
 26/10/2026. Repositorio `C:\req\repo`, rama `migracion-windows-laboratorio-2026`. Implementación **b95345f**, sobre e13e5ea/8411613. La documentación de este corte queda en un commit posterior, consultable con git log. Sin push. Git y checkpoints anteriores conservados.
 
 **Decisiones actuales del usuario:** mantener100% nativo Windows; alternativa Linux descartada; conservar el bloqueo de recursos y el checkpoint por ahora. No iniciar U5 ni nuevos ensayos AV ampliados hasta retomar la ventana. No detener servicios o WSL para obtener memoria.

@@ -67,3 +67,14 @@ $s=[Security.Cryptography.X509Certificates.X509Store]::new('Root','CurrentUser')
 ```
 
 Cambiar de rama o retirar la confianza no recrea bytes borrados ni sustituye una restauración. No hay autorización para degradar garantías, introducir una dependencia Linux, activar producción/U5 o modificar el origen WSL como parte de esta reversión.
+
+## Adenda — reanudación ClamAV tras exclusión de testdata
+
+Ver [informe](VALIDACION_CLAMAV_WINDOWS_2026-10-26.md) y [checkpoint](CHECKPOINT_CLAMAV_WINDOWS_2026-10-26.md). ClamAV independiente pasó0/1/2; el adaptador Java sigue en calificación y **no está habilitado en el runtime**. No se creó servicio, worker permanente, nuevo JAR de ejecución o migración.
+
+- Conservar los JSON únicos, logs separados, entradas sintéticas, paquetes/bases y checkpoints previos. El resultado `capacidad-av-windows-2026-10-26.json` es un índice del último intento; las copias por GUID preservan los anteriores. No limpiar la evidencia para convertir un fallo en un pase.
+- La exclusión de Kaspersky fue aplicada por TI y se limita a testdata. Esta unidad no la modificó. No desactivar Kaspersky ni retirar/ampliar su exclusión, cambiar AMSI, activar Defender o tocar políticas/servicios como supuesta reversión del código.
+- Los procesos de ensayo están acotados por Job/plazo y restauran perfiles/DACL. Confirmar su terminación antes de tocar archivos exactos propios. No matar procesos por nombre ni modificar el paquete/bases mientras exista un scanner o una sonda activos.
+- Un candidato Java con `av-*`/`pending`, mutex abandonado o fallo de restauración permanece cerrado. Conservar el journal privado y verificar identidad/proceso/ACL/perfil antes de una conciliación administrativa acotada. No eliminar esos marcadores a ciegas ni transformar el fallo en limpio. No habilitarlo como bean para sortear la validación pendiente.
+- No hay datos históricos que revertir. El MySQL de regresión es únicamente windows_qa y sus fixtures son descartables; no reimportarlos en windows_lab. Los24originales, COM/ACK/firmas, identidades y Graph histórico permanecen fuera del ensayo.
+- El JAR previo `siger-20ce34eea019f4f9.jar` sigue conservado e inactivo. El código nuevo no lo sustituyó. Para dejar esta unidad en reposo basta con conservar el checkout y los procesos propios terminados; no usar reset/clean/DROP o cambios en WSL como reversión.
