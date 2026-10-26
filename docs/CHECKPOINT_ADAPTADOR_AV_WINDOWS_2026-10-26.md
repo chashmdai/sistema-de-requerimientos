@@ -1,5 +1,7 @@
 # Checkpoint U4.5 — AV Java real0/1/2, refuerzo de Job por acreditar
 
+> Este corte quedó superado por el [checkpoint final U4.5](CHECKPOINT_U4_5_WINDOWS_2026-10-26.md). JOB_LIST real, cinco documentales, ocho controles, regresiones y Edge acreditados. Se conserva íntegro el contenido anterior; producción sigue deshabilitada y U5 no se inició.
+
 26/10/2026. `C:\req\repo`, rama `migracion-windows-laboratorio-2026`. Código **2a6c6d2**; documentación en el commit posterior consultable con git log. Sin push. No iniciar U5 ni habilitar runtime documental.
 
 ## Lo comprobado

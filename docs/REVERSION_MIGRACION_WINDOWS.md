@@ -1,5 +1,33 @@
 # Reversión no destructiva — U4.5 Windows
 
+## Cierre documental 26/10/2026
+
+Estado vigente: [U4.5 COMPLETADA en QA nativo](CIERRE_U4_5_WINDOWS_2026-10-26.md), código2db9783. Los procedimientos del corte parcial se conservan debajo. No se ha hecho cutover ni se ha instalado un servicio permanente. Los dos runtimes documentales de la campaña están detenidos, sin jobs, workers, listeners ni secretos efímeros remanentes.
+
+No hay migraciones nuevas que deshacer: V1–V12, esquema histórico y24objetos no se modificaron. No ejecutar undo/drop, restauración de snapshots ni nueva importación. Conservar también la evidencia y los datos sintéticos QA; no borrar filas ni archivos para revertir código.
+
+1. Si hay una sesión QA posterior, leer su `run.json` y verificar identidad del hijo y raíz exacta. Solicitar su parada con el archivo `stop`; no matar procesos por nombre ni intervenir servicios ajenos.
+2. Para volver al modo preliminar, iniciar un launcher nuevo **sin `-DocumentalConfig`**, utilizando un JAR por SHA preservado. El modo preliminar no acredita una aplicación documental completa; conserva Graph simulado y recuperación pública cerrada. No abrir simultáneamente dos instancias sobre la misma custodia/QA.
+3. Para volver al documental acreditado, usar el candidato `siger-97ec9558588182cd.jar`, la configuración y el trust sintético indicados por el [checkpoint final](CHECKPOINT_U4_5_WINDOWS_2026-10-26.md), sin preparar otra vez ingresos o claves. Los paquetes anteriores y sus manifiestos siguen disponibles.
+4. Si se requiere revertir fuentes, hacer un commit de reversión revisable de2db9783 en la rama local, conservando su historia; no resetear main, borrar cambios, alterar migraciones ni hacer push. El historial anterior se mantiene para comparación.
+5. Un `av-*` con journal ausente/alterado o dueño vivo requiere conciliación. No eliminarlo ni ampliar sus ACL a ciegas. El recuperador nativo valida rutas, SID y PID+fecha antes de restaurar ACL y perfil. Si no puede demostrar la recuperación, conserva fallo cerrado.
+
+Parada de la raíz exacta indicada por el launcher, en una línea:
+
+```powershell
+New-Item -ItemType File -Path (((Get-Content C:\req\scratch\ultimo-runtime-qa.txt).Trim())+'\stop')
+```
+
+Verificación histórica de solo lectura, en una línea:
+
+```powershell
+& C:\req\repo\scripts\Windows-Comparar-Historico.ps1
+```
+
+La reversión no toca el WSL original, Kaspersky, MySQL80 global, certificados/credenciales del agente, firewall, dominio, servicios previos ni el Formulario Público. No retirar el certificado localhost ya aprobado ni la exclusión de testdata como parte automática de este procedimiento. Graph real, recuperación pública, retención y producción permanecen cerrados. [Operación reproducible](OPERACION_DOCUMENTAL_WINDOWS.md).
+
+## Cortes anteriores conservados
+
 > Estado posterior 26/10: [runtime QA preliminar verificado](RUNTIME_QA_WINDOWS_2026-10-26.md) y [checkpoint vigente](CHECKPOINT_RUNTIME_WINDOWS_2026-10-26.md). El documental sigue cerrado. Mantener 100% nativo; conservar el bloqueo de recursos según decisión del usuario. El corte anterior se conserva abajo.
 
 Estado al checkpoint: no hay aplicación SIGER completa Windows ejecutándose, servicio ni tarea programada nuevos. No se realizó cutover; WSL sigue siendo la instancia operativa original. No hay que detener MySQL80 ni deshacer datos para conservar la operación anterior.

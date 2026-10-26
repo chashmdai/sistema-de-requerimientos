@@ -1,3 +1,5 @@
+> **Cierre integral posterior:** [U4.5 COMPLETADA en QA Windows nativo](CIERRE_U4_5_WINDOWS_2026-10-26.md), código2db9783. Antivirus/inspector/renderizador reales acreditados;229 H2/229 MySQL sin omisiones,42 frontend y Edge documental/reinicio. Este informe parcial se conserva como evidencia histórica.
+
 > **Nuevo corte del adaptador:** corregida la propagación ACL y pasada Java real0/1/2; refuerzo JOB_LIST compilado, pendiente de validación en vivo por RAM. No hay aprobación de las cinco documentales ni cierre de U4.5. Ver [checkpoint actual](CHECKPOINT_ADAPTADOR_AV_WINDOWS_2026-10-26.md). Se conserva la evidencia anterior abajo.
 
 > **Reanudación posterior:** [ClamAV independiente aprobado](VALIDACION_CLAMAV_WINDOWS_2026-10-26.md),218 correctas H2/218 MySQL QA y5 documentales omitidas. Adaptador Java por validar, no habilitado; la RAM vuelve a bloquearlo. Ver [checkpoint vigente](CHECKPOINT_CLAMAV_WINDOWS_2026-10-26.md). No es cierre de U4.5; se conserva el informe anterior.
