@@ -1,0 +1,59 @@
+{
+  "fecha": "2026-10-26",
+  "alcance": "Consumidor real SIGER y controlador/servicios públicos reales en fixture HTTPS aislado; sin runtime web institucional completo",
+  "baselineSIGER": "8411613d1a1e867d47f424c6afe0cf13db5780a0",
+  "baselineFormulario": "b6ab36af4357f6852f035466b4653da97d267e00",
+  "jarInstitucionalSHA256": "847cd77c5af327be992bc4e46aa83038f35f9f7b67229829c661412857c3b471",
+  "jarPublicoSHA256": "d859b952eec59fbd1564a370e71c80cdbd2137472739a7dc761dfd2b4d2bd779",
+  "e2e": {
+    "mysql": true,
+    "fase": "e2e",
+    "runtimeCompleto": false,
+    "https": true,
+    "checks": 110,
+    "retiroPublico": false,
+    "agente": false,
+    "comunicaciones": 4,
+    "ok": true,
+    "documentos": 4
+  },
+  "motorInstitucional": "MySQL 8.0.46 Windows / siger_institucional_windows_qa / VERIFY_IDENTITY",
+  "motorPublico": "H2 nuevo en Linux/WSL; POSIX privado",
+  "versionesDocumentales": {
+    "1.0": 1,
+    "1.1": 3
+  },
+  "coldRead": {
+    "procesoNativoNuevo": true,
+    "originales": 4,
+    "qaPreexistenteSinModificar": true,
+    "formularioDetenido": true,
+    "ok": true,
+    "versionesVerificadas": true,
+    "comunicaciones": 4
+  },
+  "junit": {
+    "errors": 0,
+    "clases": {
+      "RecuperarFormularioHttpTest": 12,
+      "FormularioCompletoInstitucionalTest": 16,
+      "ArchivoPlataformaTest": 15
+    },
+    "skipped": 0,
+    "failures": 0,
+    "motor": "H2",
+    "runtime": "Java 25 nativo Windows",
+    "tests": 43
+  },
+  "cambiosRuntime": false,
+  "garantiasEmitidas": 0,
+  "retiros": 0,
+  "push": false,
+  "despliegue": false,
+  "limites": [
+    "TXT sintéticos pequeños; antivirus e inspector controlados",
+    "Sin frontend completo, workers documentales, corte físico ni prueba de carga",
+    "Solo cuatro registros QA nuevos; sin cambios a base histórica, otras bases o servicios",
+    "Banderas públicas existentes y configuración del agente no modificadas"
+  ]
+}

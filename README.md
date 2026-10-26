@@ -8,6 +8,7 @@ Código vigente de laboratorio de SIGER 2026, desarrollado por Nexbyte para vali
 - [Checkpoint documental](docs/CHECKPOINT_DOCUMENTAL_2026-10-24.md).
 - [Integración completa 1.0/1.1: custodia, documentos y verificación](docs/INTEGRACION_FORMULARIO_COMPLETO_2026-10-24.md).
 - [Checkpoint de integración institucional](docs/CHECKPOINT_INSTITUCIONAL_2026-10-24.md).
+- [Recepción sin agente: verificación HTTPS/MySQL y límites de retención](docs/VERIFICACION_RECEPCION_SIN_AGENTE_2026-10-26.md).
 - [Contratos de integración](contratos/README.md).
 - [Arquitectura de las dos aplicaciones](docs/ARQUITECTURA_APLICACIONES.md).
 - [Reglas y operación del núcleo V8](docs/ANTECEDENTES_Y_REAPERTURAS_LAB.md).
