@@ -24,3 +24,16 @@ Comprobación del permiso temporal:
 `& C:\req\repo\scripts\Windows-BaseDatos.ps1 -Mode inspect -Identity migrator`
 
 Los scripts usan DPAPI→stdin y mensajes sanitizados; no agregar contraseñas al comando. Los backups cifrados locales no sustituyen respaldos externos o recuperación de desastre; no se declara producción lista.
+## Adenda 26/10/2026 — adaptador NTFS y QA
+
+El runtime completo Windows continúa sin arrancar. El origen WSL no fue detenido ni modificado; no hay que revertir datos de negocio para conservarlo.
+
+- Conservar 6d2f6ee y el checkpoint posterior. No convertir una regresión de código en pérdida de objetos ni modificar V1–V12. No usar el JAR anterior como writer NTFS: carece de estas barreras.
+- Los cambios de custodia se probaron en directorios sintéticos privados de scratch/QA, sin abrir la copia histórica como writer ni cambiar sus bytes. No retirar ACL o integridad para reabrirla. Las representaciones y los originales ciudadanos permanecen separados/inmutables.
+- CREATE VIEW del migrador histórico está revocado y verificado; no volver a concederlo para el runtime. Las cuentas QA son otras, limitadas al esquema descartable y autorizadas por administración. No intercambiar sus DPAPI con las del histórico.
+- El runner MySQL borra fixtures únicamente en siger_institucional_windows_qa y rechaza el histórico. Conservar el esquema QA y sus evidencias al terminar, sin DROP automático. Ante duda, ejecutar solo las consultas de inspección sobre el histórico.
+- El uso de JNA está fijado a 5.19.1. Conservar las dependencias verificadas del artefacto. No retirar el flag de acceso nativo del runner para ocultar un fallo ni introducir un fallback de FlushFileBuffers/rename.
+- La sonda AppContainer creó/eliminó solo un perfil propio efímero; ambos HRESULT0. El Job se cerró sin ejecutar hijos. No hay servicio, perfil persistente, firewall o tarea que desmontar. No confundir esa sonda con un broker habilitado.
+- Recuperación después de una interrupción: reutilizar la clave/descriptor original; verificar SHA/tamaño y completar las barreras. Un archivo existente no basta para autorizar SQL/ACK. Si el contenido está alterado, conservar evidencia y restaurar únicamente desde una copia íntegra autorizada; no sustituir la huella para forzar aceptación.
+
+La evaluación de aislamiento y lo pendiente están en CONTINUACION_NTFS_WINDOWS_2026-10-26.md y EVALUACION_WORKERS_WINDOWS_2026-10-26.md. No hay autorización nueva para correo real, pull público, servicios permanentes, cambios al host o U5.

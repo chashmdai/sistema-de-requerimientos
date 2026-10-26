@@ -1,3 +1,5 @@
+> **Continuación 26/10/2026:** NTFS y Graph portables; H2/MySQL QA nativos 208 correctos por motor y 5 workers pendientes. U4.5 sigue abierta. Ver [checkpoint intermedio](CONTINUACION_NTFS_WINDOWS_2026-10-26.md) y [evaluación de workers](EVALUACION_WORKERS_WINDOWS_2026-10-26.md). El corte original del 25/10 se conserva íntegro a continuación.
+
 # Checkpoint U4.5 — Windows Server 2022, 25/10/2026
 
 **Estado parcial verificable. U4.5 NO cerrada; U5 no iniciada; producción deshabilitada.**

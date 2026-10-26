@@ -1,0 +1,247 @@
+{
+  "date": "2026-10-26",
+  "unit": "U4.5",
+  "status": "CHECKPOINT_INTERMEDIO_NTFS_VALIDADO_WORKERS_PENDIENTES",
+  "branch": "migracion-windows-laboratorio-2026",
+  "implementation": "6d2f6ee",
+  "previousCut": [
+    "b4a41ab",
+    "17de7a1"
+  ],
+  "production": false,
+  "u5Started": false,
+  "wslChanged": false,
+  "gitTransferRepeated": false,
+  "dataImportRepeated": false,
+  "realGraphSends": 0,
+  "realPublicPulls": 0,
+  "storage": {
+    "actualChildJvmHaltAndRecoveryPassed": true,
+    "powerLossTested": false,
+    "privateAcl": "usuario del proceso + SYSTEM + Administradores",
+    "nativePublish": "MoveFileExW WRITE_THROUGH, mismo volumen, sin reemplazo ni copia",
+    "hardwareDurabilityCertified": false,
+    "emptyDirectoryFsyncFallback": false,
+    "platform": "NTFS",
+    "reparsePointsRejected": true,
+    "nativeDirectoryFlush": "CreateFileW GENERIC_WRITE/BACKUP_SEMANTICS + FlushFileBuffers, retorno comprobado",
+    "library": "JNA 5.19.1",
+    "linuxRunPerformed": false,
+    "newStorageTestsPassed": 15,
+    "posixDirectoryFsyncRetained": true
+  },
+  "tests": {
+    "h2": {
+      "realWorkersExecuted": false,
+      "executedOn": "Windows nativo",
+      "failures": 0,
+      "errors": 0,
+      "passed": 208,
+      "skipped": 5,
+      "selected": 213
+    },
+    "mysql": {
+      "realWorkersExecuted": false,
+      "executedOn": "Windows nativo",
+      "failures": 0,
+      "errors": 0,
+      "passed": 208,
+      "skipped": 5,
+      "selected": 213
+    }
+  },
+  "frontend": {
+    "build": true,
+    "passed": 42,
+    "lint": true,
+    "windowsEdgeE2e": "NO_EJECUTADO"
+  },
+  "graphFixtures": {
+    "protectBeforeWrite": true,
+    "passed": 6,
+    "realTransportActivated": false,
+    "portablePrivateFiles": true
+  },
+  "newQaGuardTestsPassed": 4,
+  "qaApp": {
+    "grants": [
+      "GRANT USAGE ON *.* TO `siger_windows_qa_app`@`localhost`",
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON `siger_institucional_windows_qa`.* TO `siger_windows_qa_app`@`localhost`"
+    ],
+    "schema": "siger_institucional_windows_qa",
+    "tls": "TLSv1.3",
+    "user": "siger_windows_qa_app@localhost",
+    "version": "8.0.46"
+  },
+  "qaMigrator": {
+    "grants": [
+      "GRANT USAGE ON *.* TO `siger_windows_qa_migrator`@`localhost`",
+      "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, REFERENCES, INDEX, ALTER, CREATE VIEW ON `siger_institucional_windows_qa`.* TO `siger_windows_qa_migrator`@`localhost`"
+    ],
+    "schema": "siger_institucional_windows_qa",
+    "tls": "TLSv1.3",
+    "user": "siger_windows_qa_migrator@localhost",
+    "version": "8.0.46"
+  },
+  "historicalMigratorCreateViewRevoked": true,
+  "historical": {
+    "audit": {
+      "acceptedGraphHistorical": 4,
+      "ackPending": 0,
+      "autoIncrement": {
+        "communication_registry": 12,
+        "core_event": 23,
+        "document_event": 98,
+        "identity_event": 42,
+        "institution_document_access": 25,
+        "institution_notification": 17,
+        "operational_event": 16,
+        "staff_profile_history": 16,
+        "task_history": 5,
+        "workflow_event": 8
+      },
+      "campaignSendsStarted": 4,
+      "cases": 5,
+      "communications": 11,
+      "humanConfirmedHistorical": 4,
+      "invalidTasks": 0,
+      "migrations": [
+        {
+          "script": "V1__recepcion_transaccional.sql",
+          "checksum": 1376122347,
+          "success": true,
+          "version": "1"
+        },
+        {
+          "script": "V2__auditoria_controles.sql",
+          "checksum": 892722086,
+          "success": true,
+          "version": "2"
+        },
+        {
+          "script": "V3__registro_comunicacion.sql",
+          "checksum": 586656987,
+          "success": true,
+          "version": "3"
+        },
+        {
+          "script": "V4__conciliacion_ack.sql",
+          "checksum": 1356918377,
+          "success": true,
+          "version": "4"
+        },
+        {
+          "script": "V5__nucleo_institucional.sql",
+          "checksum": 1384754318,
+          "success": true,
+          "version": "5"
+        },
+        {
+          "script": "V6__complejidad_por_caso.sql",
+          "checksum": 931681250,
+          "success": true,
+          "version": "6"
+        },
+        {
+          "script": "V7__derivacion_aceptada.sql",
+          "checksum": -1612737475,
+          "success": true,
+          "version": "7"
+        },
+        {
+          "script": "V8__antecedentes_y_reaperturas.sql",
+          "checksum": -155477422,
+          "success": true,
+          "version": "8"
+        },
+        {
+          "script": "V9__formulario_completo_y_documentos.sql",
+          "checksum": -2147298905,
+          "success": true,
+          "version": "9"
+        },
+        {
+          "script": "V10__gestion_documental_y_representaciones.sql",
+          "checksum": -1628829918,
+          "success": true,
+          "version": "10"
+        },
+        {
+          "script": "V11__identidad_y_territorio.sql",
+          "checksum": 222757728,
+          "success": true,
+          "version": "11"
+        },
+        {
+          "script": "V12__tareas_personales_y_notificaciones.sql",
+          "checksum": 427770227,
+          "success": true,
+          "version": "12"
+        }
+      ],
+      "mode": "audit",
+      "nexbyteAccounts": 1,
+      "nexbyteRoles": 7,
+      "requirements": 3,
+      "schema": "siger_institucional_windows_lab",
+      "tls": "TLSv1.3",
+      "uniqueCom": 11,
+      "user": "siger_windows_app@localhost",
+      "version": "8.0.46"
+    },
+    "migrationFilesUnchanged": 24,
+    "custody": {
+      "rootInheritanceDisabled": true,
+      "unexpectedAllowAces": 0,
+      "aclCheckedObjects": 1424,
+      "referenced": 24,
+      "sha256Verified": true,
+      "bytes": 16869263,
+      "objects": 24
+    },
+    "objectsUnchanged": 24,
+    "businessTablesUnchanged": 59
+  },
+  "workerProbe": {
+    "date": "2026-10-26",
+    "appContainer": "CREATE_OK_DELETE_HRESULT_00000000",
+    "negativeIsolationTestsExecuted": 0,
+    "newServices": 0,
+    "capabilitiesRequested": 0,
+    "securityEquivalenceVerified": false,
+    "jobObject": "LIMITS_ACCEPTED_NO_CHILD_EXECUTED",
+    "notes": "Disponibilidad de API no acredita aislamiento; no es un worker ni un runtime documental",
+    "untrustedDocumentsProcessed": 0
+  },
+  "nativeWorkerAcceptanceTests": "8 NO EJECUTADAS",
+  "nativeDocumentalRuntime": "NO HABILITADO",
+  "fullWindowsRuntimeStarted": false,
+  "artifact": {
+    "started": false,
+    "sha256": "847cd77c5af327be992bc4e46aa83038f35f9f7b67229829c661412857c3b471",
+    "libraries": "C:\\req\\bin\\lib",
+    "artifact": "C:\\req\\bin\\siger-847cd77c5af327be.jar"
+  },
+  "omittedWorkers": [
+    "pdfActivoYExtensionFalsaNoSeRepresentan",
+    "imagenDerivadaRealTienePngYAntivirusLimpio",
+    "pdfTresPaginasSeValidaYAislaYRenderizaCadaPagina",
+    "officeSeInspeccionaSinEjecutarYReferenciasExternasSeRechazan",
+    "controlAntivirusRealSeRechaza"
+  ],
+  "stressExclusions": [
+    "vectorInteroperableYDuplicadosConcurrentesTienenUnaConfirmacionEstable",
+    "doscientosFoliosDistintosBajoConcurrenciaYFormatoHistoricoEstable",
+    "consumidorParaleloAcotadoConservaUnicidadYConfirmaCadaRegistro"
+  ],
+  "next": "Broker Windows AppContainer/Jobs y ocho pruebas negativas; despues AV/inspector/renderer, configuracion privada/launcher DPAPI HTTPS, E2E y reinicios Windows.",
+  "localFixedDriveGuardCommit": "3e1c2cd",
+  "finalTargetedTests": {
+    "failures": 0,
+    "log": "C:/req/logs/ntfs-graph-local-final-2026-10-26.log",
+    "errors": 0,
+    "passed": 21,
+    "skipped": 0,
+    "selected": 21
+  }
+}
