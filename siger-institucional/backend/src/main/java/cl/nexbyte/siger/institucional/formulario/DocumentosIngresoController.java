@@ -4,8 +4,12 @@ import java.io.*;import java.nio.channels.FileChannel;import java.nio.file.*;imp
 import org.springframework.web.bind.annotation.*;import org.springframework.security.core.Authentication;import org.springframework.http.*;import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @RestController @RequestMapping("/nucleo/comunicaciones/{comunicacion}/documentos")
-@ConditionalOnProperty(name={"institucional.formulario-completo.habilitado","institucional.nucleo.habilitado"},havingValue="true")
+@org.springframework.context.annotation.Conditional(DocumentosIngresoController.CustodiaDisponible.class)
 public class DocumentosIngresoController {
+    /** Consultar custodia conservada no necesita habilitar el transporte de recuperación. */
+    static final class CustodiaDisponible implements org.springframework.context.annotation.Condition {
+        public boolean matches(org.springframework.context.annotation.ConditionContext c,org.springframework.core.type.AnnotatedTypeMetadata ignored){var e=c.getEnvironment();return e.getProperty("institucional.nucleo.habilitado",Boolean.class,false)&&(e.getProperty("institucional.formulario-completo.habilitado",Boolean.class,false)||!e.getProperty("institucional.documentos.directorio","").isBlank());}
+    }
     public record Documento(UUID id,String origen,EntregaCompleta.Adjunto original,String representacion,boolean descargable){}
     private final BaseJdbc db;private final AutorizacionDocumental policy;private final ObjectProvider<VisorDocumento> visor;private final ObjectProvider<DocumentosGestion> gestion;private final CatalogoLaboratorio catalog;private final ArchivoInstitucional files;private final RecepcionInstitucionalJdbc receiver;
     public DocumentosIngresoController(BaseJdbc db,NucleoInstitucional core,CatalogoLaboratorio catalog,ArchivoInstitucional files,RecepcionInstitucionalJdbc receiver,ObjectProvider<AutorizacionDocumental> policies,ObjectProvider<VisorDocumento> visor,ObjectProvider<DocumentosGestion> gestion){this.db=db;this.policy=policies.getIfAvailable(()->new AutorizacionNucleo(core));this.catalog=catalog;this.files=files;this.receiver=receiver;this.visor=visor;this.gestion=gestion;}

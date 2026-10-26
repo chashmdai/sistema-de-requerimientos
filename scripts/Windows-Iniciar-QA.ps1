@@ -1,8 +1,8 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$Jar,[ValidateRange(30,1800)][int]$Seconds=600,[ValidateSet(8080,8081)][int]$Port=8081,[string]$Archivo='')
+param([Parameter(Mandatory)][string]$Jar,[ValidateRange(30,1800)][int]$Seconds=600,[ValidateSet(8080,8081)][int]$Port=8081,[string]$Archivo='',[string]$DocumentalConfig='',[string]$TrustPublicoQA='')
 $ErrorActionPreference='Stop'
 if(-not $IsWindows){throw 'Solo Windows nativo'}
-# Es un runtime PRELIMINAR QA, sin workers ni recuperacion externa. No acepta el historico.
+# QA nativo. Workers opt-in; transportes externos cerrados. Nunca acepta el histórico.
 function Private-File([string]$Path){
  $allowed=@([Security.Principal.WindowsIdentity]::GetCurrent().User.Value,'S-1-5-18','S-1-5-32-544')
  $p=[IO.Path]::GetFullPath($Path)
@@ -26,7 +26,7 @@ if($Archivo){$Archivo=[IO.Path]::GetFullPath($Archivo);if($Archivo -notmatch '^C
 $process=$null;$files=[Collections.Generic.List[string]]::new();$payload=$null;$dbCredential=$null
 try{
  foreach($name in @('institucional-key.pem','institucional-trust.json','publico-trust.json','notificaciones-allowlist.txt')){
-  [byte[]]$bytes=Source-Bytes $name
+  if($name -eq 'publico-trust.json' -and $TrustPublicoQA){$TrustPublicoQA=[IO.Path]::GetFullPath($TrustPublicoQA);if($TrustPublicoQA -notmatch '^C:\\req\\testdata\\runtime-qa-[a-f0-9]{32}\\recepcion\\publico-trust.json$'){throw 'Solo trust de productor sintetico QA'};Private-File $TrustPublicoQA;[byte[]]$bytes=[IO.File]::ReadAllBytes($TrustPublicoQA)}else{[byte[]]$bytes=Source-Bytes $name}
   try{$target=Join-Path $secret $name;$files.Add($target);[IO.File]::WriteAllBytes($target,$bytes);Private-File $target}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)}
  }
  $ownTrust=Get-Content -LiteralPath (Join-Path $secret 'institucional-trust.json') -Raw|ConvertFrom-Json
@@ -51,6 +51,7 @@ try{
   'institucional.notificaciones.correo.allowlist'=(Join-Path $secret 'notificaciones-allowlist.txt')
   'institucional.notificaciones.correo.campana'='windows_qa_simulado'
  }
+ if($DocumentalConfig){$DocumentalConfig=[IO.Path]::GetFullPath($DocumentalConfig);if($DocumentalConfig -notmatch '^C:\\req\\testdata\\documental-win-[a-f0-9]{32}\\windows\.properties$'){throw 'Solo configuracion documental QA calificada'};Private-File $DocumentalConfig;$config['siger.windows.modo']='DOCUMENTAL_QA_CALIFICADO';$config['institucional.documental.windows-configuracion']=$DocumentalConfig}
  $start=[Diagnostics.ProcessStartInfo]::new('C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot\bin\java.exe')
  $start.UseShellExecute=$false;$start.CreateNoWindow=$true;$start.RedirectStandardInput=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true;$start.WorkingDirectory=$root
  $start.Environment.Clear();foreach($key in @('SystemRoot','windir','USERPROFILE','LOCALAPPDATA')){if([Environment]::GetEnvironmentVariable($key)){$start.Environment[$key]=[Environment]::GetEnvironmentVariable($key)}}
@@ -59,8 +60,8 @@ try{
  $process=[Diagnostics.Process]::Start($start)
  $out=[IO.FileStream]::new((Join-Path $root 'backend.log'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);$err=[IO.FileStream]::new((Join-Path $root 'backend-error.log'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
  $outTask=$process.StandardOutput.BaseStream.CopyToAsync($out);$errTask=$process.StandardError.BaseStream.CopyToAsync($err)
- $payload=$config|ConvertTo-Json -Compress;$process.StandardInput.Write($payload);$process.StandardInput.Close();$payload=$null;$config.Clear();$dbCredential=$null;$tls=$null
- $state=@{scope='PRELIMINAR_SIN_DOCUMENTAL';root=$root;archivo=$Archivo;pid=$process.Id;origin="https://localhost:$Port";artifactSHA256=$hash;database='siger_institucional_windows_qa';realGraph=$false;publicRecovery=$false;documentWorkers=$false;secretPaths=$files.ToArray()}
+ $scope=$config['siger.windows.modo'];$payload=$config|ConvertTo-Json -Compress;$process.StandardInput.Write($payload);$process.StandardInput.Close();$payload=$null;$config.Clear();$dbCredential=$null;$tls=$null
+ $state=@{scope=$scope;root=$root;archivo=$Archivo;pid=$process.Id;origin="https://localhost:$Port";artifactSHA256=$hash;database='siger_institucional_windows_qa';realGraph=$false;publicRecovery=$false;documentWorkers=[bool]$DocumentalConfig;secretPaths=$files.ToArray()}
  $state|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'run.json')
  $root|Set-Content C:\req\scratch\ultimo-runtime-qa.txt
  $watch=[Diagnostics.Stopwatch]::StartNew()
@@ -72,4 +73,4 @@ try{
  foreach($file in $files){if(Test-Path -LiteralPath $file){Private-File $file;Remove-Item -LiteralPath $file}}
  $payload=$null;$dbCredential=$null
 }
-@{runtime=$root;stopped=$true;ephemeralPrivateFilesRemoved=$true;scope='PRELIMINAR_SIN_DOCUMENTAL'}|ConvertTo-Json -Compress
+@{runtime=$root;stopped=$true;ephemeralPrivateFilesRemoved=$true;scope=$scope}|ConvertTo-Json -Compress

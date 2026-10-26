@@ -1,0 +1,35 @@
+[
+  {
+    "key": "qpdf",
+    "version": "12.4.2",
+    "asset": "qpdf-12.4.2-msvc64.zip",
+    "repo": "qpdf/qpdf",
+    "url": "https://github.com/qpdf/qpdf/releases/download/v12.4.2/qpdf-12.4.2-msvc64.zip",
+    "sha256": "db87077e683630c1217e0e8f9a20a9749d952ab676e881c3689187763a5de25d",
+    "bytes": 28183147,
+    "release": "https://github.com/qpdf/qpdf/releases/tag/v12.4.2",
+    "assetId": 591714187
+  },
+  {
+    "key": "poppler",
+    "version": "26.09.0-0",
+    "asset": "Release-26.09.0-0.zip",
+    "repo": "oschwartz10612/poppler-windows",
+    "url": "https://github.com/oschwartz10612/poppler-windows/releases/download/v26.09.0-0/Release-26.09.0-0.zip",
+    "sha256": "7a6f256a0ddf7536182246a5733331bf4677cbcc34f4663774947ad34556c8d0",
+    "bytes": 43709956,
+    "release": "https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0",
+    "assetId": 566007129
+  },
+  {
+    "key": "ffmpeg",
+    "version": "8.1-shared",
+    "asset": "ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip",
+    "repo": "BtbN/FFmpeg-Builds",
+    "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip",
+    "sha256": "09772a308ccee4304e93ad1137d513e16710e83f56161bc626e2df4e5d3b6b5b",
+    "bytes": 80986070,
+    "release": "https://github.com/BtbN/FFmpeg-Builds/releases/tag/latest",
+    "assetId": 678464604
+  }
+]

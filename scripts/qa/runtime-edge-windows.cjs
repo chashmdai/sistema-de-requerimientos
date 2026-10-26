@@ -6,8 +6,8 @@ async function main(){
  const input=JSON.parse(fs.readFileSync(0,'utf8'));
  const {chromium}=require(input.playwright);
  const run=JSON.parse(fs.readFileSync(input.run+'/run.json','utf8'));
- if(run.scope!=='PRELIMINAR_SIN_DOCUMENTAL'||run.database!=='siger_institucional_windows_qa'||!/^https:\/\/localhost:808[01]$/.test(run.origin))throw Error('GUARD');
- const checks=[];function ok(name,condition){if(!condition)throw Error(name);checks.push(name);progress.push(name);}
+ if(!['PRELIMINAR_SIN_DOCUMENTAL','DOCUMENTAL_QA_CALIFICADO'].includes(run.scope)||run.database!=='siger_institucional_windows_qa'||!/^https:\/\/localhost:808[01]$/.test(run.origin))throw Error('GUARD');
+ const checks=[];function ok(name,condition){if(!condition){const error=Error('QA_CHECK_FAILED');error.qaCheck=name;throw error;}checks.push(name);progress.push(name);}
  const browser=await chromium.launch({channel:'msedge',headless:true});progress.push('EDGE_STARTED');
  try{
   const context=await browser.newContext({ignoreHTTPSErrors:false});
@@ -20,6 +20,7 @@ async function main(){
   const session=await get('/nucleo/session');const actor=session.operador.id;ok('siete roles individuales',new Set(session.operador.accesos.map(a=>a.rol)).size===7);ok('identidad individual',session.modo==='LABORATORIO_INDIVIDUAL');
   const cookies=await context.cookies();ok('cookie Secure HttpOnly Strict',cookies.some(c=>c.name==='SIGERSTAFFSESSION'&&c.secure&&c.httpOnly&&c.sameSite==='Strict'));
   ok('CSRF rechaza POST sin token',(await request.post(run.origin+'/nucleo/comunicaciones/manual',{data:{}})).status()===403);
+  if(input.mode==='territorio'){await require('./territorio-edge-windows.cjs')({input,run,browser,get,change,ok,actor});const result={scope:run.scope,mode:input.mode,checks,passed:checks.length,failed:0,realGraph:false};fs.writeFileSync(input.run+'/resultado-edge-territorio.json',JSON.stringify(result,null,2));console.log(JSON.stringify({mode:input.mode,passed:checks.length,failed:0}));return;}
   await page.getByRole('link',{name:'Administración TI',exact:true}).click();await page.getByRole('heading',{name:/Funcionarios|Administración TI/}).first().waitFor();checks.push('UI TI accesible');
   const staff=await get('/nucleo/ti/funcionarios');ok('cuentas restringidas disponibles',staff.some(c=>c.usuario==='qa.windows.ti')&&staff.some(c=>c.usuario==='qa.windows.otra'));
   let saved;
@@ -74,11 +75,12 @@ async function main(){
   if(input.mode!=='after-restart')await page.screenshot({path:input.run+'/edge-notificaciones.png',fullPage:true});
   await page.goto(run.origin+'/#caso/'+saved.caseId);await page.getByRole('heading',{name:/^Caso ·/}).waitFor();checks.push('UI Caso y contexto Requerimiento');
   await page.getByRole('button',{name:'Mis tareas de este Caso',exact:true}).click();await page.getByText('Recordatorio sintético Windows',{exact:true}).waitFor();checks.push('UI tareas dentro del Caso');
+  if(run.documentWorkers){await require('./documental-edge-windows.cjs')({input,run,saved,browser,context,page,request,get,change,ok});fs.writeFileSync(input.run+'/e2e-operacion.json',JSON.stringify(saved,null,2));}
   await page.getByRole('button',{name:'Cerrar sesión',exact:true}).click();await page.getByLabel('Usuario individual',{exact:true}).waitFor();
   const ended=await (await request.get(run.origin+'/nucleo/session')).json();ok('logout invalida sesion',!ended.autenticado);
-  fs.writeFileSync(input.run+'/resultado-edge-'+input.mode+'.json',JSON.stringify({scope:run.scope,checks,passed:checks.length,failed:0,documental:false,realGraph:false,version:browser.version()},null,2));
-  console.log(JSON.stringify({scope:run.scope,mode:input.mode,passed:checks.length,documental:false}));
+  fs.writeFileSync(input.run+'/resultado-edge-'+input.mode+'.json',JSON.stringify({scope:run.scope,checks,passed:checks.length,failed:0,documental:run.documentWorkers,realGraph:false,version:browser.version()},null,2));
+  console.log(JSON.stringify({scope:run.scope,mode:input.mode,passed:checks.length,documental:run.documentWorkers}));
   await context.close();
  }finally{await browser.close();}
 }
-main().catch(e=>{console.error(JSON.stringify({error:'E2E_QA_FAILED',errorClass:e.name,lastCompleted:progress.at(-1),completed:progress.length,certificateError:/CERT_|SELF_SIGNED/.test(e.message??'')}));process.exitCode=1;});
+main().catch(e=>{console.error(JSON.stringify({error:'E2E_QA_FAILED',errorClass:e.name,failureCheck:e.qaCheck,lastCompleted:progress.at(-1),completed:progress.length,certificateError:/CERT_|SELF_SIGNED/.test(e.message??'')}));process.exitCode=1;});

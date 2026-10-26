@@ -1,4 +1,4 @@
-param([ValidateSet('H2','MySQL','Frontend','Package')][string]$Mode='H2')
+param([ValidateSet('H2','MySQL','Frontend','Package')][string]$Mode='H2',[string]$DocumentalRun='')
 $ErrorActionPreference='Stop'
 if (-not $IsWindows) {throw 'Solo Windows nativo'}
 $repo=Split-Path $PSScriptRoot;$backend=Join-Path $repo 'siger-institucional\backend';$front=Join-Path $repo 'siger-institucional\front'
@@ -9,7 +9,8 @@ if (Get-ChildItem Env:|Where-Object {$_.Name -like 'ROBUST_DB_*' -or $_.Name -li
 [IO.Directory]::CreateDirectory('C:\req\scratch\tests')|Out-Null
 $oldJava=$env:JAVA_HOME;$oldTmp=$env:TMP;$oldTemp=$env:TEMP;$oldOptions=$env:JAVA_TOOL_OPTIONS
 try {
- $env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot';$env:TMP='C:\req\scratch\tests';$env:TEMP=$env:TMP;$env:JAVA_TOOL_OPTIONS=($oldOptions+' -XX:-UsePerfData').Trim()
+ $env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot';$env:TMP='C:\req\scratch\tests';$env:TEMP=$env:TMP;$env:JAVA_TOOL_OPTIONS=($oldOptions+' -Xmx256m -XX:-UsePerfData').Trim()
+ if($DocumentalRun){$DocumentalRun=[IO.Path]::GetFullPath($DocumentalRun);if($Mode -notin @('H2','MySQL') -or $DocumentalRun -notmatch '^C:\\req\\testdata\\documental-win-[a-f0-9]{32}$'){throw 'Solo workers nativos QA explicitos'};foreach($part in @('test.properties','windows.properties','fixtures')){if(-not(Test-Path -LiteralPath (Join-Path $DocumentalRun $part))){throw 'Fixtures documentales nativos incompletos'}};$env:DOCUMENTAL_REAL_CONFIG=Join-Path $DocumentalRun 'test.properties';$env:DOCUMENTAL_REAL_FIXTURES=Join-Path $DocumentalRun 'fixtures'}
  if($Mode -eq 'MySQL') {
   foreach($role in @('app','migrator')) {
    $file="C:\req\config\mysql-windows-qa-$role.credential.xml"
@@ -26,7 +27,7 @@ try {
  }
  if($Mode -eq 'Frontend') {Push-Location $front;try{foreach($step in @('test','lint','build')){& npm.cmd run $step *> "C:\req\logs\frontend-$step-windows.log";if($LASTEXITCODE -ne 0){throw 'Frontend no correcto'}}}finally{Pop-Location}}
  else {Push-Location $backend;try{
-   if($Mode -in @('H2','MySQL')) {& C:\maven\bin\mvn.cmd -B -ntp '-Djava.io.tmpdir=C:\req\scratch\tests' '-DargLine=--enable-native-access=ALL-UNNAMED -XX:-UsePerfData -Djava.io.tmpdir=C:\req\scratch\tests' ('-Dtest=*,!RecepcionInstitucionalJdbcTest#'+($excluded -join '+')) test *> "C:\req\logs\backend-$($Mode.ToLower())-windows.log"}
+   if($Mode -in @('H2','MySQL')) {& C:\maven\bin\mvn.cmd -B -ntp '-Djava.io.tmpdir=C:\req\scratch\tests' '-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir=C:\req\scratch\tests' ('-Dtest=*,!RecepcionInstitucionalJdbcTest#'+($excluded -join '+')) test *> "C:\req\logs\backend-$($Mode.ToLower())-windows.log"}
    else{& C:\maven\bin\mvn.cmd -B -ntp -DskipTests package *> C:\req\logs\package-windows-final.log};$code=$LASTEXITCODE
   }finally{Pop-Location};if($code -ne 0){throw 'Bateria no correcta: consultar resultados locales'}}
-}finally{Get-ChildItem Env:|Where-Object {$_.Name -like 'ROBUST_DB_*'}|ForEach-Object {Remove-Item -LiteralPath ('Env:\'+$_.Name)};$env:JAVA_HOME=$oldJava;$env:TMP=$oldTmp;$env:TEMP=$oldTemp;$env:JAVA_TOOL_OPTIONS=$oldOptions}
+}finally{Get-ChildItem Env:|Where-Object {$_.Name -like 'ROBUST_DB_*' -or $_.Name -like 'DOCUMENTAL_REAL_*'}|ForEach-Object {Remove-Item -LiteralPath ('Env:\'+$_.Name)};$env:JAVA_HOME=$oldJava;$env:TMP=$oldTmp;$env:TEMP=$oldTemp;$env:JAVA_TOOL_OPTIONS=$oldOptions}
