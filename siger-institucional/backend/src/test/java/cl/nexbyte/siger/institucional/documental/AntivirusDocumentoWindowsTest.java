@@ -1,6 +1,7 @@
 package cl.nexbyte.siger.institucional.documental;
 
 import cl.nexbyte.siger.institucional.archivos.ArchivoPrivado;
+import com.sun.jna.platform.win32.*;
 import java.io.IOException;
 import java.nio.file.*;
 import java.security.MessageDigest;
@@ -47,5 +48,20 @@ class AntivirusDocumentoWindowsTest {
         var rejected=assertThrows(IOException.class,()->av.limpio(input));
         assertTrue(rejected.getMessage().contains("manifiesto"),"Debe superar el mutex nativo y rechazar el paquete alterado");assertNull(av.ultimoResultado());
         try(var files=Files.list(jobs)){assertFalse(files.anyMatch(p->p.getFileName().toString().startsWith("av-")));}
+    }
+    @Test void permisoTemporalSePropagaYSeRetiraDeHijosExistentes()throws Exception {
+        var nested=Files.createDirectory(tools.resolve("nested"));
+        var file=Files.writeString(nested.resolve("readonly.dll"),"SINTETICO");
+        var token=new WinNT.HANDLEByReference();assertTrue(Advapi32.INSTANCE.OpenProcessToken(Kernel32.INSTANCE.GetCurrentProcess(),WinNT.TOKEN_QUERY,token));
+        String user;try{user=Advapi32Util.getTokenAccount(token.getValue()).sidString;}finally{Kernel32.INSTANCE.CloseHandle(token.getValue());}
+        // SID sintético sin perfil/proceso asociado; el test comprueba herencia NTFS real.
+        String sid="S-1-15-2-7192201-1288223-1120133-555201-7713221-88811-99103";
+        try(var saved=Advapi32Util.getSecurityDescriptorForObject(tools.toString(),1,false)){
+            try{AntivirusDocumentoWindows.grant(tools,user,sid,"OICI","GRGX");
+                assertTrue(Arrays.stream(Advapi32Util.getFileSecurity(file.toString(),false)).anyMatch(a->a instanceof WinNT.ACCESS_ALLOWED_ACE ace&&ace.getSidString().equals(sid)));
+            }finally{boolean protectedAcl=(saved.getShort(2)&0x1000)!=0;AntivirusDocumentoWindows.aplicarDescriptor(tools,saved,(protectedAcl?0x80000000:0x20000000)|4);}
+        }
+        ArchivoPrivado.validarAcceso(tools);ArchivoPrivado.validarAcceso(nested);ArchivoPrivado.validarAcceso(file);
+        assertFalse(Arrays.stream(Advapi32Util.getFileSecurity(file.toString(),false)).anyMatch(a->a instanceof WinNT.ACCESS_ALLOWED_ACE ace&&ace.getSidString().equals(sid)));
     }
 }

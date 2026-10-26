@@ -17,7 +17,15 @@ for($p='C:\req\testdata';$p;$p=Split-Path -Parent $p){if((Get-Item -LiteralPath 
 $null=New-Item -ItemType Directory -Path $root
 $javaTemp=Join-Path $root 'java-temp';$null=New-Item -ItemType Directory -Path $javaTemp
 [IO.File]::WriteAllText('C:\req\scratch\ultimo-av-java.txt',$root)
-$json=@(& 'C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot\bin\java.exe' --enable-native-access=ALL-UNNAMED -XX:-UsePerfData -Xmx256m ('-Djava.io.tmpdir='+$javaTemp) -cp ($classes+';C:\req\bin\lib\*') (Join-Path $PSScriptRoot 'AntivirusWindowsReal.java') $root 2> (Join-Path $root 'java-stderr.txt'))
+# El compilador termina antes de medir/ejecutar el adaptador. Mismos límites; no mantener javac
+# dentro del proceso antivirus por el modo source-file de java (el backend tampoco lo hace).
+$qaClasses=Join-Path $root 'qa-classes';$null=New-Item -ItemType Directory -Path $qaClasses
+& 'C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot\bin\javac.exe' -J-Xmx256m -J-XX:-UsePerfData ('-J-Djava.io.tmpdir='+$javaTemp) -cp ($classes+';C:\req\bin\lib\*') -d $qaClasses (Join-Path $PSScriptRoot 'AntivirusWindowsReal.java') *> (Join-Path $root 'javac.txt')
+if($LASTEXITCODE -ne 0){throw 'No se pudo compilar el harness; conservar log privado, no ejecutar scanner'}
+$launchAvailable=[uint64](Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory*1024
+@{utc=[DateTimeOffset]::UtcNow.ToString('o');availablePhysicalBeforeCompileBytes=$available;availablePhysicalBeforeLaunchBytes=$launchAvailable;requiredFreeBytes=4GB;plannedJobLimitBytes=1536MB;javaHeapLimitBytes=256MB;cpuLimitSeconds=45;deadlineMilliseconds=90000}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'preflight.json')
+if($launchAvailable -lt 4GB){$json=@{scope='JAVA_AV_WINDOWS_REAL_NO_RUNTIME_COMPLETO';state='BLOQUEADO_RECURSOS';root=$root;availablePhysicalBytes=$launchAvailable;requiredFreeBytes=4GB;scannerExecuted=$false;fullDocumentalRuntime=$false}|ConvertTo-Json;[IO.File]::WriteAllText($record,$json);$json;return}
+$json=@(& 'C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot\bin\java.exe' --enable-native-access=ALL-UNNAMED -XX:-UsePerfData -Xmx256m ('-Djava.io.tmpdir='+$javaTemp) -cp ($qaClasses+';'+$classes+';C:\req\bin\lib\*') AntivirusWindowsReal $root 2> (Join-Path $root 'java-stderr.txt'))
 $exit=$LASTEXITCODE
 $json|Set-Content -LiteralPath (Join-Path $root 'java-stdout.txt')
 if(Test-Path -LiteralPath (Join-Path $root 'resultado.json')){Copy-Item -LiteralPath (Join-Path $root 'resultado.json') -Destination $record}

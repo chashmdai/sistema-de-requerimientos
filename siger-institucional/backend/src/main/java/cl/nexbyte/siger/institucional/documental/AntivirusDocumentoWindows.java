@@ -17,18 +17,30 @@ import java.util.*;
 public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.Antivirus {
     private static final long MEMORY=1536L*1024*1024, FREE=4L*1024*1024*1024, CPU=450_000_000L;
     private static final int FLAGS=0x2|0x8|0x100|0x2000;
-    private final Path tools, definitions, jobs;
+    private final Path tools, definitions, jobs, evidencia;
     private final Map<String,String> hashes;
-    public record Resultado(int scannerExit,long peakPrivateBytes,long elapsedMillis,boolean appContainer,int capabilities,int processLimit,long memoryLimitBytes,long cpuLimitTicks,boolean cleanupComplete) {
+    public record Resultado(int scannerExit,long peakPrivateBytes,long elapsedMillis,boolean appContainer,int capabilities,int processLimit,long memoryLimitBytes,long cpuLimitTicks,boolean cleanupComplete,boolean jobAtCreation) {
         @Override public String toString(){return "ResultadoAntivirusWindows[sin contenido]";}
     }
     private volatile Resultado ultimo;
     public Resultado ultimoResultado(){return ultimo;}
+    public static final class MemoriaInsuficiente extends IOException {
+        private final long disponible;
+        MemoriaInsuficiente(long disponible){super("Margen de memoria antivirus insuficiente");this.disponible=disponible;}
+        public long disponible(){return disponible;}
+        public long requerida(){return FREE;}
+    }
 
     public AntivirusDocumentoWindows(Path tools,Path definitions,Path jobs,Map<String,String> hashes)throws IOException {
+        this(tools,definitions,jobs,hashes,null);
+    }
+    /** Evidencia privada opt-in: solo salidas acotadas, nunca copia el original. */
+    public AntivirusDocumentoWindows(Path tools,Path definitions,Path jobs,Map<String,String> hashes,Path evidencia)throws IOException {
         if(!System.getProperty("os.name","").startsWith("Windows")||Native.POINTER_SIZE!=8)throw new IOException("Solo antivirus Windows x64 nativo");
         this.tools=tools.toAbsolutePath().normalize();this.definitions=definitions.toAbsolutePath().normalize();this.jobs=jobs.toAbsolutePath().normalize();
         this.hashes=Map.copyOf(hashes);
+        this.evidencia=evidencia==null?null:evidencia.toAbsolutePath().normalize();
+        if(this.evidencia!=null){ArchivoPrivado.validarAcceso(this.evidencia);if(!Files.isDirectory(this.evidencia)||this.evidencia.startsWith(this.jobs)||this.jobs.startsWith(this.evidencia)||this.evidencia.startsWith(this.tools)||this.evidencia.startsWith(this.definitions))throw new IOException("Raíz de evidencia independiente requerida");for(var p=this.evidencia;p!=null;p=p.getParent())if(Files.exists(p.resolve(".git")))throw new IOException("Evidencia privada fuera de Git requerida");}
         if(this.tools.startsWith(this.definitions)||this.definitions.startsWith(this.tools)||this.tools.startsWith(this.jobs)||this.jobs.startsWith(this.tools)||this.jobs.startsWith(this.definitions)||this.definitions.startsWith(this.jobs))throw new IOException("Raíces independientes requeridas");
         for(var directory:List.of(this.tools,this.definitions,this.jobs)){
             ArchivoPrivado.validarAcceso(directory);
@@ -74,7 +86,7 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
                     try(var existing=Files.list(jobs)){if(existing.anyMatch(p->p.getFileName().toString().startsWith("av-")))throw new IOException("Trabajo antivirus pendiente de conciliación privada");}
                     verificarHerramientas();
                     var memory=new Memoria();memory.length=memory.size();check(Api.K.GlobalMemoryStatusEx(memory),"memoria");memory.read();
-                    if(memory.availablePhysical<FREE)throw new IOException("Margen de memoria antivirus insuficiente");
+                    if(memory.availablePhysical<FREE)throw new MemoriaInsuficiente(memory.availablePhysical);
                     var source=ArchivoPrivado.validar(original,FormatosDocumento.MAX);
                     if(Files.size(source)<1)throw new IOException("Archivo vacío no inspeccionable");
                     var job=Files.createDirectory(jobs.resolve("av-"+UUID.randomUUID()));ArchivoPrivado.proteger(job);
@@ -91,7 +103,7 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
     }
     private Resultado ejecutar(Path job,Path input)throws IOException {
         String name="Nexbyte.Siger.Antivirus."+UUID.randomUUID().toString().replace("-","");
-        var sid=new PointerByReference();Pointer attributes=null;Memory capsMemory=null,env=null,handles=null;WinNT.HANDLE jobHandle=null,out=null,err=null;
+        var sid=new PointerByReference();Pointer attributes=null;Memory capsMemory=null,env=null,handles=null,jobList=null;WinNT.HANDLE jobHandle=null,out=null,err=null;
         var process=new WinBase.PROCESS_INFORMATION();boolean initialized=false,assigned=false,profile=false,completed=false;String before=sha(input);long start=System.nanoTime();
         var work=Files.createDirectory(job.resolve("work"));ArchivoPrivado.proteger(work);
         var saved=new LinkedHashMap<Path,WinNT.SECURITY_DESCRIPTOR_RELATIVE>();
@@ -114,14 +126,18 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
             // Journal fuera del espacio escribible del hijo; un corte exige conciliación, nunca limpieza a ciegas.
             Files.writeString(job.resolve("pending"),name+"\n"+identity+"\n",StandardCharsets.US_ASCII,StandardOpenOption.CREATE_NEW);
             var caps=new Capacidades();caps.sid=sid.getValue();caps.write();capsMemory=new Memory(caps.size());capsMemory.write(0,caps.getPointer().getByteArray(0,caps.size()),0,caps.size());
-            var size=new LongByReference();Api.K.InitializeProcThreadAttributeList(null,2,0,size);
-            attributes=new Memory(size.getValue());check(Api.K.InitializeProcThreadAttributeList(attributes,2,0,size),"atributos");initialized=true;
+            var size=new LongByReference();Api.K.InitializeProcThreadAttributeList(null,3,0,size);
+            attributes=new Memory(size.getValue());check(Api.K.InitializeProcThreadAttributeList(attributes,3,0,size),"atributos");initialized=true;
             check(Api.K.UpdateProcThreadAttribute(attributes,0,new BaseTSD.ULONG_PTR(0x20009),capsMemory,new BaseTSD.SIZE_T(caps.size()),null,null),"capacidades");
             jobHandle=Api.K.CreateJobObjectW(null,null);check(jobHandle!=null,"job");
             var limits=new Limites();limits.basic.flags=FLAGS;limits.basic.processTime=CPU;limits.basic.processes=1;limits.processMemory=new BaseTSD.SIZE_T(MEMORY);limits.write();
             check(Api.K.SetInformationJobObject(jobHandle,9,limits,limits.size()),"límites");
             var effective=new Limites();check(Api.K.QueryInformationJobObject(jobHandle,9,effective,effective.size(),null),"límites efectivos");effective.read();
             if(effective.basic.flags!=FLAGS||effective.basic.processTime!=CPU||effective.basic.processes!=1||effective.processMemory.longValue()!=MEMORY)throw new IOException("Límites antivirus no efectivos");
+            // Adjuntar al Job DURANTE CreateProcess elimina la ventana de orfandad
+            // entre crear suspendido y una posterior llamada AssignProcessToJobObject.
+            jobList=new Memory(Native.POINTER_SIZE);jobList.setPointer(0,jobHandle.getPointer());
+            check(Api.K.UpdateProcThreadAttribute(attributes,0,new BaseTSD.ULONG_PTR(0x2000D),jobList,new BaseTSD.SIZE_T(jobList.size()),null,null),"Job al crear");
             var sa=new WinBase.SECURITY_ATTRIBUTES();sa.bInheritHandle=true;sa.write();
             out=Kernel32.INSTANCE.CreateFile(job.resolve("stdout").toString(),WinNT.GENERIC_WRITE,WinNT.FILE_SHARE_READ,sa,WinNT.CREATE_NEW,WinNT.FILE_ATTRIBUTE_NORMAL,null);
             err=Kernel32.INSTANCE.CreateFile(job.resolve("stderr").toString(),WinNT.GENERIC_WRITE,WinNT.FILE_SHARE_READ,sa,WinNT.CREATE_NEW,WinNT.FILE_ATTRIBUTE_NORMAL,null);
@@ -135,7 +151,7 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
             String command=quote(exe)+" --database="+quote(definitions)+" --tempdir="+quote(work)+" --max-filesize=25M --max-scansize=50M --max-files=2000 --max-recursion=16 --max-scantime=45000 --alert-exceeds-max=yes --no-summary --official-db-only=yes --bytecode-unsigned=no "+quote(input);
             char[] mutable=(command+'\0').toCharArray();
             check(Api.K.CreateProcessW(new WString(exe.toString()),mutable,null,null,true,0x80000|0x4|0x400|0x08000000,env,new WString(work.toString()),startup,process),"proceso suspendido");process.read();
-            check(Api.K.AssignProcessToJobObject(jobHandle,process.hProcess),"asignación Job");assigned=true;
+            assigned=true;var inJob=new IntByReference();check(Api.K.IsProcessInJob(process.hProcess,jobHandle,inJob),"pertenencia Job");if(inJob.getValue()!=1)throw new IOException("Proceso no asociado al Job");
             verificarToken(process.hProcess);
             check(Api.K.ResumeThread(process.hThread)!=-1,"reanudar");
             while(Kernel32.INSTANCE.WaitForSingleObject(process.hProcess,50)==258){
@@ -150,8 +166,8 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
             if(Files.size(job.resolve("stdout"))+Files.size(job.resolve("stderr"))>1024*1024)throw new IOException("Salida antivirus excesiva");
             // El código 0 sin un análisis del archivo actual tampoco es suficiente.
             if(code.getValue()==0&&!Files.readString(job.resolve("stdout"),StandardCharsets.UTF_8).contains("input: OK"))throw new IOException("Análisis antivirus sin confirmación");
-            result=new Resultado(code.getValue(),usage.peakProcess.longValue(),(System.nanoTime()-start)/1_000_000,true,0,1,MEMORY,CPU,true);
-            completed=true;
+            completed=true; // Un exit no limpio no es un proceso sin conciliar.
+            result=new Resultado(code.getValue(),usage.peakProcess.longValue(),(System.nanoTime()-start)/1_000_000,true,0,1,MEMORY,CPU,completed,true);
         }catch(Win32Exception nativeFailure){failure=new IOException("Frontera antivirus Win32 no disponible ("+nativeFailure.getErrorCode()+")");}
         catch(IOException e){failure=e;}
         finally{
@@ -164,13 +180,17 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
                 // SECURITY_DESCRIPTOR_CONTROL está en offset2. Preservar SE_DACL_PROTECTED,
                 // sin convertir una raíz heredada en protegida al retirar la ACE temporal.
                 boolean wasProtected=(entry.getValue().getPointer().getShort(2)&0x1000)!=0;
-                check(Advapi32.INSTANCE.SetFileSecurity(entry.getKey().toString(),(wasProtected?0x80000000:0x20000000)|4,entry.getValue().getPointer()),"restaurar DACL");
+                aplicarDescriptor(entry.getKey(),entry.getValue().getPointer(),(wasProtected?0x80000000:0x20000000)|4);
             }catch(IOException e){failure=e;}
             if(profile&&Api.U.DeleteAppContainerProfile(new WString(name))!=0)failure=new IOException("Perfil antivirus pendiente de conciliación");
             if(sid.getValue()!=null)Api.A.FreeSid(sid.getValue());
+            if(completed&&failure==null&&evidencia!=null){try{
+                var target=Files.createDirectory(evidencia.resolve(job.getFileName()));ArchivoPrivado.proteger(target);
+                for(var file:List.of("stdout","stderr")){var source=ArchivoPrivado.validar(job.resolve(file),1024*1024);var dest=target.resolve(file);Files.copy(source,dest);ArchivoPrivado.proteger(dest);}
+            }catch(IOException e){failure=new IOException("No se pudo conservar evidencia privada antivirus");}}
             // No borrar evidencia ante un error o una frontera no conciliada.
             if(completed&&failure==null){try(var entries=Files.walk(job)){for(var p:entries.sorted(Comparator.reverseOrder()).toList()){ArchivoPrivado.validarAcceso(p);Files.delete(p);}}catch(IOException e){failure=new IOException("Trabajo antivirus pendiente de conciliación");}}
-            for(var memory:descriptors)memory.close();for(var memory:Arrays.asList(capsMemory,env,handles))if(memory!=null)memory.close();if(attributes instanceof Memory memory)memory.close();
+            for(var memory:descriptors)memory.close();for(var memory:Arrays.asList(capsMemory,env,handles,jobList))if(memory!=null)memory.close();if(attributes instanceof Memory memory)memory.close();
         }
         if(failure!=null)throw failure;
         return result;
@@ -181,9 +201,18 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
     }
     private static void setSddl(Path p,String text,int flags)throws IOException {
         var descriptor=new PointerByReference();check(Api.A.ConvertStringSecurityDescriptorToSecurityDescriptorW(new WString(text),1,descriptor,null),"descriptor");
-        try{check(Advapi32.INSTANCE.SetFileSecurity(p.toString(),flags,descriptor.getValue()),"DACL");}finally{Kernel32.INSTANCE.LocalFree(descriptor.getValue());}
+        try{aplicarDescriptor(p,descriptor.getValue(),flags);}finally{Kernel32.INSTANCE.LocalFree(descriptor.getValue());}
     }
-    private static void grant(Path path,String user,String sid,String inheritance,String rights)throws IOException {
+    static void aplicarDescriptor(Path p,Pointer descriptor,int flags)throws IOException {
+        Pointer dacl=null,sacl=null;var present=new IntByReference();var defaulted=new IntByReference();var acl=new PointerByReference();
+        if((flags&4)!=0){check(Api.A.GetSecurityDescriptorDacl(descriptor,present,acl,defaulted),"leer DACL");if(present.getValue()!=1||acl.getValue()==null)throw new IOException("DACL privada requerida");dacl=acl.getValue();}
+        if((flags&0x10)!=0){check(Api.A.GetSecurityDescriptorSacl(descriptor,present,acl,defaulted),"leer etiqueta");if(present.getValue()!=1||acl.getValue()==null)throw new IOException("Etiqueta requerida");sacl=acl.getValue();}
+        // SetFileSecurity NO propaga ACE a los hijos existentes. SetNamedSecurityInfo sí,
+        // tanto al conceder lectura como al retirar la ACE al terminar el proceso.
+        int code=Advapi32.INSTANCE.SetNamedSecurityInfo(p.toString(),1,flags,null,null,dacl,sacl);
+        if(code!=0)throw new IOException("ACL antivirus no disponible ("+code+")");
+    }
+    static void grant(Path path,String user,String sid,String inheritance,String rights)throws IOException {
         String own=Files.isDirectory(path)?"OICI":"";
         setSddl(path,"D:P(A;"+own+";FA;;;SY)(A;"+own+";FA;;;BA)(A;"+own+";FA;;;"+user+")(A;"+inheritance+";"+rights+";;;"+sid+")",0x80000004);
     }
@@ -202,9 +231,10 @@ public final class AntivirusDocumentoWindows implements ProcesamientoDocumental.
         boolean GlobalMemoryStatusEx(Memoria memory);int CreateAppContainerProfile(WString name,WString display,WString description,Pointer capabilities,int count,PointerByReference sid);int DeleteAppContainerProfile(WString name);
         WinNT.HANDLE CreateMutexW(WinBase.SECURITY_ATTRIBUTES attributes,boolean owner,WString name);boolean ReleaseMutex(WinNT.HANDLE mutex);
         boolean InitializeProcThreadAttributeList(Pointer list,int count,int flags,LongByReference size);boolean UpdateProcThreadAttribute(Pointer list,int flags,BaseTSD.ULONG_PTR attribute,Pointer value,BaseTSD.SIZE_T size,Pointer previous,Pointer returned);void DeleteProcThreadAttributeList(Pointer list);int ResumeThread(WinNT.HANDLE thread);
-        WinNT.HANDLE CreateJobObjectW(Pointer attributes,WString name);boolean SetInformationJobObject(WinNT.HANDLE job,int info,Limites limits,int length);boolean QueryInformationJobObject(WinNT.HANDLE job,int info,Limites limits,int length,IntByReference returned);boolean AssignProcessToJobObject(WinNT.HANDLE job,WinNT.HANDLE process);boolean TerminateJobObject(WinNT.HANDLE job,int code);
+        WinNT.HANDLE CreateJobObjectW(Pointer attributes,WString name);boolean SetInformationJobObject(WinNT.HANDLE job,int info,Limites limits,int length);boolean QueryInformationJobObject(WinNT.HANDLE job,int info,Limites limits,int length,IntByReference returned);boolean IsProcessInJob(WinNT.HANDLE process,WinNT.HANDLE job,IntByReference result);boolean TerminateJobObject(WinNT.HANDLE job,int code);
         boolean CreateProcessW(WString app,char[] command,Pointer processAttributes,Pointer threadAttributes,boolean inherit,int flags,Pointer environment,WString cwd,Inicio startup,WinBase.PROCESS_INFORMATION process);
         boolean ConvertStringSecurityDescriptorToSecurityDescriptorW(WString text,int revision,PointerByReference descriptor,IntByReference size);
         Pointer FreeSid(Pointer sid);boolean GetTokenInformation(WinNT.HANDLE token,int info,Pointer data,int size,IntByReference returned);
+        boolean GetSecurityDescriptorDacl(Pointer descriptor,IntByReference present,PointerByReference acl,IntByReference defaulted);boolean GetSecurityDescriptorSacl(Pointer descriptor,IntByReference present,PointerByReference acl,IntByReference defaulted);
     }
 }
