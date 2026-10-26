@@ -1,5 +1,7 @@
 # U4.5 — Checkpoint intermedio NTFS/Graph/QA, 26/10/2026
 
+> Continuación posterior del mismo día: [runtime QA/HTTPS/Edge verificado y bloqueo documental conservado](CHECKPOINT_RUNTIME_WINDOWS_2026-10-26.md). Este informe conserva su evidencia original de 208 correctas por motor; el corte posterior tiene 214.
+
 **Primera meta técnica completada. U4.5 sigue abierta: no hay runtime documental Windows completo ni E2E Windows/Edge certificado. U5 no iniciada.**
 
 Repositorio C:\req\repo, rama migracion-windows-laboratorio-2026. Base preservada b4a41ab/17de7a1; implementación de esta continuación **6d2f6ee** y guarda de unidad local **3e1c2cd**. Un commit posterior conserva estas evidencias/documentación. Sin push.

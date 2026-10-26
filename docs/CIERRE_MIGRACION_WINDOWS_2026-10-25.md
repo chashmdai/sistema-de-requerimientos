@@ -1,4 +1,6 @@
-> **Continuación 26/10/2026:** NTFS y Graph portables; H2/MySQL QA nativos 208 correctos por motor y 5 workers pendientes. U4.5 sigue abierta. Ver [checkpoint intermedio](CONTINUACION_NTFS_WINDOWS_2026-10-26.md) y [evaluación de workers](EVALUACION_WORKERS_WINDOWS_2026-10-26.md). El corte original del 25/10 se conserva íntegro a continuación.
+> **Último corte 26/10/2026:** runtime QA Windows/HTTPS/Edge verificado;214 correctas H2 y214 MySQL,42 frontend,5 documentales pendientes. Objetivo 100% nativo mantenido y ensayo AV ampliado aplazado por el usuario. Ver [checkpoint vigente](CHECKPOINT_RUNTIME_WINDOWS_2026-10-26.md) e [informe](RUNTIME_QA_WINDOWS_2026-10-26.md). U4.5 sigue abierta.
+
+> **Continuación anterior 26/10/2026:** NTFS y Graph portables; H2/MySQL QA nativos 208 correctos por motor y 5 workers pendientes. Ver [checkpoint NTFS](CONTINUACION_NTFS_WINDOWS_2026-10-26.md) y [evaluación inicial](EVALUACION_WORKERS_WINDOWS_2026-10-26.md). El corte original del 25/10 se conserva íntegro a continuación.
 
 # U4.5 — Migración Windows: cierre parcial de sesión, 25/10/2026
 

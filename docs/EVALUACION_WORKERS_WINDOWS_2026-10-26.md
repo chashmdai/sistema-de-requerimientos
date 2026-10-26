@@ -1,5 +1,7 @@
 # Evaluación de workers Windows — 26/10/2026
 
+> Evaluación posterior: [dictamen con sondas reales, capacidad AV y decisión 100% nativa](DECISION_DOCUMENTAL_WINDOWS_2026-10-26.md). La alternativa Linux fue descartada; el usuario decidió conservar el bloqueo de recursos por ahora. La sonda/API descrita debajo es la anterior, no la evidencia más reciente.
+
 Este diagnóstico no certifica un sandbox ni habilita procesamiento documental. La custodia NTFS y sus tests simulados son un frente distinto. No se ejecutaron documentos no confiables mediante un proceso Windows sin aislamiento validado.
 
 ## Origen inspeccionado, sin cambios

@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-26",
+  "implementationCommit": "b95345f",
+  "branch": "migracion-windows-laboratorio-2026",
+  "unit": "U4.5_ABIERTA",
+  "runtimeScope": "PRELIMINAR_SIN_DOCUMENTAL",
+  "userDecisions": {
+    "hybridRejected": true,
+    "nativeOnly": true,
+    "keepResourceCheckpoint": true
+  },
+  "backend": {
+    "H2": {
+      "errors": 0,
+      "passed": 214,
+      "skipped": 5,
+      "selected": 219,
+      "failed": 0
+    },
+    "historicalMigrationsUnchanged": "V1-V12",
+    "MySQLWindowsQa": {
+      "migrator": "siger_windows_qa_migrator",
+      "failed": 0,
+      "application": "siger_windows_qa_app",
+      "passed": 214,
+      "errors": 0,
+      "selected": 219,
+      "tls": "VERIFY_IDENTITY TLSv1.3",
+      "skipped": 5
+    },
+    "historicalStressExclusions": 3
+  },
+  "frontend": {
+    "lint": "OK",
+    "passed": 42,
+    "build": "OK"
+  },
+  "e2e": {
+    "documental": false,
+    "operationChecks": 59,
+    "browser": "Edge 156.0.4314.42",
+    "nativeWindows": true,
+    "restartChecks": 45,
+    "tlsValidationBypassed": false
+  },
+  "historical": {
+    "campaignSendsStarted": 4,
+    "cases": 5,
+    "graphHumanConfirmed": 4,
+    "requirements": 3,
+    "tables": 59,
+    "tablesEqual": true,
+    "ackPending": 0,
+    "communications": 11,
+    "createViewRevoked": true,
+    "graphAccepted": 4,
+    "businessRows": 504
+  },
+  "storage": {
+    "rootInheritanceDisabled": true,
+    "objects": 24,
+    "referenced": 24,
+    "bytes": 16869263,
+    "unexpectedAllowAces": 0,
+    "sha256Verified": true,
+    "aclCheckedObjects": 1688
+  },
+  "qa": {
+    "counts": {
+      "communication_registry": 3,
+      "core_case": 3,
+      "core_communication": 3,
+      "core_requirement": 3,
+      "institution_notification": 12,
+      "institution_task": 3,
+      "mail_attempt": 1,
+      "notification_outbox": 12,
+      "staff_account": 3,
+      "staff_assignment": 12
+    },
+    "duplicatedCom": 0,
+    "grants": [
+      "GRANT USAGE ON *.* TO `siger_windows_qa_app`@`localhost`",
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON `siger_institucional_windows_qa`.* TO `siger_windows_qa_app`@`localhost`"
+    ],
+    "graphAcceptedQa": 0,
+    "schema": "siger_institucional_windows_qa",
+    "simulatedAttempts": 1,
+    "tls": "TLSv1.3",
+    "user": "siger_windows_qa_app@localhost",
+    "version": "8.0.46"
+  },
+  "privateLogScan": {
+    "credentialValuesChecked": 6,
+    "checkedFiles": 29,
+    "exposures": 0
+  },
+  "memoryGate": {
+    "scope": "QA_AV_CAPACIDAD",
+    "notACompletedTest": true,
+    "plannedJobLimitBytes": 1610612736,
+    "scannerExecuted": false,
+    "availablePhysicalBytes": 2658258944,
+    "state": "BLOQUEADO_RECURSOS",
+    "requiredFreeBytes": 4294967296
+  },
+  "workers": {
+    "amsi": {
+      "configurationChanged": false,
+      "provider": "Kaspersky",
+      "appContainerInit": "0x80070103_NO_SCAN",
+      "ordinaryInit": "S_OK_NO_SCAN"
+    },
+    "definitions": "main63 daily28165 bytecode339",
+    "sixCanaryModes": "PASSED_WITH_LIMITED_SCOPE",
+    "fullDefinitionsAt768MiB": "FAILED_CLOSED_MEMORY",
+    "eightControlsQualified": false,
+    "extendedAvTest": "NOT_EXECUTED_USER_CHECKPOINT",
+    "missingDefinitions": "EXIT_2",
+    "clamav": "1.4.6 PORTABLE VERIFIED"
+  },
+  "artifact": {
+    "path": "C:\\req\\bin\\siger-20ce34eea019f4f9.jar",
+    "sha256": "20ce34eea019f4f91dc0e4f8ebb8e1870024e466c31a720656d037014b1da7b1"
+  },
+  "publicBaseline": {
+    "realPull": false,
+    "changedContractFiles": 0,
+    "commit": "bc6489cd75c3dff9ff8462b8d0275d52f1045f29",
+    "retentionImplementedInSiger": false,
+    "newPublicE2E": false,
+    "contractVersions": [
+      "1.0",
+      "1.1"
+    ]
+  },
+  "finalState": {
+    "ownRuntimeProcessesStopped": true,
+    "wslUnmodified": true,
+    "push": false,
+    "production": false,
+    "U5": false,
+    "newPersistentServices": 0,
+    "realGraphSends": 0
+  }
+}

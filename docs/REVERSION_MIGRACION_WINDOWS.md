@@ -1,5 +1,7 @@
 # Reversión no destructiva — U4.5 Windows
 
+> Estado posterior 26/10: [runtime QA preliminar verificado](RUNTIME_QA_WINDOWS_2026-10-26.md) y [checkpoint vigente](CHECKPOINT_RUNTIME_WINDOWS_2026-10-26.md). El documental sigue cerrado. Mantener 100% nativo; conservar el bloqueo de recursos según decisión del usuario. El corte anterior se conserva abajo.
+
 Estado al checkpoint: no hay aplicación SIGER completa Windows ejecutándose, servicio ni tarea programada nuevos. No se realizó cutover; WSL sigue siendo la instancia operativa original. No hay que detener MySQL80 ni deshacer datos para conservar la operación anterior.
 
 1. Conservar C:\req\repo (todas sus ramas/commits), el bundle, C:\req\storage, las bases, evidencias y material privado DPAPI. No ejecutar reset, clean, Flyway clean/repair/DOWN, DROP/TRUNCATE, borrado de volúmenes, reducción de columnas o sustitución de hashes/firmas.
@@ -37,3 +39,31 @@ El runtime completo Windows continúa sin arrancar. El origen WSL no fue detenid
 - Recuperación después de una interrupción: reutilizar la clave/descriptor original; verificar SHA/tamaño y completar las barreras. Un archivo existente no basta para autorizar SQL/ACK. Si el contenido está alterado, conservar evidencia y restaurar únicamente desde una copia íntegra autorizada; no sustituir la huella para forzar aceptación.
 
 La evaluación de aislamiento y lo pendiente están en CONTINUACION_NTFS_WINDOWS_2026-10-26.md y EVALUACION_WORKERS_WINDOWS_2026-10-26.md. No hay autorización nueva para correo real, pull público, servicios permanentes, cambios al host o U5.
+
+## Adenda 26/10 — runtime QA, TLS local y sondas nativas
+
+Implementación b95345f. Al checkpoint los procesos propios de runtime/Edge/scanner están detenidos. No se ha realizado cutover ni hay servicio/tarea programada que desinstalar. No detener MySQL80, Kaspersky, WSL, Java/Node ajenos o servicios institucionales para revertir esta unidad.
+
+1. Conservar repositorio/commits, los esquemas histórico y QA, C:\req\storage\archivo, los 24 objetos, las raíces/evidencias sintéticas, paquetes y DPAPI. No importar otra vez, hacer reset/clean, bajar migraciones, borrar filas para ocultar pruebas, sustituir originales o cambiar hashes/COM/firmas/ACK.
+2. El launcher actual solo admite QA y PRELIMINAR_SIN_DOCUMENTAL. Para terminar un proceso propio futuro usar su archivo stop o esperar el plazo del supervisor; comprueba salida y retira únicamente los archivos privados efímeros que creó. No matar procesos por nombre ni reutilizar un PID sin el handle/identidad del launcher.
+3. Un error del supervisor puede dejar claves/P12 dentro de su raíz privada. Conservar y revisar esa raíz; comprobar que su proceso terminó antes de retirar los archivos exactos listados en run.json. No aplicar un borrado recursivo a C:\req, storage, config o scratch. Los datos/COM del ensayo se conservan en QA.
+4. El certificado exclusivo localhost es una hoja CA=false, con SAN local, huella AD60D34C9FEDA16E215EE5F223F35BA3E4371CF5, aprobada por el usuario y confiada solo en CurrentUser Root. Mantenerlo permite retomar durante su vigencia; no hay que tocar el certificado ciudadano, la CA anterior ni LocalMachine. Para retirarlo, el operador puede quitar **solo esa huella** después de detener QA. La clave/P12/password siguen bajo DPAPI en C:\req\config\windows-qa-localhost-tls.json.dpapi; conservarlos protegidos, no exportarlos a Git o backups abiertos.
+5. ClamAV portable está únicamente bajo C:\req\bin\clamav-1.4.6, con bases en C:\req\storage\antivirus-defs y una configuración de actualización manual bajo config. No se registró servicio, PATH global ni actualización programada. No ejecutar el scanner ampliado mientras siga aplazado por el usuario; conservar versiones/manifiesto/logs para retomar, sin borrar paquetes o bases como una supuesta reparación.
+6. Las sondas crean perfiles AppContainer efímeros, cierran Jobs y restauran DACL. No son un broker instalado. Se corrigió una restauración .NET que no persistía los cambios; las ACE propias de prueba del paquete AV/bases fueron retiradas y se verificó cero residuales. No agregar ALL APPLICATION PACKAGES/Everyone a config/custodia o al proveedor Kaspersky para hacer funcionar AMSI.
+7. La consulta AMSI no cambió registro, ACL, configuración o estado de productos antivirus. Su prueba ordinaria solo inicializó el API. No hay modificaciones de Kaspersky/Defender que revertir; no desregistrar proveedores ni copiar sus DLL.
+8. Graph automático/real, recuperación pública y documental están cerrados por el entrypoint QA. El historial real 4/4 y el presupuesto 4/4 pertenecen al esquema histórico intacto. QA contiene un intento SIMULADO; no conciliarlo contra Microsoft ni reiniciar una campaña real.
+9. Los datos QA son sintéticos y su guard rechaza el histórico. Los tests MySQL limpian fixtures: no ejecutarlos con la aplicación QA activa ni para demostrar conservación de sus fixtures previos. La conservación histórica se comprueba con fingerprint/audit y el manifiesto, en modo lectura.
+
+Ejemplos de una línea para el operador, no ejecutados como reversión al corte:
+
+```powershell
+$r=(Get-Content C:\req\scratch\ultimo-runtime-qa.txt).Trim(); if($r -notmatch '^C:\\req\\testdata\\runtime-qa-[a-f0-9]{32}$'){throw 'Raíz inesperada'}; [IO.File]::WriteAllText((Join-Path $r 'stop'),'stop')
+```
+
+Retirada opcional de **la hoja QA exacta**, sin tocar la confianza de máquina o certificados anteriores:
+
+```powershell
+$s=[Security.Cryptography.X509Certificates.X509Store]::new('Root','CurrentUser'); try{$s.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite); foreach($c in @($s.Certificates|Where-Object {$_.Thumbprint -eq 'AD60D34C9FEDA16E215EE5F223F35BA3E4371CF5'})){$s.Remove($c)}} finally{$s.Close()}
+```
+
+Cambiar de rama o retirar la confianza no recrea bytes borrados ni sustituye una restauración. No hay autorización para degradar garantías, introducir una dependencia Linux, activar producción/U5 o modificar el origen WSL como parte de esta reversión.
