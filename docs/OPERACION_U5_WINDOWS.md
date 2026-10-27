@@ -23,7 +23,7 @@ ClamAV requiere 4 GiB físicos disponibles; AppContainer/Job y límites no cambi
 
 Usar `Windows-Iniciar-QA.ps1` con el JAR instalado y la configuración documental indicada en `ultimo-documental-win.txt`, conforme a [operación documental](OPERACION_DOCUMENTAL_WINDOWS.md). Los ingresos y la custodia QA de una batería anterior no deben reutilizarse después de una limpieza SQL de fixtures sin conciliación: preparar un runtime y productor sintético nuevos, conservando los anteriores como evidencia.
 
-`Windows-E2E-Runtime.ps1` incorpora modos `u5` y `u5-restart`. El primero utiliza Edge real, TLS validado, UI y API autorizada; conserva `e2e-u5-operacion.json` en la raíz del runtime propio. El segundo recibe ese archivo mediante `-Baseline` después de reiniciar sobre el mismo esquema y custodia. No incluir credenciales en los argumentos. Ambos reutilizan el mecanismo DPAPI por stdin existente.
+`Windows-E2E-Runtime.ps1` incorpora modos `u5` y `u5-restart`. El primero utiliza Edge real, TLS validado, UI y API autorizada; conserva `e2e-u5-operacion.json` en la raíz del runtime propio. El segundo recibe ese archivo mediante `-Baseline` después de reiniciar sobre el mismo esquema y custodia. No incluir credenciales en los argumentos. Ambos reutilizan el mecanismo DPAPI por stdin existente. `u5-documentos` recibe también `-IngresoRun` y prueba los ingresos sintéticos y su custodia; si la vista falla conserva `u5-custodia-ciudadana-parcial.json` y termina con error. Ese archivo no acredita una previsualización correcta.
 
 Las evidencias privadas quedan en `C:\req\evidencias` y `C:\req\testdata`; no subir capturas, documentos ni archivos de configuración privada a Git. El informe de cierre enumera exactamente los ensayos realizados.
 
