@@ -11,11 +11,11 @@ public final class NotificacionesInstitucionales {
  private record Aviso(String categoria,String tipo,UUID recurso){}
  private static UUID uuid(Object o){return UUID.fromString(o.toString());}
  private static long num(Map<String,Object> r,String k){return ((Number)r.get(k)).longValue();}
- public static String titulo(String category){return switch(category){case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
+ public static String titulo(String category){return switch(category){case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "SOLICITUD_CREADA"->"Preparación de Solicitud registrada";case "SOLICITUD_MODIFICADA"->"Preparación de Solicitud actualizada";case "SOLICITUD_PREPARADA"->"Borrador de gestión preparado";case "SOLICITUD_SEGUIMIENTO"->"Seguimiento de Solicitud registrado";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
  private List<Aviso> avisos(String stream,Map<String,Object> e){
   String code=e.get("code").toString();UUID resource=uuid(e.get(stream.equals("RECEPCION")?"aggregate_id":"resource_id"));
   if(stream.equals("RECEPCION"))return code.equals("COMUNICACION_REGISTRADA")?List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource)):List.of();
-  if(stream.equals("TAREA"))return List.of(new Aviso(code,"TAREA",resource));
+  if(stream.equals("TAREA"))return List.of(new Aviso(code,"SOLICITUD".equals(e.get("resource_type"))?"SOLICITUD":"TAREA",resource));
   return switch(code){
    case "COMUNICACION_MANUAL_REGISTRADA"->List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource));
    case "DESTINO_DISTRIBUIDO"->List.of(new Aviso("DESTINO_PENDIENTE","DESTINO",resource));
@@ -37,6 +37,7 @@ public final class NotificacionesInstitucionales {
     case "ANTECEDENTE"->{permisos.antecedente(a,id);var l=db.sql.queryForMap("SELECT * FROM core_link WHERE child_id=?",id.toString());if(categoria.equals("ANTECEDENTE_NUEVO")){if(l.get("case_reference")==null)return false;var c=permisos.caso(a,uuid(l.get("case_reference")));if(!a.id().equals(c.responsable())||!a.profesionalEn(c.unidad(),c.sede()))return false;}else if(!a.distribuidor()&&db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND evaluator_id=?",Integer.class,l.get("parent_id"),a.id())==0)return false;}
     case "DERIVACION"->{permisos.derivacion(a,id);}
     case "REAPERTURA"->{permisos.reapertura(a,id);var r=permisos.fila("core_reopen",id.toString());var c=permisos.caso(a,uuid(r.get("case_id")));if(!a.id().equals(permisos.fila("core_destination",c.destinoId().toString()).get("evaluator_id")))return false;}
+    case "SOLICITUD"->permisos.solicitud(a,id);
     case "TAREA"->{var t=permisos.fila("institution_task",id.toString());permisos.tarea(a,t);}
 
     default->{return false;}

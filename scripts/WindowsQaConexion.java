@@ -11,6 +11,7 @@ public class WindowsQaConexion {
    if(data.path("audit").asBoolean()){
     if(!user.equals("siger_windows_qa_app"))throw new IllegalStateException();
     var counts=new TreeMap<String,Long>();for(var table:List.of("staff_account","staff_assignment","core_communication","communication_registry","core_requirement","core_case","institution_task","institution_notification","notification_outbox","mail_attempt","institutional_inbox","institution_document","document_representation","document_page","document_event","distribution_event"))try(var r=s.executeQuery("SELECT COUNT(*) FROM "+table)){r.next();counts.put(table,r.getLong(1));}
+    try(var r=s.executeQuery("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='institution_request'")){r.next();if(r.getLong(1)==1){for(var table:List.of("institution_request","request_command","request_history","request_followup"))try(var rows=s.executeQuery("SELECT COUNT(*) FROM "+table)){rows.next();counts.put(table,rows.getLong(1));}}}
     try(var r=s.executeQuery("SELECT COUNT(*) FROM mail_attempt WHERE state='ACCEPTED_BY_GRAPH'")){r.next();out.put("graphAcceptedQa",r.getLong(1));}
     try(var r=s.executeQuery("SELECT COUNT(*) FROM mail_attempt WHERE state='SIMULADO'")){r.next();out.put("simulatedAttempts",r.getLong(1));}
     try(var r=s.executeQuery("SELECT COUNT(*)-COUNT(DISTINCT CONCAT(folio_prefix,':',numero)) FROM communication_registry")){r.next();out.put("duplicatedCom",r.getLong(1));}

@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Run,[ValidateSet('operate','after-restart','territorio')][string]$Mode='operate',[string]$Baseline='',[string]$DocumentalRun='',[string]$IngresoRun='')
+param([Parameter(Mandatory)][string]$Run,[ValidateSet('operate','after-restart','territorio','u5','u5-restart','u5-documentos')][string]$Mode='operate',[string]$Baseline='',[string]$DocumentalRun='',[string]$IngresoRun='')
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath($Run)
 if([IO.Path]::GetDirectoryName($root) -ne 'C:\req\testdata' -or [IO.Path]::GetFileName($root) -notmatch '^runtime-qa-[a-f0-9]{32}$'){throw 'Solo raiz QA propia'}

@@ -16,6 +16,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class AntivirusDocumentoWindowsTest {
     @TempDir Path temp;
     Path tools,defs,jobs;Map<String,String> hashes;
+    @Test void temporalRetiradoPorWorkerNoEsReparsePointYRaizAusenteFallaCerrada()throws Exception{
+        var root=Files.createDirectory(temp.resolve("trabajo-dinamico"));var file=Files.writeString(root.resolve("temporal"),"SINTETICO");
+        assertTrue(ProcesoDocumentoWindows.entradaTemporalPresente(file,root));Files.delete(file);
+        assertEquals(-1,Kernel32.INSTANCE.GetFileAttributes(file.toString()));
+        assertFalse(ProcesoDocumentoWindows.entradaTemporalPresente(file,root));Files.delete(root);
+        assertThrows(IOException.class,()->ProcesoDocumentoWindows.entradaTemporalPresente(root,root));
+    }
     @BeforeEach void preparar()throws Exception {
         ArchivoPrivado.proteger(temp);
         tools=Files.createDirectory(temp.resolve("tools"));defs=Files.createDirectory(temp.resolve("defs"));jobs=Files.createDirectory(temp.resolve("jobs"));

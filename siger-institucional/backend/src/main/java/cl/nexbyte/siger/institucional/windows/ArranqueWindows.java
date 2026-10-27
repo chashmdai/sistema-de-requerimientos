@@ -24,6 +24,7 @@ public final class ArranqueWindows {
         for(var key:input.keySet())if(!PERMITIDOS.contains(key))throw new IllegalArgumentException("Propiedad no admitida");
         var p=new HashMap<String,Object>(input);
         p.putAll(Map.of("spring.profiles.active","jdbc-reception,nucleo-lab,windows-lab","spring.flyway.enabled","false","server.address","127.0.0.1","server.port",port,"server.ssl.enabled","true","server.ssl.key-store-type","PKCS12","server.servlet.session.cookie.secure","true","server.forward-headers-strategy","none","institucional.nucleo.habilitado","true","institucional.nucleo.entorno","LABORATORIO"));
+        p.put("institucional.solicitudes.habilitadas","true");
         p.putAll(Map.of("datos.mysql-local","true","institucional.identidad.habilitada","true","institucional.documental.habilitada","false","institucional.formulario-completo.habilitado","false","institucional.formulario-completo.automatico","false","institucional.v2.habilitada","false","institucional.integracion.habilitada","false","institucional.notificaciones.habilitadas","true","institucional.notificaciones.correo.modo","SIMULADO","institucional.notificaciones.correo.automatico","false"));
         p.put("institucional.documental.habilitada",Boolean.toString(documental));
         p.put("spring.main.banner-mode","off");return p;

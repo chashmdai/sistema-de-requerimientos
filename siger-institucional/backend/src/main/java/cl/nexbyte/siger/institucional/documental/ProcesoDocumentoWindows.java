@@ -177,7 +177,7 @@ public final class ProcesoDocumentoWindows {
                 if(Thread.currentThread().isInterrupted())throw new IOException("Antivirus interrumpido");
                 if((System.nanoTime()-start)/1_000_000>90_000)throw new IOException("Antivirus vencido");
                 if(Files.size(job.resolve("stdout"))+Files.size(job.resolve("stderr"))>op.salida())throw new IOException("Salida antivirus excesiva");
-                try(var entries=Files.walk(work)) {long bytes=0;int count=0;var iterator=entries.iterator();while(iterator.hasNext()) {var p=iterator.next();if((Kernel32.INSTANCE.GetFileAttributes(p.toString())&0x400)!=0)throw new IOException("Reparse point en trabajo antivirus");if(++count>4000)throw new IOException("Temporales antivirus excesivos");if(Files.isRegularFile(p,LinkOption.NOFOLLOW_LINKS))bytes+=Files.size(p);if(bytes>768L*1024*1024)throw new IOException("Temporales antivirus excesivos");}}
+                try(var entries=Files.walk(work)) {long bytes=0;int count=0;var iterator=entries.iterator();while(iterator.hasNext()) {var p=iterator.next();if(!entradaTemporalPresente(p,work))continue;if(++count>4000)throw new IOException("Temporales antivirus excesivos");try{if(Files.isRegularFile(p,LinkOption.NOFOLLOW_LINKS))bytes+=Files.size(p);}catch(NoSuchFileException removed){if(p.equals(work))throw removed;}if(bytes>768L*1024*1024)throw new IOException("Temporales antivirus excesivos");}}
             }
             var code=new IntByReference();check(Kernel32.INSTANCE.GetExitCodeProcess(process.hProcess,code),"resultado");
             var usage=new Limites();check(Api.K.QueryInformationJobObject(jobHandle,9,usage,usage.size(),null),"consumo");usage.read();
@@ -222,6 +222,15 @@ public final class ProcesoDocumentoWindows {
         }
         if(failure!=null)throw failure;
         return result;
+    }
+    // ClamAV crea y retira temporales durante el recorrido. INVALID_FILE_ATTRIBUTES
+    // vale -1: no es una máscara válida y no debe interpretarse como reparse point.
+    // Solo la desaparición de una entrada secundaria es tolerable; raíz y otros errores cierran el trabajo.
+    static boolean entradaTemporalPresente(Path path,Path root)throws IOException{
+        int attributes=Kernel32.INSTANCE.GetFileAttributes(path.toString());
+        if(attributes==-1){int error=Kernel32.INSTANCE.GetLastError();if(!path.equals(root)&&(error==2||error==3))return false;throw new IOException("Atributos de temporal no verificables ("+error+")");}
+        if((attributes&0x400)!=0)throw new IOException("Reparse point en trabajo antivirus");
+        return true;
     }
     private String comando(Operacion op,Path exe,Path input,Path work,String detalle)throws IOException{
         var a=new ArrayList<String>();a.add(exe.toString());

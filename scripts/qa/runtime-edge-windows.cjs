@@ -20,6 +20,7 @@ async function main(){
   const session=await get('/nucleo/session');const actor=session.operador.id;ok('siete roles individuales',new Set(session.operador.accesos.map(a=>a.rol)).size===7);ok('identidad individual',session.modo==='LABORATORIO_INDIVIDUAL');
   const cookies=await context.cookies();ok('cookie Secure HttpOnly Strict',cookies.some(c=>c.name==='SIGERSTAFFSESSION'&&c.secure&&c.httpOnly&&c.sameSite==='Strict'));
   ok('CSRF rechaza POST sin token',(await request.post(run.origin+'/nucleo/comunicaciones/manual',{data:{}})).status()===403);
+  if(input.mode.startsWith('u5')){await require('./u5-edge-windows.cjs')({input,run,browser,context,page,request,get,change,ok});fs.writeFileSync(input.run+'/resultado-edge-'+input.mode+'.json',JSON.stringify({scope:run.scope,mode:input.mode,checks,passed:checks.length,failed:0,realGraph:false,version:browser.version()},null,2));console.log(JSON.stringify({mode:input.mode,passed:checks.length,failed:0}));return;}
   if(input.mode==='territorio'){await require('./territorio-edge-windows.cjs')({input,run,browser,get,change,ok,actor});const result={scope:run.scope,mode:input.mode,checks,passed:checks.length,failed:0,realGraph:false};fs.writeFileSync(input.run+'/resultado-edge-territorio.json',JSON.stringify(result,null,2));console.log(JSON.stringify({mode:input.mode,passed:checks.length,failed:0}));return;}
   await page.getByRole('link',{name:'Administración TI',exact:true}).click();await page.getByRole('heading',{name:/Funcionarios|Administración TI/}).first().waitFor();checks.push('UI TI accesible');
   const staff=await get('/nucleo/ti/funcionarios');ok('cuentas restringidas disponibles',staff.some(c=>c.usuario==='qa.windows.ti')&&staff.some(c=>c.usuario==='qa.windows.otra'));
@@ -43,7 +44,7 @@ async function main(){
    fs.writeFileSync(evidenceFile,JSON.stringify(saved,null,2));
    await change('/nucleo/notificaciones/operacion/procesar',{});
    const notice=await get('/nucleo/notificaciones');ok('notificaciones persistentes',notice.items.length>0);
-   await page.getByRole('link',{name:'Mis tareas de Casos',exact:true}).click();await page.locator('a[href="#tareas/'+task.id+'"]').waitFor();checks.push('UI tarea del Caso');
+   await page.getByRole('link',{name:'Mis tareas',exact:true}).click();await page.locator('a[href="#tareas/'+task.id+'"]').waitFor();checks.push('UI tarea del Caso');
    await page.getByRole('link',{name:'Notificaciones',exact:true}).click();await page.getByRole('heading',{name:'Mis notificaciones',exact:true}).waitFor();checks.push('UI campana/bandeja');
   }
   const notices=await get('/nucleo/notificaciones');const candidate=notices.items.find(n=>n.tipo==='TAREA_RECORDATORIO');
