@@ -1,5 +1,7 @@
 # Checkpoint U5 · 26/10/2026
 
+Actualización27/10: la validación técnica pendiente por RAM quedó acreditada. Continuar desde [el checkpoint vigente](CHECKPOINT_U5_2026-10-27.md). Este corte se conserva íntegro como antecedente; U5 sigue funcionalmente parcial.
+
 **U4.5 publicado. U5 parcial y local. No reiniciar el trabajo.**
 
 - `origin/main`: `b322c9b905b533605fb53c8d706dbc144ed074a3`, publicado por fast-forward autorizado y comprobado remotamente. No volver a publicar la rama U5.

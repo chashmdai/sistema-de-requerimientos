@@ -1,5 +1,7 @@
 # Operación U5 en Windows QA
 
+La [validación técnica del27/10](VALIDACION_TECNICA_U5_2026-10-27.md) y el [checkpoint vigente](CHECKPOINT_U5_2026-10-27.md) acreditan los controles antes bloqueados por RAM. Las tres decisiones institucionales de Solicitudes continúan pendientes.
+
 Leer primero el [contrato interno](../contratos/solicitudes-tareas-u5-laboratorio-v1.md). Las decisiones de respuesta, canalización y escalamiento están pendientes por instrucción del usuario y cerradas en backend.
 
 Repositorio `C:\req\repo`; rama `feature/u5-solicitudes-tareas-independientes`. Java25 explícito, dependencias documentales privadas de U4.5, MySQL QA con `VERIFY_IDENTITY`, credenciales DPAPI, HTTPS localhost y aplicación DML. Sin WSL, producción, correos reales ni recuperación pública. El histórico Windows permanece en V12 y no se usa para operar U5.
@@ -24,6 +26,8 @@ ClamAV requiere 4 GiB físicos disponibles; AppContainer/Job y límites no cambi
 Usar `Windows-Iniciar-QA.ps1` con el JAR instalado y la configuración documental indicada en `ultimo-documental-win.txt`, conforme a [operación documental](OPERACION_DOCUMENTAL_WINDOWS.md). Los ingresos y la custodia QA de una batería anterior no deben reutilizarse después de una limpieza SQL de fixtures sin conciliación: preparar un runtime y productor sintético nuevos, conservando los anteriores como evidencia.
 
 `Windows-E2E-Runtime.ps1` incorpora modos `u5` y `u5-restart`. El primero utiliza Edge real, TLS validado, UI y API autorizada; conserva `e2e-u5-operacion.json` en la raíz del runtime propio. El segundo recibe ese archivo mediante `-Baseline` después de reiniciar sobre el mismo esquema y custodia. No incluir credenciales en los argumentos. Ambos reutilizan el mecanismo DPAPI por stdin existente. `u5-documentos` recibe también `-IngresoRun` y prueba los ingresos sintéticos y su custodia; si la vista falla conserva `u5-custodia-ciudadana-parcial.json` y termina con error. Ese archivo no acredita una previsualización correcta.
+
+Al completar la visualización, `u5-documentos` guarda `u5-custodia-ciudadana.json` con estado de previsualización aprobado; el archivo parcial es una captura intermedia, no el resultado final. La salida satisfactoria requiere también las comprobaciones UI, no solo HTTP200.
 
 Las evidencias privadas quedan en `C:\req\evidencias` y `C:\req\testdata`; no subir capturas, documentos ni archivos de configuración privada a Git. El informe de cierre enumera exactamente los ensayos realizados.
 
