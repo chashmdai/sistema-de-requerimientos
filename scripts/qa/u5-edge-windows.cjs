@@ -23,6 +23,7 @@ module.exports=async function({input,run,browser,context,page,request,get,change
   }
   await page.goto(run.origin+'/#comunicacion/'+cases[0].communication);await page.getByRole('button',{name:'Previsualizar tres-paginas.pdf',exact:true}).click();await page.getByText('Página 1 de 3',{exact:true}).waitFor({timeout:90000});await page.waitForFunction(()=>document.querySelector('.visor-superficie img')?.naturalWidth>0);await page.getByRole('button',{name:'Página siguiente',exact:true}).click();await page.getByRole('img',{name:'Página 2 de tres-paginas.pdf',exact:true}).waitFor();await page.waitForFunction(()=>document.querySelector('.visor-superficie img')?.naturalWidth>0);ok('U5 visor nativo de original ciudadano sin descarga manual',await page.locator('iframe,object,embed').count()===0);await page.getByRole('button',{name:'Volver a documentos',exact:true}).click();
 
+  evidence.preview='APROBADA';evidence.controlledUiError=false;fs.writeFileSync(input.run+'/u5-custodia-ciudadana.json',JSON.stringify(evidence,null,2));
   return;
  }
  if(input.mode==='u5-restart'){
