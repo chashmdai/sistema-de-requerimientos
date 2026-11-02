@@ -33,3 +33,13 @@ test('revocacion usa asignacion persistente y no borra cuenta ni documento',asyn
 test('rol TI exige ámbito institucional y no inventa alcance territorial',async()=>{
  render(<AdministracionTI catalog={catalog}/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));fireEvent.change(screen.getByLabelText('Rol a otorgar'),{target:{value:'TI'}});fireEvent.click(screen.getByText('Otorgar rol y alcance'));await waitFor(()=>expect(api.identidadPeticion).toHaveBeenCalledWith('/nucleo/ti/funcionarios/id1/roles','POST',expect.objectContaining({rol:'TI',alcance:'INSTITUCION',unidad:null,sede:null,hasta:null})));
 });
+test('ORG-02 muestra exclusividad y conserva el formulario ante conflicto de designación',async()=>{
+ vi.mocked(api.identidadPeticion).mockRejectedValue(new api.ApiError(409,'DISTRIBUIDOR_CENTRAL_SOLAPADO'));
+ render(<AdministracionTI catalog={catalog}/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));
+ fireEvent.change(screen.getByLabelText('Rol a otorgar'),{target:{value:'DISTRIBUCION'}});
+ expect(screen.getByText(/Solo puede existir una designación central efectiva/)).toBeTruthy();
+ fireEvent.click(screen.getByText('Otorgar rol y alcance'));
+ expect((await screen.findByRole('alert')).textContent).toContain('Ya existe una designación central en ese período');
+ expect((screen.getByLabelText('Rol a otorgar') as HTMLSelectElement).value).toBe('DISTRIBUCION');expect(screen.queryByText(/Cambio confirmado/)).toBeNull();
+ expect(api.identidadPeticion).toHaveBeenCalledWith('/nucleo/ti/funcionarios/id1/roles','POST',expect.objectContaining({rol:'DISTRIBUCION',alcance:'INSTITUCION',unidad:null,sede:null}));
+});

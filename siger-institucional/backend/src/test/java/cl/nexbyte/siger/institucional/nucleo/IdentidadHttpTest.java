@@ -23,6 +23,16 @@ class IdentidadHttpTest {
  MockHttpSession login(String user,String password)throws Exception{var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",user).param("password",password)).andExpect(status().isNoContent());return s;}
  IdentidadInstitucional.Cuenta user(String pass){String name="u."+UUID.randomUUID();return ids.crear(Fixture.tiId,new IdentidadInstitucional.Crear(name,"Funcionario sintético",name+"@example.invalid","Cargo no concede permisos","UPR","DEMO_SEDE_A",pass));}
  void grant(String id){ids.otorgar(Fixture.tiId,id,new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null));}
+ @Test void org02ApiAplicaExclusividadCentralYNoExponeIdentidadEnElConflicto()throws Exception{
+  var a=user(UUID.randomUUID()+"aZ");var b=user(UUID.randomUUID()+"aZ");var ti=login("ti.http",Fixture.tiPassword);
+  var body=new IdentidadInstitucional.Otorgar("DISTRIBUCION","INSTITUCION",null,null,Instant.now(),Instant.now().plusSeconds(600));String json=data.mapper.writeValueAsString(body),route="/nucleo/ti/funcionarios/"+a.id()+"/roles";
+  http.perform(post(route).secure(true).session(ti).contentType("application/json").content(json)).andExpect(status().isForbidden());
+  var response=http.perform(post(route).secure(true).session(ti).with(csrf()).contentType("application/json").content(json)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();String grant=data.mapper.readTree(response).get("id").asString();
+  try{
+   var conflict=http.perform(post("/nucleo/ti/funcionarios/"+b.id()+"/roles").secure(true).session(ti).with(csrf()).contentType("application/json").content(json)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DISTRIBUIDOR_CENTRAL_SOLAPADO")).andReturn().getResponse().getContentAsString();
+   assertFalse(conflict.contains(a.id()));assertFalse(conflict.contains(a.correo()));assertTrue(ids.cuentas(Fixture.tiId).stream().filter(x->x.id().equals(b.id())).findFirst().orElseThrow().asignaciones().isEmpty());
+  }finally{ids.revocar(Fixture.tiId,a.id(),grant);}
+ }
  @Test void regDis01ApiRechazaDestinoAjenoSinEscrituraYPermiteLocalConCsrf()throws Exception{
   String pass=UUID.randomUUID()+"aZ";var u=user(pass);ids.otorgar(Fixture.tiId,u.id(),new IdentidadInstitucional.Otorgar("COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A",Instant.now().minusSeconds(1),null));
   var com=core.registrarManual(cat.operador(u.id()),UUID.randomUUID(),new ContratosNucleo.Manual("Atención sintética local","TELÉFONO",Instant.now().minusSeconds(1),"DEMO_SEDE_A",null)).id();
