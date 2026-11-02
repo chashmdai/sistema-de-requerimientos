@@ -2,6 +2,8 @@
 
 Leer primero `docs/TRASPASO_CODEX_SIGER_H2.md` y `docs/ESTADO_GATE_H2_SIGER_2026-11-01.md`. Son la entrada vigente; los checkpoints anteriores conservan evidencia histórica, no instrucciones actuales de activación.
 
+Continuidad remota U4: leer primero `docs/INFORME_FINAL_U4_4_WINDOWS_UBUNTU_2026-11-02.md`. U4.4 terminó con un E2E sintético físico y ambos lados cerrados; los informes anteriores conservan sus cortes históricos. La base `siger_u4_ddn_ubuntu`, COM-000001, original y ACK son evidencia preservada, no destino de fixtures. U4.5 (interfaz privada aislada) está pendiente y no se inicia automáticamente. No sustituir el perfil WSL de la QA por la URL Ubuntu, importar U4 a QA ni ejecutar V14 sobre las bases preservadas por rutina.
+
 - El usuario autoriza trabajo únicamente dentro del alcance concreto de su solicitud. Publicar código no autoriza producción, cutover, servicios permanentes ni nuevas llamadas a proveedores.
 - `DDN-TEST-SIGER` es desarrollo Windows Server + WSL. SIGER corre nativo Windows; Formulario en WSL es otra aplicación y otro responsable. DDN-UBUNTU es el destino del Formulario; futura VM Windows alojará SIGER, con datos de infraestructura aún pendientes. No inventar nombres/IP/puertos.
 - Conservar runtime QA, procesos, registros, originales, claves, COM/ACK, evidencias y todas las ramas. El JAR activo vive fuera de Git en `C:\req\bin`; jamás sobrescribirlo al compilar. No reset/clean destructivos.
