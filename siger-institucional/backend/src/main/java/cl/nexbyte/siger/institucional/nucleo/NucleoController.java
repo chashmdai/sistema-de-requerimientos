@@ -10,12 +10,13 @@ public class NucleoController {
     private final NucleoInstitucional core;private final CatalogoLaboratorio catalogo;private final org.springframework.core.env.Environment env;
     public NucleoController(NucleoInstitucional core,CatalogoLaboratorio catalogo,org.springframework.core.env.Environment env){this.core=core;this.catalogo=catalogo;this.env=env;}
     private CatalogoLaboratorio.Operador actor(Authentication auth){return SesionFuncionario.actual(auth,catalogo);}
-    public record Sesion(boolean autenticado,CatalogoLaboratorio.Operador operador,String modo,boolean notificacionesHabilitadas,boolean solicitudesHabilitadas){}
+    public record Sesion(boolean autenticado,CatalogoLaboratorio.Operador operador,String modo,boolean notificacionesHabilitadas,boolean solicitudesHabilitadas,boolean cambioClaveObligatorio){}
     public record Csrf(String token,String headerName,String parameterName){}
     public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores,List<CatalogoLaboratorio.Region> regiones){}
     @GetMapping("/session") Sesion session(Authentication auth){
         boolean valid=auth!=null&&auth.isAuthenticated()&&auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails;
-        return new Sesion(valid,valid?actor(auth):null,catalogo.individual()?"LABORATORIO_INDIVIDUAL":"PRUEBAS_HISTORICAS",env.getProperty("institucional.notificaciones.habilitadas",Boolean.class,false),env.getProperty("institucional.solicitudes.habilitadas",Boolean.class,false));
+        boolean cambio=valid&&auth.getPrincipal() instanceof cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional.Principal p&&p.cambioClavePendiente();
+        return new Sesion(valid,valid&&!cambio?actor(auth):null,catalogo.individual()?"LABORATORIO_INDIVIDUAL":"PRUEBAS_HISTORICAS",!cambio&&env.getProperty("institucional.notificaciones.habilitadas",Boolean.class,false),!cambio&&env.getProperty("institucional.solicitudes.habilitadas",Boolean.class,false),cambio);
     }
     @GetMapping("/csrf") Csrf csrf(CsrfToken token){return new Csrf(token.getToken(),token.getHeaderName(),token.getParameterName());}
     @GetMapping("/catalogo") Catalogo catalogo(Authentication auth){

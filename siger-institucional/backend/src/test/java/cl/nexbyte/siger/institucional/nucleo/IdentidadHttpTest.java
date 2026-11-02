@@ -13,14 +13,20 @@ class IdentidadHttpTest {
   @Bean Clock relojLimitesLogin(){return Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"),ZoneOffset.UTC);}
   static String tiPassword=UUID.randomUUID()+"AZ",tiId;
   @Bean(destroyMethod="close") DatosNucleoTest datos()throws Exception{return new DatosNucleoTest(Files.createTempDirectory("identidad-http-"));}
-  @Bean IdentidadInstitucional identidad(DatosNucleoTest d){for(var t:List.of("staff_profile_history","identity_event","staff_assignment","staff_account","org_coverage"))d.db.sql.update("DELETE FROM "+t);var i=new IdentidadInstitucional(d.db,Clock.systemUTC());tiId=i.bootstrap(new IdentidadInstitucional.Crear("ti.http","TI HTTP sintético","ti.http@example.invalid","TI",null,null,tiPassword)).id();return i;}
+  @Bean IdentidadInstitucional identidad(DatosNucleoTest d){for(var t:List.of("staff_profile_history","identity_event","staff_assignment","staff_account","org_coverage"))d.db.sql.update("DELETE FROM "+t);var i=new IdentidadInstitucional(d.db,Clock.systemUTC());tiId=i.bootstrap(new IdentidadInstitucional.Crear("ti.http","TI HTTP sintético","ti.http@example.invalid","TI",null,null,tiPassword)).id();String anterior=tiPassword;tiPassword=UUID.randomUUID()+"AZ";i.cambiarClavePersonal((IdentidadInstitucional.Principal)i.autenticar("ti.http"),new IdentidadInstitucional.CambioClave(anterior,tiPassword));return i;}
   @Bean CatalogoLaboratorio catalogo(IdentidadInstitucional i){return new CatalogoLaboratorio(i);}
   @Bean OrganizacionInstitucional org(DatosNucleoTest d,IdentidadInstitucional i){return new OrganizacionInstitucional(d.db,i,Clock.systemUTC());}
   @Bean HabilitacionNucleo gate(){return new HabilitacionNucleo(HabilitacionNucleoTest.valid());}
   @Bean NucleoInstitucional core(DatosNucleoTest d,CatalogoLaboratorio c){return new NucleoInstitucional(d.db,c,d.recepcion,d.mapper,Clock.systemUTC());}
  }
  @Autowired MockMvc http;@Autowired DatosNucleoTest data;@Autowired IdentidadInstitucional ids;@Autowired CatalogoLaboratorio cat;@Autowired NucleoInstitucional core;
- MockHttpSession login(String user,String password)throws Exception{var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",user).param("password",password)).andExpect(status().isNoContent());return s;}
+ Map<String,String> clavesHabilitadas=new HashMap<>();
+ MockHttpSession login(String user,String password)throws Exception{
+  String actual=clavesHabilitadas.getOrDefault(user,password);var p=(IdentidadInstitucional.Principal)ids.autenticar(user);
+  // Estas regresiones requieren cuenta habilitada; el flujo temporal se prueba sin atajos en CredencialTemporalHttpTest.
+  if(p.cambioClavePendiente()){String nueva=UUID.randomUUID()+"AZ";ids.cambiarClavePersonal(p,new IdentidadInstitucional.CambioClave(actual,nueva));actual=nueva;clavesHabilitadas.put(user,nueva);}
+  var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",user).param("password",actual)).andExpect(status().isNoContent());return s;
+ }
  IdentidadInstitucional.Cuenta user(String pass){String name="u."+UUID.randomUUID();return ids.crear(Fixture.tiId,new IdentidadInstitucional.Crear(name,"Funcionario sintético",name+"@example.invalid","Cargo no concede permisos","UPR","DEMO_SEDE_A",pass));}
  void grant(String id){ids.otorgar(Fixture.tiId,id,new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null));}
  @Test void org02ApiAplicaExclusividadCentralYNoExponeIdentidadEnElConflicto()throws Exception{
@@ -61,7 +67,7 @@ class IdentidadHttpTest {
   var fresh=login(u.usuario(),pass);http.perform(get("/nucleo/session").secure(true).session(fresh)).andExpect(jsonPath("$.operador.accesos").isEmpty());
  }
  @Test void desactivarInvalidaSesionYCredencialYNoSeAdmitePrincipalInyectado()throws Exception{
-  String pass=UUID.randomUUID()+"aZ";var u=user(pass);var s=login(u.usuario(),pass);ids.actualizar(Fixture.tiId,u.id(),new IdentidadInstitucional.Perfil(u.nombre(),u.correo(),u.cargo(),u.unidad(),u.sede(),false,u.revision()));
+  String pass=UUID.randomUUID()+"aZ";var u=user(pass);var s=login(u.usuario(),pass);ids.actualizar(Fixture.tiId,u.id(),new IdentidadInstitucional.Perfil(u.nombre(),u.correo(),u.cargo(),u.unidad(),u.sede(),false,cat.operador(u.id()).versionAcceso()));
   http.perform(get("/nucleo/comunicaciones").secure(true).session(s)).andExpect(status().isUnauthorized());assertTrue(s.isInvalid());
   http.perform(post("/nucleo/login").secure(true).with(csrf()).param("username",u.usuario()).param("password",pass)).andExpect(status().isUnauthorized());
   http.perform(get("/nucleo/ti/funcionarios").secure(true).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(Fixture.tiId).roles("FUNCIONARIO_LAB"))).andExpect(status().isUnauthorized());

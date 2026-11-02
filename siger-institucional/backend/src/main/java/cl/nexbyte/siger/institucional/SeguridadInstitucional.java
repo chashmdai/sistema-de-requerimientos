@@ -59,6 +59,15 @@ public class SeguridadInstitucional {
                         var account=attempts.computeIfAbsent("cuenta:"+login.toLowerCase(Locale.ROOT),k->new long[]{minute,0});
                         if(++count[1]>30||++account[1]>8){r.setStatus(429);r.setHeader("Retry-After","60");return;}
                     }
+                    if(q.getRequestURI().equals("/nucleo/clave-personal")&&q.getMethod().equals("POST"))synchronized(attempts){
+                        var auth=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                        if(auth!=null&&auth.getPrincipal() instanceof cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional.Principal){
+                            long minute=clock.millis()/60000;attempts.entrySet().removeIf(e->e.getValue()[0]!=minute);
+                            if(attempts.size()>1024){r.setStatus(429);return;}
+                            var count=attempts.computeIfAbsent("clave:"+auth.getName(),k->new long[]{minute,0});
+                            if(++count[1]>8){r.setStatus(429);r.setHeader("Retry-After","60");return;}
+                        }
+                    }
                     chain.doFilter(q,r);
                 }
             },UsernamePasswordAuthenticationFilter.class);
@@ -68,6 +77,12 @@ public class SeguridadInstitucional {
                 if(identity!=null&&auth!=null&&auth.isAuthenticated()){
                     if(!(auth.getPrincipal() instanceof cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional.Principal p)||!identity.vigente(p)){
                         org.springframework.security.core.context.SecurityContextHolder.clearContext();var session=q.getSession(false);if(session!=null)session.invalidate();r.setStatus(401);r.setHeader("Cache-Control","no-store");return;
+                    }
+                    if(p.cambioClavePendiente()&&q.getRequestURI().startsWith("/nucleo/")){
+                        String route=q.getRequestURI(),method=q.getMethod();
+                        boolean permitido=method.equals("GET")&&Set.of("/nucleo/session","/nucleo/csrf").contains(route)
+                            ||method.equals("POST")&&Set.of("/nucleo/clave-personal","/nucleo/logout").contains(route);
+                        if(!permitido){r.setStatus(403);r.setHeader("Cache-Control","no-store");r.setContentType("application/problem+json");r.getWriter().write("{\"status\":403,\"code\":\"CAMBIO_CLAVE_REQUERIDO\"}");return;}
                     }
                 }
                 chain.doFilter(q,r);

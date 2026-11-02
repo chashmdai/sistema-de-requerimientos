@@ -1,5 +1,7 @@
 # Entrega progresiva de lógica SIGER · 02/11/2026
 
+Continuidad posterior a `d19fa87d`: [U1.3 y siguientes](LOGICA_CONTINUIDAD_U1_2026-11-02.md). Los resultados siguientes conservan el corte acreditado de U1.1/U1.2; no se presentan como las pruebas nuevas de continuidad.
+
 ## U0
 
 [Diagnóstico inicial](LOGICA_U0_DIAGNOSTICO_2026-11-02.md), [matriz de 138 reglas](LOGICA_MATRIZ_REGLAS_2026-11-02.csv), [baseline de migraciones](LOGICA_BASELINE_MIGRACIONES_2026-11-02.csv). Documento rector verificado y leído íntegramente, sin incorporarlo a Git. G0 limpio `95cf2ae8173b4c6cab3eb8a1531659b8459dd898`; U0 registrado en `0a384cc`.

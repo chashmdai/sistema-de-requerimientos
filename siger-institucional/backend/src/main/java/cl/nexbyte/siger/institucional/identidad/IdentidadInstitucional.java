@@ -15,18 +15,21 @@ public final class IdentidadInstitucional {
     }
     public record Perfil(String nombre,String correo,String cargo,String unidad,String sede,boolean activo,long revision){}
     public record Otorgar(String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta){}
-    public record Cuenta(String id,String usuario,String nombre,String correo,String cargo,String unidad,String sede,boolean activo,long revision,List<Map<String,Object>> asignaciones){}
+    public record Cuenta(String id,String usuario,String nombre,String correo,String cargo,String unidad,String sede,boolean activo,long revision,List<Map<String,Object>> asignaciones,boolean cambioClavePendiente){}
     public record Clave(String password,long revision){@Override public String toString(){return "Clave[reservada]";}}
+    public record CambioClave(String actual,String nueva){@Override public String toString(){return "CambioClave[reservado]";}}
     public static final class Principal extends User {
         private final long epoch;
-        Principal(String username,String hash,long epoch){super(username,hash,List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_FUNCIONARIO_LAB")));this.epoch=epoch;}
+        private final boolean cambioClavePendiente;
+        Principal(String username,String hash,long epoch,boolean cambioClavePendiente){super(username,hash,List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_FUNCIONARIO_LAB")));this.epoch=epoch;this.cambioClavePendiente=cambioClavePendiente;}
         public long epoch(){return epoch;}
+        public boolean cambioClavePendiente(){return cambioClavePendiente;}
     }
     private long now(){return clock.millis();}
     private static String str(Map<String,Object> r,String k){return r.get(k)==null?null:r.get(k).toString();}
     private static long num(Map<String,Object> r,String k){return ((Number)r.get(k)).longValue();}
     private static void text(String s,int max){if(s==null||s.isBlank()||s.length()>max||s.chars().anyMatch(Character::isISOControl))throw new FalloTecnico(400);}
-    private Map<String,Object> row(String id){var rows=db.sql.queryForList("SELECT s.*,a.label FROM staff_account s JOIN core_actor a ON a.id=s.actor_id WHERE s.actor_id=?",id);if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();}
+    private Map<String,Object> row(String id){var rows=db.sql.queryForList("SELECT s.*,a.label,c.must_change_password FROM staff_account s JOIN core_actor a ON a.id=s.actor_id LEFT JOIN staff_credential_state c ON c.actor_id=s.actor_id WHERE s.actor_id=?",id);if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();}
     private boolean enabled(Map<String,Object> r){return Boolean.TRUE.equals(r.get("enabled"));}
     private void guard(){db.sql.queryForObject("SELECT id FROM identity_guard WHERE id=1 FOR UPDATE",Integer.class);}
     private void evento(String a,String subject,String code,String resource){db.sql.update("INSERT INTO identity_event(actor_id,subject_id,event_code,resource_id,at_ms) VALUES(?,?,?,?,?)",a,subject,code,resource,now());}
@@ -61,9 +64,9 @@ public final class IdentidadInstitucional {
         return new Operador(id,str(r,"label"),primary,str(r,"unit_code"),str(r,"site_id"),accesses,str(r,"email"),str(r,"cargo"),num(r,"security_epoch"));
     }
     public UserDetails autenticar(String username){
-        var rows=db.sql.queryForList("SELECT * FROM staff_account WHERE username=?",username);
+        var rows=db.sql.queryForList("SELECT s.*,c.must_change_password FROM staff_account s LEFT JOIN staff_credential_state c ON c.actor_id=s.actor_id WHERE s.username=?",username);
         if(rows.isEmpty()||!enabled(rows.getFirst()))throw new UsernameNotFoundException("Acceso no habilitado");
-        var r=rows.getFirst();return new Principal(str(r,"actor_id"),str(r,"password_hash"),num(r,"security_epoch"));
+        var r=rows.getFirst();return new Principal(str(r,"actor_id"),str(r,"password_hash"),num(r,"security_epoch"),Boolean.TRUE.equals(r.get("must_change_password")));
     }
     public boolean vigente(Principal principal){try{var r=row(principal.getUsername());return enabled(r)&&num(r,"security_epoch")==principal.epoch();}catch(FalloTecnico e){return false;}}
     public List<Operador> operadores(){return db.sql.queryForList("SELECT actor_id FROM staff_account WHERE enabled=TRUE ORDER BY actor_id").stream().map(r->operador(str(r,"actor_id"))).toList();}
@@ -82,11 +85,12 @@ public final class IdentidadInstitucional {
         if(c.usuario()==null||!c.usuario().matches("[a-z0-9][a-z0-9._-]{2,63}"))throw new FalloTecnico(400);
         perfilValido(c.nombre(),c.correo(),c.cargo(),c.unidad(),c.sede());String id=UUID.randomUUID().toString();
         db.sql.update("INSERT INTO core_actor(id,label,role_code) VALUES(?,?,'PROFESIONAL')",id,c.nombre());
-        db.sql.update("INSERT INTO staff_account VALUES(?,?,?,?,?,?,TRUE,0,?,?,?,?)",id,c.usuario(),c.correo().toLowerCase(Locale.ROOT),c.cargo(),c.unidad(),c.sede(),hash,now(),now(),admin==null?id:admin);
+        db.sql.update("INSERT INTO staff_account(actor_id,username,email,cargo,unit_code,site_id,enabled,security_epoch,password_hash,created_ms,updated_ms,updated_by) VALUES(?,?,?,?,?,?,TRUE,0,?,?,?,?)",id,c.usuario(),c.correo().toLowerCase(Locale.ROOT),c.cargo(),c.unidad(),c.sede(),hash,now(),now(),admin==null?id:admin);
+        marcarCambioClave(id,true);
         evento(admin==null?id:admin,id,"CUENTA_CREADA",id);snapshot(admin==null?id:admin,id);return cuenta(id);
     }
     private void snapshot(String author,String id){var r=row(id);db.sql.update("INSERT INTO staff_profile_history(actor_id,label,email,cargo,unit_code,site_id,enabled,security_epoch,changed_by,changed_ms) VALUES(?,?,?,?,?,?,?,?,?,?)",id,r.get("label"),r.get("email"),r.get("cargo"),r.get("unit_code"),r.get("site_id"),r.get("enabled"),r.get("security_epoch"),author,now());}
-    private Cuenta cuenta(String id){var r=row(id);return new Cuenta(id,str(r,"username"),str(r,"label"),str(r,"email"),str(r,"cargo"),str(r,"unit_code"),str(r,"site_id"),enabled(r),num(r,"security_epoch"),db.sql.queryForList("SELECT id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,revoked_ms,granted_by,revoked_by FROM staff_assignment WHERE actor_id=? ORDER BY valid_from,id",id));}
+    private Cuenta cuenta(String id){var r=row(id);return new Cuenta(id,str(r,"username"),str(r,"label"),str(r,"email"),str(r,"cargo"),str(r,"unit_code"),str(r,"site_id"),enabled(r),num(r,"security_epoch"),db.sql.queryForList("SELECT id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,revoked_ms,granted_by,revoked_by FROM staff_assignment WHERE actor_id=? ORDER BY valid_from,id",id),Boolean.TRUE.equals(r.get("must_change_password")));}
     public List<Cuenta> cuentas(String admin){ti(admin);return db.sql.queryForList("SELECT actor_id FROM staff_account ORDER BY username LIMIT 500").stream().map(r->cuenta(str(r,"actor_id"))).toList();}
     private void ultimaTi(){long count=db.sql.queryForObject("SELECT COUNT(*) FROM staff_account s WHERE enabled=TRUE AND EXISTS(SELECT 1 FROM staff_assignment a WHERE a.actor_id=s.actor_id AND a.role_code='TI' AND a.scope_code='INSTITUCION' AND a.revoked_ms IS NULL AND a.valid_from<=? AND (a.valid_until IS NULL OR a.valid_until>?))",Long.class,now(),now());if(count==0)throw new FalloTecnico(409,"ULTIMO_TI");}
     public Cuenta actualizar(String admin,String id,Perfil p){ti(admin);perfilValido(p.nombre(),p.correo(),p.cargo(),p.unidad(),p.sede());return db.transaction(()->{guard();ti(admin);revision(row(id),p.revision());db.sql.update("UPDATE core_actor SET label=? WHERE id=?",p.nombre(),id);db.sql.update("UPDATE staff_account SET email=?,cargo=?,unit_code=?,site_id=?,enabled=?,security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",p.correo().toLowerCase(Locale.ROOT),p.cargo(),p.unidad(),p.sede(),p.activo(),now(),admin,id);if(p.activo())validarActivacionDistribuidor(id);ultimaTi();evento(admin,id,p.activo()?"PERFIL_HABILITADO":"CUENTA_DESACTIVADA",id);snapshot(admin,id);return cuenta(id);});}
@@ -100,6 +104,24 @@ public final class IdentidadInstitucional {
     private String otorgarInterno(String admin,String id,Otorgar o){validar(o);var target=row(id);if(o.rol().equals("DISTRIBUCION")&&enabled(target))distribucionDisponible("",o.desde().toEpochMilli(),o.hasta()==null?null:o.hasta().toEpochMilli());String grant=UUID.randomUUID().toString();db.sql.update("INSERT INTO staff_assignment(id,actor_id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,granted_by) VALUES(?,?,?,?,?,?,?,?,?)",grant,id,o.rol(),o.alcance(),o.unidad(),o.sede(),o.desde().toEpochMilli(),o.hasta()==null?null:o.hasta().toEpochMilli(),admin);db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",now(),admin,id);evento(admin,id,"ROL_OTORGADO",grant);return grant;}
     public String otorgar(String admin,String id,Otorgar o){ti(admin);return db.transaction(()->{guard();ti(admin);return otorgarInterno(admin,id,o);});}
     public void revocar(String admin,String id,String grant){ti(admin);db.transaction(()->{guard();ti(admin);if(db.sql.update("UPDATE staff_assignment SET revoked_ms=?,revoked_by=? WHERE id=? AND actor_id=? AND revoked_ms IS NULL",now(),admin,grant,id)!=1)throw new FalloTecnico(404);db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",now(),admin,id);ultimaTi();evento(admin,id,"ROL_REVOCADO",grant);return null;});}
-    public void clave(String admin,String id,Clave c){ti(admin);String hash=hash(c.password());db.transaction(()->{guard();ti(admin);revision(row(id),c.revision());db.sql.update("UPDATE staff_account SET password_hash=?,security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",hash,now(),admin,id);evento(admin,id,"CLAVE_REEMPLAZADA",id);return null;});}
+    private void marcarCambioClave(String id,boolean pendiente){
+        if(db.sql.queryForList("SELECT actor_id FROM staff_credential_state WHERE actor_id=?",id).isEmpty())db.sql.update("INSERT INTO staff_credential_state VALUES(?,?)",id,pendiente);
+        else db.sql.update("UPDATE staff_credential_state SET must_change_password=? WHERE actor_id=?",pendiente,id);
+    }
+    public void clave(String admin,String id,Clave c){ti(admin);String hash=hash(c.password());db.transaction(()->{guard();ti(admin);revision(row(id),c.revision());db.sql.update("UPDATE staff_account SET password_hash=?,security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",hash,now(),admin,id);marcarCambioClave(id,true);evento(admin,id,"CLAVE_REEMPLAZADA",id);return null;});}
+    /** Cambio de la propia credencial: identidad/epoch del servidor, sin selector de cuenta ni caché de secretos. */
+    public void cambiarClavePersonal(Principal principal,CambioClave cambio){
+        if(principal==null||!vigente(principal))throw new FalloTecnico(401);
+        if(cambio==null||cambio.actual()==null||cambio.actual().isEmpty()||cambio.actual().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>72)throw new FalloTecnico(400);
+        String nuevaHash=hash(cambio.nueva());
+        db.transaction(()->{
+            guard();if(!vigente(principal))throw new FalloTecnico(401);
+            String actor=principal.getUsername(),anterior=str(row(actor),"password_hash");
+            if(!anterior.startsWith("{bcrypt}")||!encoder.matches(cambio.actual(),anterior.substring(8)))throw new FalloTecnico(403,"CREDENCIAL_ACTUAL_INVALIDA");
+            if(cambio.actual().equals(cambio.nueva()))throw new FalloTecnico(400,"CLAVE_NUEVA_REUTILIZADA");
+            db.sql.update("UPDATE staff_account SET password_hash=?,security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",nuevaHash,now(),actor,actor);marcarCambioClave(actor,false);
+            evento(actor,actor,"CLAVE_PERSONAL_CAMBIADA",actor);return null;
+        });
+    }
     public Cuenta bootstrap(Crear c){String hash=hash(c.password());return db.transaction(()->{guard();if(db.sql.queryForObject("SELECT COUNT(*) FROM staff_account",Integer.class)!=0)throw new FalloTecnico(409);var account=crearInterno(null,c,hash);otorgarInterno(account.id(),account.id(),new Otorgar("TI","INSTITUCION",null,null,clock.instant(),null));return cuenta(account.id());});}
 }
