@@ -28,7 +28,7 @@
     </resources>
     <plugins>
       <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
-      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><configuration><excludedGroups>stress</excludedGroups></configuration></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><configuration><excludedGroups>stress</excludedGroups><systemPropertyVariables><jdk.net.hosts.file>${project.basedir}/src/test/resources/hosts-pruebas</jdk.net.hosts.file></systemPropertyVariables></configuration></plugin>
     </plugins>
   </build>
 </project>
