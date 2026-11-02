@@ -1,0 +1,38 @@
+import cl.nexbyte.siger.institucional.formulario.*;
+import cl.nexbyte.siger.institucional.robustez.*;
+import cl.nexbyte.siger.institucional.archivos.*;
+import java.nio.file.*;import java.security.*;import java.sql.*;import java.util.*;
+/** Solo SELECT y lectura de originales: no toma writer.lock, no firma, no reclama ni confirma. */
+class VerificarRecepcionInteractiva {
+ static final tools.jackson.databind.json.JsonMapper M=EntregaCompleta.lector();
+ static void check(boolean ok){if(!ok)throw new IllegalStateException("VERIFICACION_NO_ACREDITADA");}
+ static String sha(byte[] value)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value));}
+ static Map<String,PublicKey> trust(tools.jackson.databind.JsonNode value){var r=new HashMap<String,PublicKey>();value.properties().forEach(e->r.put(e.getKey(),ComprobanteDigital.publicPem(e.getValue().asString())));return r;}
+ public static void main(String[] args){try{
+  check(System.getProperty("os.name").startsWith("Windows")&&args.length==0);var input=M.readTree(System.in);check(input.path("user").asString().equals("siger_windows_qa_app"));
+  String id=UUID.fromString(input.path("operation").asString()).toString();var publicTrust=trust(input.path("publicTrust"));var own=trust(input.path("ownTrust"));
+  String url="jdbc:mysql://127.0.0.1:3306/siger_institucional_windows_qa?sslMode=VERIFY_IDENTITY&fallbackToSystemTrustStore=false&trustCertificateKeyStoreUrl=file:/C:/req/config/siger-mysql-truststore.p12&trustCertificateKeyStoreType=PKCS12&trustCertificateKeyStorePassword=public-trust&connectTimeout=5000&socketTimeout=15000&characterEncoding=UTF-8";
+  try(var db=DriverManager.getConnection(url,input.path("user").asString(),input.path("password").asString())){
+   db.setReadOnly(true);try(var s=db.createStatement();var r=s.executeQuery("SELECT DATABASE(),CURRENT_USER()")){r.next();check(r.getString(1).equals("siger_institucional_windows_qa")&&r.getString(2).equals("siger_windows_qa_app@localhost"));}
+   var out=new TreeMap<String,Object>();out.put("operation",id);out.put("readOnly",true);
+   EntregaCompleta delivery;RegistroInstitucional receipt;String com;long number;
+   try(var s=db.prepareStatement("SELECT i.body,i.receipt,i.ack_pending,c.comunicacion_id,c.numero,c.registrada_ms,c.canal,c.content_hash,c.provenance_hash FROM institutional_inbox i JOIN communication_registry c ON c.source=i.source AND c.operacion_id=i.id WHERE i.source='FORMULARIO_PUBLICO_DDN' AND i.id=?")){
+    s.setString(1,id);try(var r=s.executeQuery()){check(r.next());delivery=M.readValue(r.getString(1),EntregaCompleta.class);receipt=M.readValue(r.getString(2),RegistroInstitucional.class);check(!r.getBoolean(3));com=r.getString(4);number=r.getLong(5);
+     delivery.validar(publicTrust,M);delivery.validarRegistro(receipt,own,M);check(delivery.id().toString().equals(id));check(receipt.registro().comunicacionId().toString().equals(com));check(receipt.registro().numeroFolio()==number);check(receipt.registro().registradaEn().toEpochMilli()==r.getLong(6));check(receipt.registro().canalOrigen().equals(r.getString(7)));check(delivery.sha256().equals(r.getString(8))&&delivery.huellaProcedencia().equals(r.getString(9)));check(!r.next());}
+   }
+   check(delivery.sha256().equals(input.path("contentSHA256").asString()));check(delivery.huellaProcedencia().equals(input.path("provenanceSHA256").asString()));check(delivery.comunicacion().path("version").asString().equals(input.path("documentVersion").asString()));
+   var root=Path.of(input.path("storage").asString()).toAbsolutePath().normalize();check(root.toString().matches("C:\\\\req\\\\testdata\\\\runtime-qa-[a-f0-9]{32}\\\\archivo"));
+   var originals=new ArrayList<Map<String,Object>>();check(delivery.adjuntos().size()==input.path("attachments").size());
+   for(var a:delivery.adjuntos()){
+    var expected=input.path("attachments").get(a.id().toString());check(expected!=null&&a.tamanio()==expected.path("size").asLong()&&a.sha256().equals(expected.path("sha256").asString())&&a.tipo().equals(expected.path("type").asString()));
+    String key=id+"/"+a.id();String documentId;
+    try(var s=db.prepareStatement("SELECT id,communication_id,origin,name,size_bytes,sha256,media_type,storage_key FROM institution_document WHERE operation_id=? AND attachment_id=?")){s.setString(1,id);s.setString(2,a.id().toString());try(var r=s.executeQuery()){check(r.next());documentId=r.getString(1);check(com.equals(r.getString(2))&&"INGRESO_CIUDADANO".equals(r.getString(3))&&a.nombre().equals(r.getString(4))&&a.tamanio()==r.getLong(5)&&a.sha256().equals(r.getString(6))&&a.tipo().equals(r.getString(7))&&key.equals(r.getString(8)));check(!r.next());}}
+    var path=root.resolve("objects").resolve(key+".bin").normalize();check(path.startsWith(root.resolve("objects")));PlataformaArchivos.actual().validarCadena(path);ArchivoPrivado.validarAcceso(path);check(Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS)&&Files.size(path)==a.tamanio());var digest=MessageDigest.getInstance("SHA-256");try(var stream=Files.newInputStream(path,LinkOption.NOFOLLOW_LINKS)){byte[] b=new byte[65536];for(int n;(n=stream.read(b))!=-1;)digest.update(b,0,n);}check(HexFormat.of().formatHex(digest.digest()).equals(a.sha256()));
+    originals.add(Map.of("attachment",a.id(),"document",documentId,"size",a.tamanio(),"sha256",a.sha256(),"mediaType",a.tipo(),"privateOriginalVerified",true));
+   }
+   for(var e:Map.of("communicationCount","SELECT COUNT(*) FROM communication_registry WHERE source='FORMULARIO_PUBLICO_DDN' AND operacion_id=?","documentCount","SELECT COUNT(*) FROM institution_document WHERE operation_id=?").entrySet())try(var s=db.prepareStatement(e.getValue())){s.setString(1,id);try(var r=s.executeQuery()){r.next();long expected=e.getKey().equals("communicationCount")?1:delivery.adjuntos().size();check(r.getLong(1)==expected);out.put(e.getKey(),r.getLong(1));}}
+   long registeredSeq=-1,confirmedSeq=-1;var events=new ArrayList<Map<String,Object>>();try(var s=db.prepareStatement("SELECT seq,at_ms,category,code FROM operational_event WHERE (aggregate_id=? AND code='COMUNICACION_REGISTRADA') OR (aggregate_id=? AND code='ACK_PUBLICO_CONFIRMADO') ORDER BY seq")){s.setString(1,com);s.setString(2,id);try(var r=s.executeQuery()){while(r.next()){String code=r.getString(4);if(code.equals("COMUNICACION_REGISTRADA")){check(registeredSeq<0);registeredSeq=r.getLong(1);}if(code.equals("ACK_PUBLICO_CONFIRMADO")){check(confirmedSeq<0);confirmedSeq=r.getLong(1);}events.add(Map.of("seq",r.getLong(1),"atMs",r.getLong(2),"category",r.getString(3),"code",code));}}}check(registeredSeq>0&&confirmedSeq>registeredSeq);
+   out.put("communication",com);out.put("folio",receipt.registro().folio());out.put("documentVersion",delivery.comunicacion().path("version").asString());out.put("ackVersion",receipt.registro().version());out.put("channel",receipt.registro().canalOrigen());out.put("type",delivery.tipo());out.put("contentSHA256",delivery.sha256());out.put("provenanceSHA256",delivery.huellaProcedencia());out.put("publicSignatureVerified",true);out.put("institutionalSignatureVerified",true);out.put("originals",originals);out.put("events",events);out.put("ackPending",false);out.put("ackPayloadSHA256",sha(Base64.getUrlDecoder().decode(receipt.comprobante().payload())));out.put("ackSignatureSHA256",sha(Base64.getUrlDecoder().decode(receipt.comprobante().firma())));out.put("ok",true);System.out.println(M.writeValueAsString(out));
+  }
+ }catch(Exception e){System.out.println(M.writeValueAsString(Map.of("ok",false,"code","RECEPCION_NO_ACREDITADA","errorClass",e.getClass().getSimpleName())));System.exit(1);}}
+}

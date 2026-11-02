@@ -1,8 +1,11 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$Jar,[ValidateRange(30,1800)][int]$Seconds=600,[ValidateSet(8080,8081)][int]$Port=8081,[string]$Archivo='',[string]$DocumentalConfig='',[string]$TrustPublicoQA='')
+param([Parameter(Mandatory)][string]$Jar,[ValidateRange(30,1800)][int]$Seconds=600,[ValidateSet(8080,8081)][int]$Port=8081,[string]$Archivo='',[string]$DocumentalConfig='',[string]$TrustPublicoQA='',[string]$PerfilFormulario='',[switch]$HabilitarRecuperacionManual,[switch]$HabilitarConsumidorAutomaticoQA,[switch]$MantenerDisponible)
 $ErrorActionPreference='Stop'
 if(-not $IsWindows){throw 'Solo Windows nativo'}
-# QA nativo. Workers opt-in; transportes externos cerrados. Nunca acepta el histórico.
+if($HabilitarRecuperacionManual -and $HabilitarConsumidorAutomaticoQA){throw 'Seleccionar solo un modo de recuperacion'}
+if($HabilitarConsumidorAutomaticoQA -and (-not $MantenerDisponible -or $PerfilFormulario -notmatch '^C:\\req\\config\\formulario-wsl-e2e-[a-f0-9]{32}\\perfil\.json$')){throw 'Automatico QA requiere continuidad y perfil E2E aislado explicitos'}
+if($MantenerDisponible -and -not ($HabilitarRecuperacionManual -or $HabilitarConsumidorAutomaticoQA)){throw 'La revision humana sin vencimiento requiere un perfil QA explicito'}
+# QA nativo. Sin recuperación por defecto. El opt-in manual no programa reclamaciones. Nunca acepta el histórico.
 function Private-File([string]$Path){
  $allowed=@([Security.Principal.WindowsIdentity]::GetCurrent().User.Value,'S-1-5-18','S-1-5-32-544')
  $p=[IO.Path]::GetFullPath($Path)
@@ -19,6 +22,13 @@ $hash=(Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLowerInvari
 if(-not $hash.StartsWith($prefix)){throw 'Artefacto distinto de su nombre SHA'}
 if(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue){throw 'Puerto ocupado; no se interviene otro servicio'}
 Add-Type -AssemblyName System.Security.Cryptography.ProtectedData
+$integration=$null
+if($HabilitarRecuperacionManual -or $HabilitarConsumidorAutomaticoQA){
+ if(-not $DocumentalConfig -or -not $PerfilFormulario -or [IO.Path]::GetFullPath($PerfilFormulario) -notmatch '^C:\\req\\config\\formulario-wsl-(integracion|e2e-[a-f0-9]{32})\\perfil\.json$'){throw 'Recuperacion manual requiere documental QA y perfil aprobado'}
+ Private-File $PerfilFormulario;$integration=Get-Content -LiteralPath $PerfilFormulario -Raw|ConvertFrom-Json
+ if($integration.origin -ne 'https://formulario.defensorianinez.gob.cl' -or -not $integration.technicalAuthenticationReady -or -not $integration.institutionalSigningTrustedOffline -or $integration.publicRecoveryEnabled -or $integration.automaticRecovery){throw 'Perfil no preparado o automatismo no autorizado'}
+ foreach($path in @($integration.ca,$integration.publicTrust,$integration.credential)){if([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($path)) -ne [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($PerfilFormulario))){throw 'Archivo fuera del perfil privado'};Private-File $path}
+}elseif($PerfilFormulario){throw 'Perfil requiere habilitacion manual explicita'}
 $root='C:\req\testdata\runtime-qa-'+[guid]::NewGuid().ToString('N')
 $secret=Join-Path $root 'secrets';$null=New-Item -ItemType Directory -Path $secret
 Private-File $secret
@@ -26,7 +36,11 @@ if($Archivo){$Archivo=[IO.Path]::GetFullPath($Archivo);if($Archivo -notmatch '^C
 $process=$null;$files=[Collections.Generic.List[string]]::new();$payload=$null;$dbCredential=$null
 try{
  foreach($name in @('institucional-key.pem','institucional-trust.json','publico-trust.json','notificaciones-allowlist.txt')){
-  if($name -eq 'publico-trust.json' -and $TrustPublicoQA){$TrustPublicoQA=[IO.Path]::GetFullPath($TrustPublicoQA);if($TrustPublicoQA -notmatch '^C:\\req\\testdata\\runtime-qa-[a-f0-9]{32}\\recepcion\\publico-trust.json$'){throw 'Solo trust de productor sintetico QA'};Private-File $TrustPublicoQA;[byte[]]$bytes=[IO.File]::ReadAllBytes($TrustPublicoQA)}else{[byte[]]$bytes=Source-Bytes $name}
+  if($name -eq 'publico-trust.json' -and ($integration -or $TrustPublicoQA)){
+   $trust=@{};if($integration){$trust=Get-Content -LiteralPath $integration.publicTrust -Raw|ConvertFrom-Json -AsHashtable}
+   if($TrustPublicoQA){$TrustPublicoQA=[IO.Path]::GetFullPath($TrustPublicoQA);if($TrustPublicoQA -notmatch '^C:\\req\\testdata\\runtime-qa-[a-f0-9]{32}\\recepcion\\publico-trust.json$'){throw 'Solo trust de productor sintetico QA'};Private-File $TrustPublicoQA;$prior=Get-Content -LiteralPath $TrustPublicoQA -Raw|ConvertFrom-Json -AsHashtable;foreach($id in $prior.Keys){if($trust.ContainsKey($id) -and $trust[$id].Trim() -ne $prior[$id].Trim()){throw 'Colision de clave; no reemplazar confianza'};$trust[$id]=$prior[$id]}}
+   [byte[]]$bytes=[Text.Encoding]::UTF8.GetBytes(($trust|ConvertTo-Json -Compress))
+  }else{[byte[]]$bytes=Source-Bytes $name}
   try{$target=Join-Path $secret $name;$files.Add($target);[IO.File]::WriteAllBytes($target,$bytes);Private-File $target}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($bytes)}
  }
  $ownTrust=Get-Content -LiteralPath (Join-Path $secret 'institucional-trust.json') -Raw|ConvertFrom-Json
@@ -52,6 +66,11 @@ try{
   'institucional.notificaciones.correo.campana'='windows_qa_simulado'
  }
  if($DocumentalConfig){$DocumentalConfig=[IO.Path]::GetFullPath($DocumentalConfig);if($DocumentalConfig -notmatch '^C:\\req\\testdata\\documental-win-[a-f0-9]{32}\\windows\.properties$'){throw 'Solo configuracion documental QA calificada'};Private-File $DocumentalConfig;$config['siger.windows.modo']='DOCUMENTAL_QA_CALIFICADO';$config['institucional.documental.windows-configuracion']=$DocumentalConfig}
+ if($integration){
+  $target=Join-Path $secret 'formulario-ca.pem';$files.Add($target);[IO.File]::WriteAllBytes($target,[IO.File]::ReadAllBytes($integration.ca));Private-File $target
+  $privateBytes=[Security.Cryptography.ProtectedData]::Unprotect([IO.File]::ReadAllBytes($integration.credential),$null,[Security.Cryptography.DataProtectionScope]::CurrentUser)
+  try{$connection=[Text.Encoding]::UTF8.GetString($privateBytes)|ConvertFrom-Json;$modeKey=if($HabilitarConsumidorAutomaticoQA){'siger.windows.formulario-automatico'}else{'siger.windows.formulario-manual'};$config[$modeKey]='true';$config['institucional.formulario-completo.origen-publico']=$integration.origin;$config['institucional.formulario-completo.ca-certificado']=$target;$config['institucional.formulario-completo.token']=$connection.token;$config['operacion.token']=$connection.operationalToken}finally{[Security.Cryptography.CryptographicOperations]::ZeroMemory($privateBytes);$connection=$null}
+ }
  $start=[Diagnostics.ProcessStartInfo]::new('C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot\bin\java.exe')
  $start.UseShellExecute=$false;$start.CreateNoWindow=$true;$start.RedirectStandardInput=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true;$start.WorkingDirectory=$root
  $start.Environment.Clear();foreach($key in @('SystemRoot','windir','USERPROFILE','LOCALAPPDATA')){if([Environment]::GetEnvironmentVariable($key)){$start.Environment[$key]=[Environment]::GetEnvironmentVariable($key)}}
@@ -61,11 +80,13 @@ try{
  $out=[IO.FileStream]::new((Join-Path $root 'backend.log'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);$err=[IO.FileStream]::new((Join-Path $root 'backend-error.log'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
  $outTask=$process.StandardOutput.BaseStream.CopyToAsync($out);$errTask=$process.StandardError.BaseStream.CopyToAsync($err)
  $scope=$config['siger.windows.modo'];$payload=$config|ConvertTo-Json -Compress;$process.StandardInput.Write($payload);$process.StandardInput.Close();$payload=$null;$config.Clear();$dbCredential=$null;$tls=$null
- $state=@{scope=$scope;root=$root;archivo=$Archivo;pid=$process.Id;origin="https://localhost:$Port";artifactSHA256=$hash;database='siger_institucional_windows_qa';realGraph=$false;publicRecovery=$false;documentWorkers=[bool]$DocumentalConfig;secretPaths=$files.ToArray()}
+ $state=@{scope=$scope;root=$root;archivo=$Archivo;pid=$process.Id;launcherPid=$PID;origin="https://localhost:$Port";artifactSHA256=$hash;database='siger_institucional_windows_qa';realGraph=$false;publicRecovery=[bool]($HabilitarRecuperacionManual -or $HabilitarConsumidorAutomaticoQA);automaticPublicRecovery=[bool]$HabilitarConsumidorAutomaticoQA;integrationProfile=$PerfilFormulario;documentWorkers=[bool]$DocumentalConfig;manualHumanReview=[bool]$MantenerDisponible;secretPaths=$files.ToArray()}
  $state|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $root 'run.json')
  $root|Set-Content C:\req\scratch\ultimo-runtime-qa.txt
  $watch=[Diagnostics.Stopwatch]::StartNew()
- while(-not $process.HasExited -and $watch.Elapsed.TotalSeconds -lt $Seconds -and -not (Test-Path -LiteralPath (Join-Path $root 'stop'))){Start-Sleep -Milliseconds 200}
+ # Opt-in de la prueba interactiva: conservar la interfaz hasta que el humano pida cerrar.
+ # No instala servicio ni tarea; el archivo stop sigue terminando solamente este proceso QA.
+ while(-not $process.HasExited -and ($MantenerDisponible -or $watch.Elapsed.TotalSeconds -lt $Seconds) -and -not (Test-Path -LiteralPath (Join-Path $root 'stop'))){Start-Sleep -Milliseconds 200}
 }finally{
  if($process){if(-not $process.HasExited){$process.Kill();if(-not $process.WaitForExit(10000)){throw 'Proceso QA no terminado; conservar secretos privados para diagnostico'}}
   try{$null=$outTask.GetAwaiter().GetResult();$null=$errTask.GetAwaiter().GetResult()}finally{if($out){$out.Dispose()};if($err){$err.Dispose()};$process.Dispose()}}

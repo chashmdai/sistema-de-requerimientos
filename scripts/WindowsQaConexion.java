@@ -16,6 +16,7 @@ public class WindowsQaConexion {
     try(var r=s.executeQuery("SELECT COUNT(*) FROM mail_attempt WHERE state='SIMULADO'")){r.next();out.put("simulatedAttempts",r.getLong(1));}
     try(var r=s.executeQuery("SELECT COUNT(*)-COUNT(DISTINCT CONCAT(folio_prefix,':',numero)) FROM communication_registry")){r.next();out.put("duplicatedCom",r.getLong(1));}
     try(var r=s.executeQuery("SELECT COUNT(*) FROM institutional_inbox WHERE ack_pending=TRUE")){r.next();out.put("ackPending",r.getLong(1));}
+    try(var r=s.executeQuery("SELECT revision,accept_new,pull_enabled,contingency FROM operation_control WHERE id=1")){if(!r.next())throw new IllegalStateException();out.put("operationControl",Map.of("revision",r.getLong(1),"acceptNew",r.getBoolean(2),"pullEnabled",r.getBoolean(3),"mode",r.getString(4)));}
     out.put("counts",counts);
    }
    System.out.println(json.writeValueAsString(out));

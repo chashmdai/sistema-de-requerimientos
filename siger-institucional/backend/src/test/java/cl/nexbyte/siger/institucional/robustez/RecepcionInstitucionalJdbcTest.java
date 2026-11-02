@@ -40,7 +40,7 @@ class RecepcionInstitucionalJdbcTest {
   var previous=store.guardar(fixture);assertThat(store.guardar(fixture)).isEqualTo(previous);
   assertThat(fixture.comunicacion().identidad().nombresComponentes()).isNull();
  }
- @Test void vectorInteroperableYDuplicadosConcurrentesTienenUnaConfirmacionEstable()throws Exception{
+ @Test @Tag("stress") void vectorInteroperableYDuplicadosConcurrentesTienenUnaConfirmacionEstable()throws Exception{
   fixture.validar(trust,mapper);
   try(var threads=Executors.newFixedThreadPool(24)){
    var gate=new CountDownLatch(1);var tasks=new ArrayList<Future<Object>>();
@@ -51,7 +51,7 @@ class RecepcionInstitucionalJdbcTest {
   assertThat(db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Long.class)).isEqualTo(1);
   assertThat(db.sql.queryForObject("SELECT COUNT(*) FROM operational_event WHERE code='COMUNICACION_REGISTRADA'",Long.class)).isEqualTo(1);
  }
- @Test void doscientosFoliosDistintosBajoConcurrenciaYFormatoHistoricoEstable()throws Exception{
+ @Test @Tag("stress") void doscientosFoliosDistintosBajoConcurrenciaYFormatoHistoricoEstable()throws Exception{
   var deliveries=new ArrayList<EntregaVerificada>();for(int i=0;i<200;i++)deliveries.add(synthetic());
   var results=new ArrayList<RegistroInstitucional>();
   try(var executor=Executors.newFixedThreadPool(12)){
@@ -102,7 +102,7 @@ class RecepcionInstitucionalJdbcTest {
   if(System.getenv("ROBUST_DB_URL")==null){action.accept(db.sql);return;}
   try(var migration=new BaseJdbc(System.getenv("ROBUST_DB_URL"),System.getenv("ROBUST_DB_MIGRATION_USER"),System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){action.accept(migration.sql);}
  }
- @Test void consumidorParaleloAcotadoConservaUnicidadYConfirmaCadaRegistro(){
+ @Test @Tag("stress") void consumidorParaleloAcotadoConservaUnicidadYConfirmaCadaRegistro(){
   var deliveries=new ArrayList<FuenteEntregasV2.Reserva>();for(int i=0;i<20;i++)deliveries.add(new FuenteEntregasV2.Reserva(UUID.randomUUID(),0,1,synthetic()));
   var ack=new ConcurrentHashMap<UUID,RegistroInstitucional>();var claimed=new java.util.concurrent.atomic.AtomicBoolean();
   var source=new FuenteEntregasV2(){

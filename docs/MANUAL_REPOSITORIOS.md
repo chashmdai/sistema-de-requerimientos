@@ -1,5 +1,7 @@
 # Ejecución desde los dos repositorios
 
+**Referencia histórica.** Para continuidad actual leer [traspaso H2](TRASPASO_CODEX_SIGER_H2.md) y [preparación Windows](INSTALACION_PREPARACION_WINDOWS_SIGER.md). No ejecutar recetas de esta demo sobre la QA integrada preservada.
+
 Guía del 23-10-2026. Código de laboratorio; no habilita publicación ciudadana ni operación institucional productiva. Java 25, Spring Boot 4.1.1, React/TypeScript, MySQL 8.4 y Flyway. Cada aplicación compila su React dentro de su propio JAR y mantiene su base independiente.
 
 ## Qué contiene cada repositorio

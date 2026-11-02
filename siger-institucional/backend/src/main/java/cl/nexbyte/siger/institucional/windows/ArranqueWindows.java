@@ -9,7 +9,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.core.env.*;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Arranque QA opt-in. Credenciales por stdin anónimo; transportes externos siempre cerrados. */
+/** Arranque QA. Credenciales por stdin anónimo; recuperación manual solo por habilitación explícita. */
 public final class ArranqueWindows {
     private ArranqueWindows(){}
     static Map<String,Object> configurar(Map<String,String> input){
@@ -27,9 +27,23 @@ public final class ArranqueWindows {
         p.put("institucional.solicitudes.habilitadas","true");
         p.putAll(Map.of("datos.mysql-local","true","institucional.identidad.habilitada","true","institucional.documental.habilitada","false","institucional.formulario-completo.habilitado","false","institucional.formulario-completo.automatico","false","institucional.v2.habilitada","false","institucional.integracion.habilitada","false","institucional.notificaciones.habilitadas","true","institucional.notificaciones.correo.modo","SIMULADO","institucional.notificaciones.correo.automatico","false"));
         p.put("institucional.documental.habilitada",Boolean.toString(documental));
+        boolean manual="true".equals(input.getOrDefault("siger.windows.formulario-manual","false"));
+        boolean automatico="true".equals(input.getOrDefault("siger.windows.formulario-automatico","false"));
+        for(String key:List.of("siger.windows.formulario-manual","siger.windows.formulario-automatico"))if(input.containsKey(key)&&!Set.of("true","false").contains(input.get(key)))throw new IllegalArgumentException("Habilitación inválida");
+        if(manual&&automatico)throw new IllegalArgumentException("Seleccionar un solo modo de recuperación QA");
+        if(manual||automatico){
+            if(!documental||!"https://formulario.defensorianinez.gob.cl".equals(input.get("institucional.formulario-completo.origen-publico")))throw new IllegalArgumentException("Recuperación manual requiere documental QA y origen local aprobado");
+            for(String key:List.of("institucional.formulario-completo.token","operacion.token"))if(!input.getOrDefault(key,"").matches("[A-Za-z0-9_-]{32,400}"))throw new IllegalArgumentException("Credencial técnica requerida");
+            String root=input.get("institucional.configuracion-privada.directorio"),ca=input.get("institucional.formulario-completo.ca-certificado");
+            if(root==null||ca==null||!java.nio.file.Path.of(root).isAbsolute()||!java.nio.file.Path.of(ca).normalize().equals(java.nio.file.Path.of(root).resolve("formulario-ca.pem").normalize()))throw new IllegalArgumentException("CA privada explícita requerida");
+            try{if(Arrays.stream(java.net.InetAddress.getAllByName("formulario.defensorianinez.gob.cl")).anyMatch(a->!a.isLoopbackAddress()))throw new IllegalArgumentException("Destino fuera de loopback");}catch(java.net.UnknownHostException e){throw new IllegalArgumentException("Origen local no resuelto");}
+            p.put("institucional.formulario-completo.habilitado","true");
+            p.put("institucional.formulario-completo.automatico",Boolean.toString(automatico));
+            p.put("institucional.formulario-completo.exclusivo-qa",Boolean.toString(automatico));
+        }else for(String key:List.of("institucional.formulario-completo.origen-publico","institucional.formulario-completo.token","institucional.formulario-completo.ca-certificado","operacion.token"))if(input.containsKey(key))throw new IllegalArgumentException("Recuperación manual no habilitada");
         p.put("spring.main.banner-mode","off");return p;
     }
-    private static final Set<String> PERMITIDOS=Set.of("siger.windows.modo","institucional.documental.windows-configuracion","institucional.db.url","institucional.db.user","institucional.db.password","server.port","server.ssl.key-store","server.ssl.key-store-password","institucional.configuracion-privada.directorio","institucional.comprobante.key-id","institucional.comprobante.private-key","institucional.comprobante.own-trusted-keys","institucional.comprobante.trusted-keys","institucional.documentos.directorio","institucional.notificaciones.correo.allowlist","institucional.notificaciones.correo.campana");
+    private static final Set<String> PERMITIDOS=Set.of("siger.windows.modo","siger.windows.formulario-manual","siger.windows.formulario-automatico","institucional.formulario-completo.origen-publico","institucional.formulario-completo.token","institucional.formulario-completo.ca-certificado","operacion.token","institucional.documental.windows-configuracion","institucional.db.url","institucional.db.user","institucional.db.password","server.port","server.ssl.key-store","server.ssl.key-store-password","institucional.configuracion-privada.directorio","institucional.comprobante.key-id","institucional.comprobante.private-key","institucional.comprobante.own-trusted-keys","institucional.comprobante.trusted-keys","institucional.documentos.directorio","institucional.notificaciones.correo.allowlist","institucional.notificaciones.correo.campana");
     public static void main(String[] args)throws Exception{
         Map<String,Object> properties;
         try{

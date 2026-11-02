@@ -1,5 +1,7 @@
 # Operación documental nativa Windows (QA)
 
+**Continuidad H2:** la cadena y garantías siguen vigentes; las campañas siguientes son recetas históricas que NO deben recrearse sobre el QA integrado actual. MySQL QA contiene E2E preservados y su regresión destructiva está bloqueada. Leer [datos](DATOS_ROLES_OPERACION_SIGER.md), [preparación](INSTALACION_PREPARACION_WINDOWS_SIGER.md) y [gates](GATES_DESPLIEGUE_SIGER.md); V13 es aditiva y está documentada por separado. No confundir provisión de fixtures/productores con la recepción real ya conservada.
+
 Esta operación no instala servicios, no habilita producción y no hace cutover. El esquema histórico y sus 24 objetos permanecen separados de QA. No se necesitan WSL, Python, sockets Unix ni un broker de ejecución en el runtime. Python se usa exclusivamente para generar fixtures sintéticos en QA.
 
 ## Componentes

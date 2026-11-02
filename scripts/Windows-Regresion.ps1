@@ -1,6 +1,14 @@
-param([ValidateSet('H2','MySQL','Frontend','Package')][string]$Mode='H2',[string]$DocumentalRun='')
+param([ValidateSet('H2','MySQL','Frontend','Package')][string]$Mode='H2',[string]$DocumentalRun='',[string]$Evidencia='',[switch]$AutorizarLimpiezaQA)
 $ErrorActionPreference='Stop'
 if (-not $IsWindows) {throw 'Solo Windows nativo'}
+if($Mode -eq 'MySQL'){
+ if(Test-Path -LiteralPath 'C:\req\scratch\runtime-consumidor-automatico-qa.txt'){throw 'QA_INTEGRADA_PRESERVADA: este esquema contiene Comunicaciones/originales E2E. No ejecutar fixtures; provisionar un destino de pruebas distinto y ampliar su allowlist mediante gate.'}
+ if(-not $AutorizarLimpiezaQA){throw 'La regresion MySQL elimina fixtures: requiere QA descartable y autorizacion explicita de limpieza.'}
+}
+if(-not $Evidencia){$Evidencia='C:\req\evidencias\regresion-'+[guid]::NewGuid().ToString('N')}
+$Evidencia=[IO.Path]::GetFullPath($Evidencia)
+if(-not $Evidencia.StartsWith('C:\req\evidencias\',[StringComparison]::OrdinalIgnoreCase)){throw 'Evidencia fuera del laboratorio privado'}
+[IO.Directory]::CreateDirectory($Evidencia)|Out-Null
 $repo=Split-Path $PSScriptRoot;$backend=Join-Path $repo 'siger-institucional\backend';$front=Join-Path $repo 'siger-institucional\front'
 $excluded=@('vectorInteroperableYDuplicadosConcurrentesTienenUnaConfirmacionEstable','doscientosFoliosDistintosBajoConcurrenciaYFormatoHistoricoEstable','consumidorParaleloAcotadoConservaUnicidadYConfirmaCadaRegistro')
 $source=Get-Content (Join-Path $backend 'src\test\java\cl\nexbyte\siger\institucional\robustez\RecepcionInstitucionalJdbcTest.java') -Raw
@@ -20,14 +28,14 @@ try {
    $start=[Diagnostics.ProcessStartInfo]::new("$env:JAVA_HOME\bin\java.exe");$start.UseShellExecute=$false;$start.RedirectStandardInput=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true;$start.CreateNoWindow=$true
    foreach($arg in @('--class-path','C:\req\bin\lib\*',(Join-Path $PSScriptRoot 'WindowsQaConexion.java'))) {$start.ArgumentList.Add($arg)}
    $p=[Diagnostics.Process]::Start($start)
-   try{$payload=@{username=$cred.UserName;password=$cred.GetNetworkCredential().Password}|ConvertTo-Json -Compress;$p.StandardInput.Write($payload);$p.StandardInput.Close();$payload=$null;$stdout=$p.StandardOutput.ReadToEndAsync();$stderr=$p.StandardError.ReadToEndAsync();if(-not $p.WaitForExit(30000)){$p.Kill($true);throw 'QA JDBC timeout'};if($p.ExitCode -ne 0){throw 'QA JDBC no verificado; detalle remoto omitido'};$stdout.Result.Trim()|Set-Content "C:\req\evidencias\qa-jdbc-$role.json"}finally{$p.Dispose()}
+   try{$payload=@{username=$cred.UserName;password=$cred.GetNetworkCredential().Password}|ConvertTo-Json -Compress;$p.StandardInput.Write($payload);$p.StandardInput.Close();$payload=$null;$stdout=$p.StandardOutput.ReadToEndAsync();$stderr=$p.StandardError.ReadToEndAsync();if(-not $p.WaitForExit(30000)){$p.Kill($true);throw 'QA JDBC timeout'};if($p.ExitCode -ne 0){throw 'QA JDBC no verificado; detalle remoto omitido'};$stdout.Result.Trim()|Set-Content (Join-Path $Evidencia "qa-jdbc-$role.json")}finally{$p.Dispose()}
    if($role -eq 'app'){$env:ROBUST_DB_USER=$cred.UserName;$env:ROBUST_DB_PASSWORD=$cred.GetNetworkCredential().Password}else{$env:ROBUST_DB_MIGRATION_USER=$cred.UserName;$env:ROBUST_DB_MIGRATION_PASSWORD=$cred.GetNetworkCredential().Password};$cred=$null
   }
   $env:ROBUST_DB_URL='jdbc:mysql://127.0.0.1:3306/siger_institucional_windows_qa?sslMode=VERIFY_IDENTITY&fallbackToSystemTrustStore=false&trustCertificateKeyStoreUrl=file:/C:/req/config/siger-mysql-truststore.p12&trustCertificateKeyStoreType=PKCS12&trustCertificateKeyStorePassword=public-trust&connectTimeout=5000&socketTimeout=15000&characterEncoding=UTF-8'
  }
- if($Mode -eq 'Frontend') {Push-Location $front;try{foreach($step in @('test','lint','build')){& npm.cmd run $step *> "C:\req\logs\frontend-$step-windows.log";if($LASTEXITCODE -ne 0){throw 'Frontend no correcto'}}}finally{Pop-Location}}
+ if($Mode -eq 'Frontend') {Push-Location $front;try{foreach($step in @('test','lint','build')){& npm.cmd run $step *> (Join-Path $Evidencia "frontend-$step-windows.log");if($LASTEXITCODE -ne 0){throw 'Frontend no correcto'}}}finally{Pop-Location}}
  else {Push-Location $backend;try{
-   if($Mode -in @('H2','MySQL')) {& C:\maven\bin\mvn.cmd -B -ntp '-Djava.io.tmpdir=C:\req\scratch\tests' '-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir=C:\req\scratch\tests' ('-Dtest=*,!RecepcionInstitucionalJdbcTest#'+($excluded -join '+')) test *> "C:\req\logs\backend-$($Mode.ToLower())-windows.log"}
-   else{& C:\maven\bin\mvn.cmd -B -ntp -DskipTests package *> C:\req\logs\package-windows-final.log};$code=$LASTEXITCODE
+   if($Mode -in @('H2','MySQL')) {& C:\maven\bin\mvn.cmd -B -ntp '-Djava.io.tmpdir=C:\req\scratch\tests' '-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir=C:\req\scratch\tests' ('-Dtest=*,!RecepcionInstitucionalJdbcTest#'+($excluded -join '+')) test *> (Join-Path $Evidencia "backend-$($Mode.ToLower())-windows.log")}
+   else{& C:\maven\bin\mvn.cmd -B -ntp -DskipTests package *> (Join-Path $Evidencia 'package-windows-final.log')};$code=$LASTEXITCODE
   }finally{Pop-Location};if($code -ne 0){throw 'Bateria no correcta: consultar resultados locales'}}
 }finally{Get-ChildItem Env:|Where-Object {$_.Name -like 'ROBUST_DB_*' -or $_.Name -like 'DOCUMENTAL_REAL_*'}|ForEach-Object {Remove-Item -LiteralPath ('Env:\'+$_.Name)};$env:JAVA_HOME=$oldJava;$env:TMP=$oldTmp;$env:TEMP=$oldTemp;$env:JAVA_TOOL_OPTIONS=$oldOptions}

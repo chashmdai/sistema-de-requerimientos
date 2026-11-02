@@ -41,3 +41,14 @@ docs/evidencias/
 
 
 **/__pycache__/
+**/*.dpapi
+**/*.credential.xml
+**/*.sql.gz
+**/secrets/
+/private/
+/runtime/
+/evidencias/
+/logs/
+/storage/
+/testdata/
+/scratch/

@@ -17,6 +17,7 @@ class RecuperarFormularioHttpTest {
         try{
             if(!("Bearer "+"t".repeat(64)).equals(exchange.getRequestHeaders().getFirst("Authorization"))){badHeaders.incrementAndGet();reply(exchange,401,new byte[0]);return;}
             String path=exchange.getRequestURI().getPath();
+            if(exchange.getRequestMethod().equals("HEAD")){assertTrue(path.contains("00000000-0000-0000-0000-000000000000"));exchange.sendResponseHeaders(404,-1);return;}
             if(path.endsWith("/reclamar")){if(malformed){reply(exchange,200,"{NO_REGISTRAR_CONTENIDO".getBytes(java.nio.charset.StandardCharsets.UTF_8));return;}if(!"1.0,1.1".equals(exchange.getRequestHeaders().getFirst("X-Formulario-Versiones")))badHeaders.incrementAndGet();var body=d.mapper.readTree(exchange.getRequestBody().readAllBytes());if(body.path("limite").asInt()!=1)badHeaders.incrementAndGet();reply(exchange,200,d.mapper.writeValueAsBytes(Map.of("entregas",List.of(new FuenteFormulario.Reserva(lease,System.currentTimeMillis()+(stall?2000:300000),1,delivery)))));}
             else if(path.contains("/adjuntos/")){downloads.incrementAndGet();if(!lease.toString().equals(exchange.getRequestHeaders().getFirst("X-Reserva"))){reply(exchange,409,new byte[0]);return;}if(stall){exchange.sendResponseHeaders(200,content.length);exchange.getResponseBody().write(content,0,1);exchange.getResponseBody().flush();try{Thread.sleep(1500);}catch(InterruptedException e){Thread.currentThread().interrupt();}}else if(large){exchange.sendResponseHeaders(200,12L*1024*1024);byte[] buffer=new byte[65536];Arrays.fill(buffer,(byte)90);for(int i=0;i<192;i++)exchange.getResponseBody().write(buffer);}else{exchange.sendResponseHeaders(200,content.length);exchange.getResponseBody().write(broken?Arrays.copyOf(content,3):content);}}
             else if(path.endsWith("/confirmacion")){
@@ -30,6 +31,15 @@ class RecuperarFormularioHttpTest {
     static void reply(HttpExchange x,int status,byte[] bytes)throws IOException{x.getResponseHeaders().set("Content-Type","application/json");x.sendResponseHeaders(status,status==204?-1:bytes.length);if(status!=204)x.getResponseBody().write(bytes);}
     @AfterEach void close()throws Exception{if(source!=null)source.close();if(server!=null)server.stop(0);if(d!=null)d.close();}
     @Test void negociaVersionesTransfiereOriginalYConfirmaSoloTrasCommit(){var r=job.ejecutar();assertEquals(1,r.confirmadas());assertEquals(1,acks.get());assertEquals(1,downloads.get());assertEquals(0,badHeaders.get());assertEquals(Boolean.FALSE,d.db.sql.queryForObject("SELECT ack_pending FROM institutional_inbox",Boolean.class));assertTrue(d.receiver.confirmacionesPendientes().isEmpty());}
+    @Test void perdidaDeExclusionAntesDePersistirNoCreaComNiAck(){
+        var checks=new AtomicInteger();job=new RecuperarFormulario(source,d.receiver,d.files,()->{if(checks.incrementAndGet()==2)throw new IllegalStateException("Exclusion perdida");});
+        assertEquals(1,job.ejecutar().fallidas());assertEquals(0,acks.get());assertEquals(1,downloads.get());assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM institution_document",Integer.class));
+    }
+    @Test void perdidaDeExclusionTrasCommitConservaReciboYConciliaSinOtroFolio(){
+        var checks=new AtomicInteger();job=new RecuperarFormulario(source,d.receiver,d.files,()->{if(checks.incrementAndGet()==3)throw new IllegalStateException("Exclusion perdida");});
+        assertEquals(1,job.ejecutar().fallidas());assertEquals(0,acks.get());assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Integer.class));assertEquals(Boolean.TRUE,d.db.sql.queryForObject("SELECT ack_pending FROM institutional_inbox",Boolean.class));
+        var persisted=d.receiver.registroCompletoConservado(delivery,d.files);d.now=d.now.plusSeconds(10);job=new RecuperarFormulario(source,d.receiver,d.files);assertEquals(1,job.conciliar());assertEquals(persisted,firstAck.get());assertEquals(1,acks.get());assertEquals(1,downloads.get());assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Integer.class));
+    }
     @Test void ackPerdidoYReinicioSeConcilianConElMismoRegistroSinDescargarOtraVez()throws Exception{
         lost=true;assertEquals(1,job.ejecutar().fallidas());var expected=firstAck.get();d.restart();d.now=d.now.plusSeconds(10);job=new RecuperarFormulario(source,d.receiver,d.files);assertEquals(1,job.conciliar());assertEquals(expected,firstAck.get());assertEquals(1,downloads.get());assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Integer.class));
         assertEquals(0,job.conciliar());assertEquals(2,acks.get());
@@ -48,4 +58,5 @@ class RecuperarFormularioHttpTest {
     }
     @Test void jsonMalformadoNoPropagaContenidoNiExcepcionDelProductor(){malformed=true;var error=assertThrows(FalloTecnico.class,()->job.ejecutar());assertEquals(502,error.status);assertFalse(error.toString().contains("NO_REGISTRAR_CONTENIDO"));assertEquals(0,acks.get());}
     @Test void exigeHttpsParaOrigenNoExpresamenteLocal(){assertThrows(IllegalArgumentException.class,()->new FuenteFormulario(URI.create("http://127.0.0.1:9000"),"t".repeat(64),null,false));assertThrows(IllegalArgumentException.class,()->new FuenteFormulario(URI.create("https://usuario:clave@example.invalid"),"t".repeat(64),null,false));}
+    @Test void sondaSoloLecturaDistingueAutenticacionSinReclamarDescargarOConfirmar(){var result=source.comprobarConexion();assertTrue(result.preparada());assertEquals(401,result.sinCredencial());assertEquals(401,result.credencialInvalida());assertEquals(404,result.autenticada());assertEquals(0,downloads.get());assertEquals(0,acks.get());assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Integer.class));}
 }

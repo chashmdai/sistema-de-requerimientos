@@ -1,5 +1,7 @@
 # Dos aplicaciones independientes · actualización 19-10-2026
 
+**Documento histórico.** La arquitectura/topología vigente, módulos y límites están en [ARQUITECTURA_MODULOS_SIGER.md](ARQUITECTURA_MODULOS_SIGER.md). Las versiones, puertos y pendientes de esta primera demo no sustituyen el [traspaso H2](TRASPASO_CODEX_SIGER_H2.md).
+
 Se conserva la decisión de separar Formulario Público de SIGER. Ahora SIGER incorpora un [núcleo funcionario provisional](NUCLEO_INSTITUCIONAL_LAB.md), conforme al [flujo para validación](flujo.consolidado-sinformsinbit.md).
 
 ```mermaid

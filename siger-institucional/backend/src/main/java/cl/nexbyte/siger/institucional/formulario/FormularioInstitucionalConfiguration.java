@@ -3,12 +3,16 @@ import cl.nexbyte.siger.institucional.robustez.*;import java.nio.file.Path;impor
 @Configuration @Profile("jdbc-reception") @ConditionalOnProperty(name="institucional.formulario-completo.habilitado",havingValue="true")
 public class FormularioInstitucionalConfiguration {
     @Bean FuenteFormulario fuenteFormulario(Environment e)throws java.io.IOException{var ca=e.getProperty("institucional.formulario-completo.ca-certificado","");return new FuenteFormulario(URI.create(e.getRequiredProperty("institucional.formulario-completo.origen-publico")),e.getRequiredProperty("institucional.formulario-completo.token"),ca.isBlank()?null:Path.of(ca),false);}
-    @Bean RecuperarFormulario recuperarFormulario(FuenteFormulario s,RecepcionInstitucionalJdbc r,ArchivoInstitucional a){return new RecuperarFormulario(s,r,a);}
+    @Bean @ConditionalOnProperty(name="institucional.formulario-completo.exclusivo-qa",havingValue="true") ExclusionConsumidorFormulario exclusionFormulario(BaseJdbc db){return new ExclusionConsumidorFormulario(db);}
+    @Bean RecuperarFormulario recuperarFormulario(FuenteFormulario s,RecepcionInstitucionalJdbc r,ArchivoInstitucional a,org.springframework.beans.factory.ObjectProvider<ExclusionConsumidorFormulario> exclusion){var guard=exclusion.getIfAvailable();return new RecuperarFormulario(s,r,a,guard==null?()->{}:guard::verificar);}
     @Bean @ConditionalOnProperty(name="institucional.formulario-completo.automatico",havingValue="true") Planificador planificadorFormulario(RecuperarFormulario r,ControlesOperacion c){return new Planificador(r,c);}
     static final class Planificador{
-        private final RecuperarFormulario receiver;private final ControlesOperacion control;private long next;private int failures;
-        Planificador(RecuperarFormulario r,ControlesOperacion c){receiver=r;control=c;}
-        @Scheduled(fixedDelayString="${institucional.formulario-completo.intervalo-ms:5000}")public void tick(){if(System.currentTimeMillis()<next)return;try{var c=control.estado();if(!c.recuperar()||!c.contingencia().equals("NORMAL"))return;receiver.conciliar();var r=receiver.ejecutar();if(r.fallidas()>0)delay();else failures=0;}catch(RuntimeException e){delay();}}
-        private void delay(){failures=Math.min(6,failures+1);next=System.currentTimeMillis()+Math.min(300000,5000L<<failures);}
+        private final RecuperarFormulario receiver;private final ControlesOperacion control;private final java.util.function.LongSupplier clock;private long next,lastAttempt,lastSuccess,cycles,recovered,confirmed,reconciled;private int failures;private String state="INICIANDO",lastError="";
+        Planificador(RecuperarFormulario r,ControlesOperacion c){this(r,c,System::currentTimeMillis);}
+        Planificador(RecuperarFormulario r,ControlesOperacion c,java.util.function.LongSupplier clock){receiver=r;control=c;this.clock=clock;}
+        @Scheduled(fixedDelayString="${institucional.formulario-completo.intervalo-ms:5000}")public synchronized void tick(){if(clock.getAsLong()<next)return;try{var c=control.estado();if(!c.recuperar()||!c.contingencia().equals("NORMAL")){state="PAUSADO_POR_CONTROL";return;}lastAttempt=clock.getAsLong();cycles++;reconciled+=receiver.conciliar();var r=receiver.ejecutar();recovered+=r.recuperadas();confirmed+=r.confirmadas();if(r.fallidas()>0){lastError="ENTREGA_NO_CONFIRMADA";delay();}else{failures=0;next=0;lastSuccess=clock.getAsLong();lastError="";state=r.recuperadas()==0?"ESPERANDO_ENTREGAS":"RECEPCION_CONFIRMADA";}}catch(RuntimeException e){lastError=e instanceof FalloTecnico f?"HTTP_"+f.status:"FALLO_TECNICO";delay();}}
+        private void delay(){failures=Math.min(6,failures+1);next=clock.getAsLong()+Math.min(300000,5000L<<failures);state="REINTENTO_PROGRAMADO";}
+        public record Estado(boolean automatico,String estado,long ciclos,long ultimoIntentoMs,long ultimoExitoMs,long proximoIntentoMs,int fallosConsecutivos,String ultimoError,long recuperadas,long confirmadas,long conciliadas){}
+        public synchronized Estado estado(){return new Estado(true,state,cycles,lastAttempt,lastSuccess,next,failures,lastError,recovered,confirmed,reconciled);}
     }
 }

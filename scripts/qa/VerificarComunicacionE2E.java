@@ -1,0 +1,32 @@
+import cl.nexbyte.siger.institucional.formulario.*;
+import cl.nexbyte.siger.institucional.robustez.*;
+import java.nio.file.*;import java.security.*;import java.time.*;import java.util.*;
+/** Verificación posparada. No construye FuenteFormulario ni reclama/ACK. Solo un UUID sintético acordado. */
+class VerificarComunicacionE2E {
+ static final tools.jackson.databind.json.JsonMapper M=EntregaCompleta.lector();
+ static void check(boolean b){if(!b)throw new IllegalArgumentException("E2E_NO_ACREDITADO");}
+ static String sha(byte[] bytes)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));}
+ static Map<String,PublicKey> trust(tools.jackson.databind.JsonNode node){var out=new HashMap<String,PublicKey>();node.properties().forEach(e->out.put(e.getKey(),ComprobanteDigital.publicPem(e.getValue().asString())));return out;}
+ public static void main(String[] args){try{
+  check(System.getProperty("os.name").startsWith("Windows")&&args.length==0);var input=M.readTree(System.in);check(input.path("user").asString().equals("siger_windows_qa_app"));
+  var id=UUID.fromString(input.path("operation").asString());var attachment=UUID.fromString(input.path("attachment").asString());
+  String url="jdbc:mysql://127.0.0.1:3306/siger_institucional_windows_qa?sslMode=VERIFY_IDENTITY&fallbackToSystemTrustStore=false&trustCertificateKeyStoreUrl=file:/C:/req/config/siger-mysql-truststore.p12&trustCertificateKeyStoreType=PKCS12&trustCertificateKeyStorePassword=public-trust&connectTimeout=5000&socketTimeout=15000&characterEncoding=UTF-8";
+  var own=trust(input.path("own"));check(own.size()==1);String keyId=own.keySet().iterator().next();
+  try(var db=new BaseJdbc(url,input.path("user").asString(),input.path("password").asString(),2);var files=new ArchivoInstitucional(Path.of(input.path("storage").asString()))){
+   check(db.sql.queryForObject("SELECT DATABASE()",String.class).equals("siger_institucional_windows_qa"));check(db.sql.queryForObject("SELECT CURRENT_USER()",String.class).equals("siger_windows_qa_app@localhost"));
+   check(db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry WHERE source='FORMULARIO_PUBLICO_DDN' AND operacion_id=?",Integer.class,id.toString())==1);
+   var row=db.sql.queryForMap("SELECT i.body,i.receipt,i.ack_pending,c.comunicacion_id,c.numero FROM institutional_inbox i JOIN communication_registry c ON c.source=i.source AND c.operacion_id=i.id WHERE i.source='FORMULARIO_PUBLICO_DDN' AND i.id=?",id.toString());
+   check(Boolean.FALSE.equals(row.get("ack_pending")));var delivery=M.readValue(row.get("body").toString(),EntregaCompleta.class);var receipt=M.readValue(row.get("receipt").toString(),RegistroInstitucional.class);
+   var receiver=new RecepcionInstitucionalJdbc(db,M,trust(input.path("publicTrust")),keyId,ComprobanteDigital.privatePem(input.path("key").asString()),own,"COM",6,Clock.systemUTC());
+   receiver.validarCompleta(delivery);delivery.validarRegistro(receipt,own,M);check(delivery.id().equals(id));check(delivery.sha256().equals(input.path("contentSHA256").asString()));check(delivery.huellaProcedencia().equals(input.path("provenanceSHA256").asString()));
+   check(delivery.adjuntos().size()==1);var descriptor=delivery.adjuntos().getFirst();check(descriptor.id().equals(attachment));check(descriptor.tamanio()==input.path("size").asLong());check(descriptor.sha256().equals(input.path("attachmentSHA256").asString()));
+   var path=files.verificar(files.key(id,attachment),descriptor);check(Files.size(path)==descriptor.tamanio());
+   check(db.sql.queryForObject("SELECT COUNT(*) FROM institution_document WHERE operation_id=? AND origin='INGRESO_CIUDADANO'",Integer.class,id.toString())==1);
+   int comBefore=db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Integer.class),docsBefore=db.sql.queryForObject("SELECT COUNT(*) FROM institution_document",Integer.class);
+   check(receipt.equals(receiver.guardarCompleta(delivery,files)));check(receipt.equals(receiver.guardarCompleta(delivery,files)));check(comBefore==db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry",Integer.class));check(docsBefore==db.sql.queryForObject("SELECT COUNT(*) FROM institution_document",Integer.class));
+   var presenter=delivery.comunicacion().path("personas").get(0);int groups=0;for(var field:delivery.comunicacion().path("datos").path("campos").properties())if(field.getKey().matches("grupo-nna-[1-5]-nombre"))groups++;
+   check(!presenter.path("autenticada").asBoolean()&&presenter.path("runNumero").isNull()&&presenter.path("runDv").isNull());check("DOCUMENTO_EXTRANJERO".equals(presenter.path("atributos").path("tipoIdentificacion").path("valor").asString()));check(groups==1&&delivery.comunicacion().path("personas").size()==1);
+   var result=new TreeMap<String,Object>();result.put("scope","E2E_REAL_VERIFICACION_WINDOWS_POSPARADA");result.put("operation",id);result.put("communication",receipt.registro().comunicacionId());result.put("folio",receipt.registro().folio());result.put("documentVersion",delivery.comunicacion().path("version").asString());result.put("type",delivery.tipo());result.put("contentSHA256",delivery.sha256());result.put("provenanceSHA256",delivery.huellaProcedencia());result.put("attachment",attachment);result.put("attachmentSHA256",descriptor.sha256());result.put("size",descriptor.tamanio());result.put("ackVersion",receipt.registro().version());result.put("channel",receipt.registro().canalOrigen());result.put("ackSignatureSHA256",sha(Base64.getUrlDecoder().decode(receipt.comprobante().firma())));result.put("ackPayloadSHA256",sha(Base64.getUrlDecoder().decode(receipt.comprobante().payload())));result.put("ackPending",false);result.put("localIdempotenceReplay",true);result.put("extraPublicClaims",0);result.put("extraPublicAcks",0);result.put("contentAndProvenanceVerified",true);result.put("originalVerified",true);result.put("publicSignatureVerified",true);result.put("institutionalSignatureVerified",true);result.put("communicationCountForOperation",1);result.put("presenterAuthenticated",false);result.put("presenterHasRun",false);result.put("identificationType","DOCUMENTO_EXTRANJERO");result.put("groupCount",groups);result.put("personCount",1);System.out.println(M.writeValueAsString(result));
+  }
+ }catch(Exception e){System.out.println(M.writeValueAsString(Map.of("ok",false,"code","E2E_WINDOWS_NO_ACREDITADO","errorClass",e.getClass().getSimpleName())));System.exit(1);}}
+}
