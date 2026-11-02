@@ -43,3 +43,7 @@ test('ORG-02 muestra exclusividad y conserva el formulario ante conflicto de des
  expect((screen.getByLabelText('Rol a otorgar') as HTMLSelectElement).value).toBe('DISTRIBUCION');expect(screen.queryByText(/Cambio confirmado/)).toBeNull();
  expect(api.identidadPeticion).toHaveBeenCalledWith('/nucleo/ti/funcionarios/id1/roles','POST',expect.objectContaining({rol:'DISTRIBUCION',alcance:'INSTITUCION',unidad:null,sede:null}));
 });
+test('ACC-01 propia cuenta conserva historial y revocación pero no ofrece concesión de roles',async()=>{
+ render(<AdministracionTI catalog={catalog} actorId="id1"/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));
+ expect(screen.getByText(/No puedes concederte roles/)).toBeTruthy();expect(screen.queryByLabelText('Rol a otorgar')).toBeNull();expect(screen.getByText('Revocar PROFESIONAL')).toBeTruthy();expect(api.identidadPeticion).not.toHaveBeenCalled();
+});

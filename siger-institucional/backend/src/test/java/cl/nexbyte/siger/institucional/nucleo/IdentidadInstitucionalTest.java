@@ -91,6 +91,13 @@ class IdentidadInstitucionalTest {
   denied(409,()->ids.actualizar(ti,ti,new Perfil(account.nombre(),account.correo(),account.cargo(),null,null,false,account.revision())));
   var u=user("persona",null,null);denied(403,()->ids.otorgar(u.id(),u.id(),new Otorgar("TI","INSTITUCION",null,null,Instant.now(),null)));
  }
+ @Test void acc01TiNoSeConcedeRolesNiConsumeRevisionYAuditaCadaDenegacion(){
+  var before=ids.cuentas(ti).stream().filter(c->c.id().equals(ti)).findFirst().orElseThrow();
+  int events=d.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event",Integer.class);
+  var requested=new Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null);
+  for(int i=0;i<2;i++){var error=assertThrows(FalloTecnico.class,()->ids.otorgar(ti,ti,requested));assertEquals(403,error.status);assertEquals("AUTOASIGNACION_NO_PERMITIDA",error.code);}
+  var after=ids.cuentas(ti).stream().filter(c->c.id().equals(ti)).findFirst().orElseThrow();assertEquals(before,after);assertEquals(events+2,d.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event",Integer.class));assertEquals(2,d.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event WHERE event_code='AUTOASIGNACION_DENEGADA' AND actor_id=? AND subject_id=?",Integer.class,ti,ti));assertFalse(a(ti).profesionalEn("UPR","DEMO_SEDE_A"));assertTrue(a(ti).ti());
+ }
  @Test void falloPersistenciaNoDejaCuentaNiPerfilParcial(){
   d.ddl(sql->sql.execute("ALTER TABLE staff_account ADD CONSTRAINT test_block_account CHECK (username<>'bloqueado')"));
   try{assertThrows(org.springframework.dao.DataAccessException.class,()->user("bloqueado",null,null));assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM staff_account",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_actor WHERE label='Persona bloqueado'",Integer.class));}

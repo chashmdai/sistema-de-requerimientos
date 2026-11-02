@@ -102,7 +102,15 @@ public final class IdentidadInstitucional {
         if(!"UNIDAD_SEDE".equals(o.alcance()))throw new FalloTecnico(400);ubicacion(o.unidad(),o.sede());if(o.unidad()==null)throw new FalloTecnico(400);
     }
     private String otorgarInterno(String admin,String id,Otorgar o){validar(o);var target=row(id);if(o.rol().equals("DISTRIBUCION")&&enabled(target))distribucionDisponible("",o.desde().toEpochMilli(),o.hasta()==null?null:o.hasta().toEpochMilli());String grant=UUID.randomUUID().toString();db.sql.update("INSERT INTO staff_assignment(id,actor_id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,granted_by) VALUES(?,?,?,?,?,?,?,?,?)",grant,id,o.rol(),o.alcance(),o.unidad(),o.sede(),o.desde().toEpochMilli(),o.hasta()==null?null:o.hasta().toEpochMilli(),admin);db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",now(),admin,id);evento(admin,id,"ROL_OTORGADO",grant);return grant;}
-    public String otorgar(String admin,String id,Otorgar o){ti(admin);return db.transaction(()->{guard();ti(admin);return otorgarInterno(admin,id,o);});}
+    public String otorgar(String admin,String id,Otorgar o){
+        ti(admin);
+        if(Objects.equals(admin,id)){
+            // La denegación se conserva fuera de la transacción de concesión; no cambia epoch ni roles.
+            db.transaction(()->{guard();ti(admin);evento(admin,id,"AUTOASIGNACION_DENEGADA",id);return null;});
+            throw new FalloTecnico(403,"AUTOASIGNACION_NO_PERMITIDA");
+        }
+        return db.transaction(()->{guard();ti(admin);return otorgarInterno(admin,id,o);});
+    }
     public void revocar(String admin,String id,String grant){ti(admin);db.transaction(()->{guard();ti(admin);if(db.sql.update("UPDATE staff_assignment SET revoked_ms=?,revoked_by=? WHERE id=? AND actor_id=? AND revoked_ms IS NULL",now(),admin,grant,id)!=1)throw new FalloTecnico(404);db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",now(),admin,id);ultimaTi();evento(admin,id,"ROL_REVOCADO",grant);return null;});}
     private void marcarCambioClave(String id,boolean pendiente){
         if(db.sql.queryForList("SELECT actor_id FROM staff_credential_state WHERE actor_id=?",id).isEmpty())db.sql.update("INSERT INTO staff_credential_state VALUES(?,?)",id,pendiente);

@@ -29,6 +29,13 @@ class IdentidadHttpTest {
  }
  IdentidadInstitucional.Cuenta user(String pass){String name="u."+UUID.randomUUID();return ids.crear(Fixture.tiId,new IdentidadInstitucional.Crear(name,"Funcionario sintético",name+"@example.invalid","Cargo no concede permisos","UPR","DEMO_SEDE_A",pass));}
  void grant(String id){ids.otorgar(Fixture.tiId,id,new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null));}
+ @Test void acc01ApiTiNoPermiteOtorgarseUnRolOperativo()throws Exception{
+  var s=login("ti.http",Fixture.tiPassword);long epoch=cat.operador(Fixture.tiId).versionAcceso();
+  String body=data.mapper.writeValueAsString(new IdentidadInstitucional.Otorgar("DIRECTOR","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now(),null));
+  http.perform(post("/nucleo/ti/funcionarios/"+Fixture.tiId+"/roles").secure(true).session(s).with(csrf()).contentType("application/json").content(body)).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("AUTOASIGNACION_NO_PERMITIDA"));
+  assertEquals(epoch,cat.operador(Fixture.tiId).versionAcceso());assertFalse(cat.operador(Fixture.tiId).jefatura());
+  http.perform(get("/nucleo/ti/funcionarios").secure(true).session(s)).andExpect(status().isOk());
+ }
  @Test void org02ApiAplicaExclusividadCentralYNoExponeIdentidadEnElConflicto()throws Exception{
   var a=user(UUID.randomUUID()+"aZ");var b=user(UUID.randomUUID()+"aZ");var ti=login("ti.http",Fixture.tiPassword);
   var body=new IdentidadInstitucional.Otorgar("DISTRIBUCION","INSTITUCION",null,null,Instant.now(),Instant.now().plusSeconds(600));String json=data.mapper.writeValueAsString(body),route="/nucleo/ti/funcionarios/"+a.id()+"/roles";

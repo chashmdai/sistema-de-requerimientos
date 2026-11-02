@@ -34,6 +34,18 @@ La solución final por tabla pasó `Build-Siger.ps1` en Windows nativo/Java25/No
 
 V1–V14 conservan sus 28 hashes de baseline. Los dos scripts V15.1 comparten SHA-256 `683bd9131ad2230958d4e1572e855194ae8697a87c26dacd0f7d7dd32b9bffde` en este checkout Windows. No hay ejecución MySQL ni migración sobre una base persistente. Las nueve omisiones siguen siendo workers reales opt-in y se conserva el tag stress histórico sin nuevas exclusiones.
 
+## U1.4 · ACC-01: impedir concesiones a la propia cuenta TI
+
+La API de concesión actual no puede representar un aprobador institucional independiente ni su respaldo. Por eso se deniega `otorgar(admin,beneficiario,...)` cuando ambos IDs son la misma cuenta, incluso si TI está vigente. Es una restricción conservadora de esta API, no una afirmación de que una autorización institucional independiente nunca pueda respaldar una futura ejecución sobre la propia cuenta. Ese mecanismo aún debe desarrollarse.
+
+El actor se deriva de la sesión vigente; no existe un campo JSON para reemplazarlo. El backend retorna 403 `AUTOASIGNACION_NO_PERMITIDA`; no inserta asignación, no cambia epoch/perfil ni invalida una sesión por el solo rechazo. Cada intento deja `AUTOASIGNACION_DENEGADA` en `identity_event`, con actor/beneficiario y hora del servidor, bajo el guard existente. La auditoría confirma antes de devolver la denegación; si no puede persistir, falla cerrado. No guarda el payload, no genera correo ni se considera actuación de expediente. Reintentar genera otro hecho de acceso denegado, no otra concesión.
+
+La UI recibe el ID del operador autenticado y, al editar su cuenta, conserva historial y revocación pero omite el formulario de otorgamiento, con explicación. El backend sigue denegando llamadas directas. La revocación propia conserva el control del último TI; no se amplía ni elimina esa guarda.
+
+El bootstrap sigue siendo una operación distinta, de laboratorio vacío y configuración privada, con rol TI inicial fijo y exclusión transaccional: no usa el comando ordinario de concesión y no admite repetirlo con cuentas existentes. No crea permisos operativos por inferencia. No se eliminan ni reinterpretan roles históricos ya otorgados. No se modifica la cuenta multirrol QA ni los helpers operacionales para evitar la denegación.
+
+Pruebas nuevas: `IdentidadInstitucionalTest.acc01TiNoSeConcedeRolesNiConsumeRevisionYAuditaCadaDenegacion`, `IdentidadHttpTest.acc01ApiTiNoPermiteOtorgarseUnRolOperativo` e `Identidad.test.tsx`. Antes del cambio: dos fallos backend (aceptación en vez de 403) y uno UI (concesión propia ofrecida). La matriz conserva ACC-01 **parcial**: esto no acredita aprobación/respaldo de concesiones a terceros, autoridad por área ni identidad maestra que relacione varias cuentas con una persona real.
+
 ## Pendientes de U1 y gates posteriores
 
 No se declara U1 completa: autoridad por área, respaldos/aprobación de concesiones, reservas y excepciones, lectura de Direcciones por materia y demás atribuciones siguen pendientes. El control de credencial no resuelve fuente maestra, SSO/MFA, recuperación corporativa ni habilitación nominal (PE-02).
@@ -41,6 +53,35 @@ No se declara U1 completa: autoridad por área, respaldos/aprobación de concesi
 La prevención de autoelevación debe distinguir cuenta técnica de persona institucional: bloquear una concesión a la propia cuenta es un control necesario, pero no prueba identidad única entre cuentas ni evita por sí solo aprobaciones cruzadas. La autoridad y sus respaldos deben modelarse antes de acreditar ACC-01/10 completos. Las funciones U5 históricas continúan 409; U2 requiere su nueva SOL/principal/asunción y no se habilita mediante atajos a preparación U5. U2 y posteriores no se declaran implementados en esta continuidad.
 
 Se mantienen fuera de alcance QA/histórico/U4, originales/COM-000001/ACK, JAR de `C:\req\bin`, procesos/servicios/certificados/custodias, WSL/HTTP_503, Formulario, Cloudflare, Graph/CU/PISEE reales y directorio U4.5. Las pruebas usan H2 nuevos, MockMvc/DOM y dobles existentes; no son E2E físicos ni habilitación productiva.
+
+## Hito consolidado y trazabilidad
+
+**Build final Windows nativo/Java25/Node24, `Build-Siger.ps1`: correcto el 02/11/2026 a las 20:08 America/Santiago. Backend: 296 métodos, 287 correctos, nueve omitidos, cero fallos/errores. Frontend: 59/59, lint y build correctos.** Incluye U1.3/U1.4, los dos tests transaccionales adicionales y regresión de U1.1/U1.2, identidad, documental, ingesta/recibos/COMMIT→ACK, notificaciones/tareas, U5 histórico y gates. Las nueve omisiones son workers reales opt-in; tres stress conservan su exclusión previa. No se cambian POM, dependencias, lockfile, script de build o CI para lograr verde. npm conserva 10 vulnerabilidades moderadas heredadas, sin actualización masiva ajena al alcance.
+
+Artefacto de desarrollo solo en `siger-institucional/backend/target/siger-institucional-0.1.0-SNAPSHOT.jar`: SHA-256 `2cfa3f19b95de6beb2ed9ff5b9b349f8e8f21e32fd656cbae1aba1eb74a764b7`. Log final privado `build-u14-final.log`: SHA-256 `260b8f485d502910f113a48cda24d0717b1eb63dcc7355eb07b8aae9a34141f8`. Logs iniciales/solución descartada/red-green y Surefire final se conservan en el directorio privado `siger-logica-u13-8a4d53b3c2f24baca9d1677c490db207` bajo LOCALAPPDATA. No se publican contraseñas, originales, DPAPI, configuraciones privadas ni logs completos. La inspección de diff/nombres/patrones sensibles no mostró candidatos nuevos; no es una garantía universal de ausencia de secretos.
+
+La matriz mantiene exactamente **138 identificadores**. Se actualizan ACC-04 (credencial temporal acreditada, PE-02 pendiente) y ACC-01 (denegación propia acreditada, autorización integral pendiente). Se conservan las coberturas acreditadas U1.1/U1.2 y el resto de pendientes, sin convertir regresiones históricas en aceptación del modelo futuro. No se repite U0 ni se declara cubierto un escenario de reserva/área que no tiene implementación.
+
+| Componentes | Cambios |
+| --- | --- |
+| `IdentidadInstitucional`, nuevo `CuentaPersonalController` | Estado de credencial, cambio propio, reset temporal, transacción/epoch/eventos y denegación de concesión propia |
+| `SeguridadInstitucional`, `NucleoController` | Sesión temporal restringida, DTO sin operador/capacidades durante el cambio, límite de intentos |
+| `App`, nuevo `CambioClave`, `Identidad`, `api` | Flujo inicial, retorno al login, mensajes, estado TI y eliminación de concesión propia en UI |
+| V15.1 H2/MySQL | Tabla técnica separada, sin alterar V1–V14 ni forma de `staff_account`; pruebas de expansión desde V14 |
+| Pruebas | Tres clases backend nuevas de credencial, UI nueva, extensión de pruebas de identidad y preparación explícita de credenciales en fixtures HTTP existentes |
+| Contrato/informes/matriz | Semántica, evidencias, pendientes y límites actualizados |
+
+### Git, PR y CI
+
+U1.3 está confirmado/publicado en **`37f735bed3173a4ec457ea8ccab53b653b67c886`**. Su [CI 41542276666](https://github.com/chashmdai/sistema-de-requerimientos/actions/runs/41542276666) terminó correctamente en [Windows](https://github.com/chashmdai/sistema-de-requerimientos/actions/runs/41542276666/job/125609155213) y [Ubuntu](https://github.com/chashmdai/sistema-de-requerimientos/actions/runs/41542276666/job/125609154687). Son runners remotos, no workers documentales reales ni MySQL. El commit siguiente contiene U1.4 y este cierre probado localmente; los checks del HEAD publicado se verifican en el [PR #2](https://github.com/chashmdai/sistema-de-requerimientos/pull/2) y su comprobante final, sin atribuir resultados futuros a esta redacción.
+
+Se mantiene `feature/siger-logica-negocio` y push normal/upstream, PR #2 en borrador. El HEAD exacto del informe se resuelve con `git log -1 --format=%H -- docs/LOGICA_CONTINUIDAD_U1_2026-11-02.md`; el comprobante privado y la entrega de chat registran el SHA final/CI/remoto/árbol limpio. No se abre PR apilado porque los cambios siguen dentro de U1 y dependencias inmediatas. No hay merge, auto-merge o despliegue.
+
+Fetch de `main` previo al cierre y referencia Git U4.5 seguían en G0. No se integraron cambios ajenos, no se modificó su worktree, ni se migraron/provisionaron recursos operacionales. La compatibilidad U4.5 es de código/esquema preparados y pruebas aisladas; nuevos operadores de laboratorio deberán completar cambio de credencial y los helpers que intenten autoasignarse roles deberán respetar la autorización independiente. No se valida su demostración operacional desde esta rama.
+
+### Próximo incremento
+
+Diseñar/completar autoridad funcional por unidad/sede/área e instrucciones de concesión con aprobador, respaldo y vigencia, aplicando la misma política a lectura/gestión/documentos y separando facultad institucional de ejecución TI. No falta una nómina para desarrollar ese mecanismo con fixtures; sigue siendo trabajo de ingeniería pendiente, no una razón para inventar autoridades. Después: FIR/excepciones y Direcciones por materia, antes de activar los recorridos U2 que dependan de esas facultades. Se entrega un punto estable con dos incrementos cerrados y recuperables, sin iniciar una migración amplia de SOL/REQ/CAS a medias.
 
 ## Preguntas y dependencias institucionales
 

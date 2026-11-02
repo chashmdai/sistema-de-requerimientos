@@ -40,3 +40,11 @@ GET `/nucleo/session` agrega `cambioClaveObligatorio`; cuando es true devuelve `
 POST `/nucleo/clave-personal`: JSON `{actual,nueva}`, actor y revisión de seguridad derivados de la sesión, sin cuenta objetivo. Se verifica clave actual, nueva distinta, 16 caracteres mínimos/72 bytes UTF-8 máximos y controles existentes. Responde 204 tras transacción de hash/estado/epoch/evento e invalida sesión; el usuario vuelve a autenticarse. 400 para validación/reutilización, 403 `CREDENCIAL_ACTUAL_INVALIDA`, 401 para sesión obsoleta y 429 al superar ocho intentos/cuenta/minuto en el proceso. No se guardan secretos o digest de payload en comandos idempotentes; el reenvío de una sesión consumida no puede volver a modificar la cuenta.
 
 La cuenta TI conserva su endpoint de reset, que marca temporal e invalida las sesiones por epoch. Cuenta administrativa y sesión funcionaria no son credenciales de proveedor. Se mantiene pendiente fuente maestra, SSO/MFA y recuperación institucional PE-02. La evolución/compatibilidad y los resultados están en [continuidad U1](../docs/LOGICA_CONTINUIDAD_U1_2026-11-02.md).
+
+## U1.4 · ACC-01: denegación de concesión propia
+
+POST `/nucleo/ti/funcionarios/{id}/roles` rechaza 403 `AUTOASIGNACION_NO_PERMITIDA` si el destinatario es el propio actor de sesión TI. Registra `AUTOASIGNACION_DENEGADA` sin insertar concesión ni cambiar epoch/perfil. Cada petición denegada es un intento auditado distinto; la denegación no genera correo ni actuación. El fallo de auditoría no habilita la concesión.
+
+React conserva historial/revocación de la propia cuenta y omite el formulario de otorgamiento. La guarda del último TI permanece. Bootstrap inicial de laboratorio vacío sigue separado y no es un bypass del endpoint ordinario.
+
+La API actual carece de aprobador/respaldo independiente; no puede aceptar una pretendida aprobación desde JSON. La prevención integral de autoelevación, las concesiones a terceros y la autoridad por área continúan pendientes. No se declara ACC-01 completo ni se otorga aprobación institucional a otro TI por ser una cuenta distinta. No hay nueva migración para U1.4.
