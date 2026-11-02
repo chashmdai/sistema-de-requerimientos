@@ -23,6 +23,20 @@ class IdentidadHttpTest {
  MockHttpSession login(String user,String password)throws Exception{var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",user).param("password",password)).andExpect(status().isNoContent());return s;}
  IdentidadInstitucional.Cuenta user(String pass){String name="u."+UUID.randomUUID();return ids.crear(Fixture.tiId,new IdentidadInstitucional.Crear(name,"Funcionario sintético",name+"@example.invalid","Cargo no concede permisos","UPR","DEMO_SEDE_A",pass));}
  void grant(String id){ids.otorgar(Fixture.tiId,id,new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null));}
+ @Test void regDis01ApiRechazaDestinoAjenoSinEscrituraYPermiteLocalConCsrf()throws Exception{
+  String pass=UUID.randomUUID()+"aZ";var u=user(pass);ids.otorgar(Fixture.tiId,u.id(),new IdentidadInstitucional.Otorgar("COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A",Instant.now().minusSeconds(1),null));
+  var com=core.registrarManual(cat.operador(u.id()),UUID.randomUUID(),new ContratosNucleo.Manual("Atención sintética local","TELÉFONO",Instant.now().minusSeconds(1),"DEMO_SEDE_A",null)).id();
+  var s=login(u.usuario(),pass);String route="/nucleo/comunicaciones/"+com+"/distribuir";var key=UUID.randomUUID();
+  var body=new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UEP","DEMO_SEDE_B",u.id())));
+  http.perform(post(route).secure(true).session(s).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(data.mapper.writeValueAsString(body))).andExpect(status().isForbidden());
+  assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,com.toString()));
+  assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_command WHERE id=?",Integer.class,key.toString()));
+  body=new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",u.id())));
+  String json=data.mapper.writeValueAsString(body);
+  http.perform(post(route).secure(true).session(s).header("Idempotency-Key",key).contentType("application/json").content(json)).andExpect(status().isForbidden());
+  for(int n=0;n<2;n++)http.perform(post(route).secure(true).session(s).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(json)).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(1));
+  assertEquals(1,data.db.sql.queryForObject("SELECT COUNT(*) FROM distribution_event WHERE communication_id=?",Integer.class,com.toString()));
+ }
  @Test void tiCreaPorHttpNoDevuelveHashYFuncionarioNoAdministra()throws Exception{
   var ti=login("ti.http",Fixture.tiPassword);String pass=UUID.randomUUID()+"aZ",name="nuevo."+UUID.randomUUID();var json=data.mapper.writeValueAsString(new IdentidadInstitucional.Crear(name,"Nombre sintético",name+"@example.invalid","Administrativo","UPR","DEMO_SEDE_A",pass));
   var response=http.perform(post("/nucleo/ti/funcionarios").secure(true).session(ti).with(csrf()).contentType("application/json").content(json)).andExpect(status().isOk()).andExpect(jsonPath("$.activo").value(true)).andExpect(jsonPath("$.password").doesNotExist()).andExpect(jsonPath("$.password_hash").doesNotExist()).andReturn().getResponse().getContentAsString();assertFalse(response.contains(pass));

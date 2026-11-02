@@ -105,6 +105,18 @@ public final class NucleoInstitucional {
         if(a.distribuidor())return;var rows=db.sql.queryForList("SELECT site_id FROM core_communication WHERE id=?",id(com));
         if(rows.isEmpty()||!a.distribuyeSede(str(rows.getFirst(),"site_id")))throw new FalloTecnico(403);
     }
+    /** REG-DIS-01: la coordinación distribuye dentro de la sede de la bandeja, aunque tenga otras funciones. */
+    private void distributionTargetsAllowed(Operador a,UUID com,Distribucion request){
+        distributionAllowed(a,com);
+        if(request==null||request.destinos()==null||request.destinos().isEmpty()||request.destinos().size()>10)throw new FalloTecnico(400);
+        String origin=a.distribuidor()?null:db.sql.queryForObject("SELECT site_id FROM core_communication WHERE id=?",String.class,id(com));
+        for(var d:request.destinos()){
+            if(d==null)throw new FalloTecnico(400);
+            if(!a.distribuidor()&&!Objects.equals(origin,d.sede()))throw new FalloTecnico(403);
+            if(catalogo.presencias().stream().noneMatch(p->p.unidad().equals(d.unidad())&&p.sede().equals(d.sede())))throw new FalloTecnico(400);
+            if(!catalogo.operador(d.evaluador()).jefeEn(d.unidad(),d.sede()))throw new FalloTecnico(400);
+        }
+    }
     private void openCommunication(UUID communication,Map<String,Object> row){
         if(!"ABIERTA".equals(row.get("state")))throw new FalloTecnico(409);
         var req=db.sql.queryForList("SELECT state FROM core_requirement WHERE communication_id=?",id(communication));
@@ -150,13 +162,9 @@ public final class NucleoInstitucional {
         });
     }
     public Resultado distribuir(Operador a,UUID key,UUID communication,Distribucion request){
-        actor(a);distributionAllowed(a,communication);if(request.destinos()==null||request.destinos().isEmpty()||request.destinos().size()>10)throw new FalloTecnico(400);
-        for(var d:request.destinos()){
-            if(d==null||catalogo.presencias().stream().noneMatch(p->p.unidad().equals(d.unidad())&&p.sede().equals(d.sede())))throw new FalloTecnico(400);
-            var evaluator=catalogo.operador(d.evaluador());if(!evaluator.jefeEn(d.unidad(),d.sede()))throw new FalloTecnico(400);
-        }
+        actor(a);distributionTargetsAllowed(a,communication,request);
         return execute(key,a,"DISTRIBUIR",List.of(communication,request),()->{
-            var row=lock(communication);distributionAllowed(a,communication);revision(row,request.revision());openCommunication(communication,row);
+            var row=lock(communication);distributionTargetsAllowed(a,communication,request);revision(row,request.revision());openCommunication(communication,row);
             var pairs=new HashSet<String>();for(var d:request.destinos())if(catalogo.individual()&&(!pairs.add(d.unidad()+"|"+d.sede())||db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND unit_code=? AND site_id=?",Integer.class,id(communication),d.unidad(),d.sede())>0))throw new FalloTecnico(409);
             for(var d:request.destinos()){var did=UUID.randomUUID();db.sql.update("INSERT INTO core_destination(id,communication_id,unit_code,site_id,evaluator_id,state,revision,created_ms,created_by) VALUES(?,?,?,?,?,'EVALUANDO',0,?,?)",id(did),id(communication),d.unidad(),d.sede(),d.evaluador(),now(),a.id());db.sql.update("INSERT INTO distribution_event VALUES(?,?,?,?,?,?,?)",id(did),id(communication),a.id(),row.get("site_id"),d.unidad(),d.sede(),now());event(communication,"DESTINO",did,a,"DESTINO_DISTRIBUIDO");}
             bump(communication);return result(communication,communication);

@@ -30,15 +30,32 @@ class IdentidadInstitucionalTest {
   denied(403,()->manual(u.id(),"DEMO_SEDE_B"));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_case",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement",Integer.class));
   var central=manual(ti,null);assertNull(core.detalle(a(ti),central).comunicacion().sedeOrigen());
  }
- @Test void coordinadorSoloDistribuyeOrigenPropioYPrincipalGlobalSinAutoCaso(){
+ // REG-DIS-01 sustituye la expectativa histórica de distribución regional intersede.
+ @Test void coordinadorSoloDistribuyeOrigenYDestinoPropiosYPrincipalGlobalSinAutoCaso(){
   var regional=user("regional","UPR","DEMO_SEDE_A");grant(regional.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A");
   var otro=user("otro","UEP","DEMO_SEDE_B");var head=user("jefe","UEP","DEMO_SEDE_B");grant(head.id(),"DIRECTOR","UNIDAD_SEDE","UEP","DEMO_SEDE_B");
   var dist=user("principal",null,null);grant(dist.id(),"DISTRIBUCION","INSTITUCION",null,null);
-  var propio=manual(regional.id(),"DEMO_SEDE_A");distribute(regional.id(),propio,head.id(),"UEP","DEMO_SEDE_B");
+  var propio=manual(regional.id(),"DEMO_SEDE_A");
+  denied(403,()->distribute(regional.id(),propio,head.id(),"UEP","DEMO_SEDE_B"));
+  distribute(regional.id(),propio,regional.id(),"UPR","DEMO_SEDE_A");
   var ajeno=manual(otro.id(),"DEMO_SEDE_B");denied(403,()->core.distribuir(a(regional.id()),UUID.randomUUID(),ajeno,new Distribucion(0,List.of(new NuevoDestino("UEP","DEMO_SEDE_B",head.id())))));
   var web=d.nuevaWeb();denied(403,()->core.distribuir(a(regional.id()),UUID.randomUUID(),web,new Distribucion(0,List.of(new NuevoDestino("UEP","DEMO_SEDE_B",head.id())))));
   distribute(dist.id(),ajeno,head.id(),"UEP","DEMO_SEDE_B");distribute(dist.id(),web,head.id(),"UEP","DEMO_SEDE_B");
   assertEquals(3,d.db.sql.queryForObject("SELECT COUNT(*) FROM distribution_event",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_case",Integer.class));assertNull(core.detalle(a(dist.id()),web).comunicacion().sedeOrigen());
+ }
+ @Test void regDis01NoMezclaSedesDeDosConcesionesYRechazoDeLoteEsAtomico(){
+  var regional=user("regional","UPR","DEMO_SEDE_A");grant(regional.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A");grant(regional.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_B");
+  var com=manual(regional.id(),"DEMO_SEDE_A");var key=UUID.randomUUID();
+  var local=new NuevoDestino("UPR","DEMO_SEDE_A",regional.id());var ajeno=new NuevoDestino("UEP","DEMO_SEDE_B",regional.id());
+  denied(403,()->core.distribuir(a(regional.id()),key,com,new Distribucion(0,List.of(local,ajeno))));
+  assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM distribution_event",Integer.class));
+  assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_command WHERE id=?",Integer.class,key.toString()));assertEquals(0,core.detalle(a(regional.id()),com).comunicacion().revision());
+  var old=a(regional.id());String g=grant(regional.id(),"DISTRIBUCION","INSTITUCION",null,null);
+  // La facultad central independiente sí permite otro destino; revocarla invalida al actor anterior.
+  var result=core.distribuir(a(regional.id()),key,com,new Distribucion(0,List.of(ajeno)));ids.revocar(ti,regional.id(),g);
+  denied(403,()->core.distribuir(old,UUID.randomUUID(),com,new Distribucion(1,List.of(local))));
+  denied(403,()->core.distribuir(a(regional.id()),key,com,new Distribucion(0,List.of(ajeno))));
+  assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination",Integer.class));assertEquals(com,result.id());
  }
  @Test void reintentoDistribucionConservaComDestinoYRevisionYRechazaOtraOperacionDuplicada(){
   var u=user("regional","UPR","DEMO_SEDE_A");grant(u.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A");UUID c=manual(u.id(),"DEMO_SEDE_A"),key=UUID.randomUUID();var body=new Distribucion(0,List.of(new NuevoDestino("UPR","DEMO_SEDE_A",u.id())));

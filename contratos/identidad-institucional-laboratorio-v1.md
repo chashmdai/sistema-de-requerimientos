@@ -1,4 +1,5 @@
 # Identidad institucional de laboratorio v1
+Adaptación posterior de lógica: [contrato incremental](logica-institucional-incremental-v1.md), que restringe también el **destino** de distribución regional a la sede de origen. Las descripciones históricas siguientes no amplían esa facultad.
 Extensión interna de SIGER. No cambia HTTP V3 público, firmas, COM o ACK. Solo cuenta activa por sesión HTTPS y CSRF en mutaciones; ningún actor/autor/procedencia se toma del navegador.
 
 ## Sesión
