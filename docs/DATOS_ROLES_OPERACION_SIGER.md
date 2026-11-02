@@ -59,10 +59,10 @@ Las tareas son personales: creador y responsable coinciden; no las impone otra j
 
 Notificaciones son persistentes por funcionario, deduplicadas y resueltas desde facultades/responsabilidades vigentes. Leer una notificación no aprueba una gestión ni concede acceso al recurso enlazado. Inactividad/revocación vuelve a filtrar la consulta. Los envíos externos pasan por outbox transaccional; el correo no incluye contenido ciudadano reservado.
 
-Graph está **SIMULADO** en la QA actual. Los4envíos históricos fueron aceptados y confirmados por el humano en su campaña; no se repiten ni se infiere entrega de un202. No activar nuevas campañas por ejecutar un build, importar datos o restaurar un backup.
+Graph está **SIMULADO** en la QA actual. Los 4 envíos históricos fueron aceptados y confirmados por el humano en su campaña; no se repiten ni se infiere entrega de un 202. No activar nuevas campañas por ejecutar un build, importar datos o restaurar un backup.
 
 ## Datos de desarrollo protegidos
 
-`siger_institucional_windows_lab`:504 filas históricas/59 tablas y24 objetos protegidos. `siger_institucional_windows_qa`: QA integrada con cuentas, gestión y Comunicaciones E2E conservadas. El nombreqa no autoriza limpieza. No ejecutar fixtures contra ninguno; los tests H2 usan directorios privados nuevos.
+`siger_institucional_windows_lab`: 504 filas históricas/59 tablas y 24 objetos protegidos. `siger_institucional_windows_qa`: QA integrada con cuentas, gestión y Comunicaciones E2E conservadas. El nombre QA no autoriza limpieza. No ejecutar fixtures contra ninguno; los tests H2 usan directorios privados nuevos.
 
 La batería MySQL anterior fue ejecutada cuando el destino era descartable; sus resultados no autorizan borrar el estado actual. Para otra campaña destructiva, TI debe provisionar un esquema/identidades de prueba distintos y su allowlist debe revisarse antes de habilitarla. Véanse [gates](GATES_DESPLIEGUE_SIGER.md) y [estado H2](ESTADO_GATE_H2_SIGER_2026-11-01.md).

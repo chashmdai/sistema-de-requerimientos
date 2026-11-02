@@ -1,6 +1,6 @@
 # Arquitectura vigente y mapa de módulos
 
-SIGER es un monolito modular Java 25/Spring Boot4.1.1 con React/TypeScript empaquetado en el mismo JAR. No depende de un clone del Formulario para compilar. MySQL institucional y almacenamiento privado forman su conservación; el Formulario es un productor independiente.
+SIGER es un monolito modular Java 25/Spring Boot 4.1.1 con React/TypeScript empaquetado en el mismo JAR. No depende de un clone del Formulario para compilar. MySQL institucional y almacenamiento privado forman su conservación; el Formulario es un productor independiente.
 
 ```mermaid
 flowchart LR
@@ -48,12 +48,12 @@ React está en `siger-institucional/front/src`. `App.tsx`/`api.ts` resuelven nav
 
 ## Versiones y componentes comprobados
 
-Java 25, Boot4.1.1, JNA5.19.1, Flyway 12.4.0 y Connector/J9.7.0 en el candidato actual; frontend Node 24 y versiones exactas en `package-lock.json`. MySQL Windows8.0.46 fue compatible con la transferencia lógica desde8.4. Las versiones del equipo nuevo deben verificarse; no actualizar MySQL compartido por conveniencia.
+Java 25, Boot 4.1.1, JNA 5.19.1, Flyway 12.4.0 y Connector/J 9.7.0 en el candidato actual; frontend Node 24 y versiones exactas en `package-lock.json`. MySQL Windows 8.0.46 fue compatible con la transferencia lógica desde 8.4. Las versiones del equipo nuevo deben verificarse; no actualizar MySQL compartido por conveniencia.
 
 Binarios documentales y versiones/SHA: `scripts/windows-documental/tools-lock.json` y manifiestos privados de la instalación. No se versionan `.exe`, `.dll` o definiciones AV. La cadena nativa y sus ocho controles están descritos en [operación documental](OPERACION_DOCUMENTAL_WINDOWS.md) y [matriz](MATRIZ_SEGURIDAD_DOCUMENTAL_WINDOWS.md).
 
 ## Disponibilidad y fallos
 
-El núcleo consulta registros ya conservados aunque el Formulario esté caído. La indisponibilidad remota afecta nuevas extracciones/ACK y activa backoff; no inventa confirmaciones. La conservación institucional no depende del agente de respaldo independiente ni de una política pública de72h. SIGER no activa eliminaciones o retención del Formulario.
+El núcleo consulta registros ya conservados aunque el Formulario esté caído. La indisponibilidad remota afecta nuevas extracciones/ACK y activa backoff; no inventa confirmaciones. La conservación institucional no depende del agente de respaldo independiente ni de una política pública de 72 h. SIGER no activa eliminaciones o retención del Formulario.
 
 El proceso de desarrollo es continuo pero no un servicio productivo supervisado. JAR por SHA y configuración privada se conservan fuera de `target`; compilar/commit/push no los sustituye. La futura supervisión, arranque institucional y recuperación operativa se aprobarán en sus gates.

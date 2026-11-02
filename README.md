@@ -24,7 +24,7 @@ Java 25, Maven 3.9+, Node 24/npm y PowerShell 7.4+. Si Java 25 ya es el seleccio
 pwsh -NoProfile -File .\siger-institucional\scripts\Build-Siger.ps1
 ```
 
-Si el Java global es otro, seleccionar el JDK25 instalado mediante `-JavaHome`; [manual Windows](docs/INSTALACION_PREPARACION_WINDOWS_SIGER.md). El script ejecuta frontend lint/tests/build y backend H2/verify, con temporales privados. No requiere credenciales, MySQL ni Formulario. Excluye únicamente las 3 pruebas históricas de estrés por tag; los workers reales se califican por separado y sus omisiones se informan.
+Si el Java global es otro, seleccionar el JDK 25 instalado mediante `-JavaHome`; [manual Windows](docs/INSTALACION_PREPARACION_WINDOWS_SIGER.md). El script ejecuta frontend lint/tests/build y backend H2/verify, con temporales privados. No requiere credenciales, MySQL ni Formulario. Excluye únicamente las 3 pruebas históricas de estrés por tag; los workers reales se califican por separado y sus omisiones se informan.
 
 El JAR empaqueta React. No ejecutar `target` como runtime permanente ni sobrescribir el artefacto activo al compilar. La QA integrada y sus originales son datos preservados, **no fixtures descartables**.
 
@@ -34,6 +34,6 @@ Desarrollo actual: Windows Server + WSL en **DDN-TEST-SIGER**. SIGER es nativo W
 
 SIGER conserva Comunicaciones, originales, procedencia y gestión institucional; inicia HTTPS PULL/ACK hacia el [Formulario independiente](https://github.com/chashmdai/formulario-web). Tiene cuentas individuales/roles, distribución central/regional, Casos/Requerimientos, documentos, tareas y avisos. Recibir no abre Casos automáticamente. El consumidor automático de QA está acreditado; no se confunde con un servicio productivo habilitado.
 
-Preparaciones U5 y tareas personales independientes están incluidas; **responder/canalizar/escalar Solicitud permanecen deshabilitados en servidor e interfaz**. No hay permiso institucional implícito por publicarlos enmain.
+Preparaciones U5 y tareas personales independientes están incluidas; **responder/canalizar/escalar Solicitud permanecen deshabilitados en servidor e interfaz**. No hay permiso institucional implícito por publicarlos en main.
 
 Los checkpoints U1–U5 y manuales anteriores se conservan como historia. Las referencias de arriba prevalecen para continuidad; no copiar puertos, credenciales o permisos de una demo antigua. No se versionan secretos, originales, certificados privados, binarios documentales ni evidencias reservadas.
