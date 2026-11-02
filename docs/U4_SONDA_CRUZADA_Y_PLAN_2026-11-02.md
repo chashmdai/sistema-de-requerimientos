@@ -2,6 +2,8 @@
 
 **Resultado independiente: GO desde Windows. U4.4 no iniciado.** El 02/11/2026, entre **11:04:07 y 11:04:08, America/Santiago (UTC−03:00)**, se ejecutó únicamente SONDA. No se ejecutó ABRIR, CICLO, migración o aprovisionamiento. El túnel se cerró normalmente a las **11:07:38** y se comprobó que desapareció su listener.
 
+Preparación final posterior: [WINDOWS_PREPARADO_CERRADO, verificaciones y comandos de ventana](U4_WINDOWS_PREPARADO_CERRADO_2026-11-02.md). No se repite la SONDA aceptada ni se inicia U4.4 sin autorización explícita.
+
 ## Resultado de SONDA
 
 Desde `C:\req\repo`, bajo la identidad DPAPI existente:
