@@ -8,8 +8,8 @@ if(-not $JavaHome){throw 'Seleccionar Java25 con -JavaHome; no se modifica la co
 $java=Join-Path $JavaHome $(if($IsWindows){'bin/java.exe'}else{'bin/java'})
 if(-not(Test-Path -LiteralPath $java)){throw 'Java seleccionado no encontrado'}
 $version=(& $java --version 2>&1)-join ' ';if($LASTEXITCODE -or $version -notmatch '(?:openjdk|java) 25(?:[.\s-])'){throw 'Este repositorio requiere Java25 explícito.'}
-if(-not $Maven){$Maven=(Get-Command $(if($IsWindows){'mvn.cmd'}else{'mvn'}) -CommandType Application -ErrorAction Stop).Source}
-$npm=(Get-Command $(if($IsWindows){'npm.cmd'}else{'npm'}) -CommandType Application -ErrorAction Stop).Source
+if(-not $Maven){$Maven=(Get-Command $(if($IsWindows){'mvn.cmd'}else{'mvn'}) -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source}
+$npm=(Get-Command $(if($IsWindows){'npm.cmd'}else{'npm'}) -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 $nodeVersion=(& node --version);if($LASTEXITCODE -or $nodeVersion -notmatch '^v24\.'){throw 'Utilizar Node24 con su npm y package-lock versionado.'}
 if(-not $TestDirectory){$base=if($IsWindows){$env:LOCALAPPDATA}else{[IO.Path]::GetTempPath()};$TestDirectory=Join-Path $base ('siger-build-'+[guid]::NewGuid().ToString('N'))}
 $TestDirectory=[IO.Path]::GetFullPath($TestDirectory)

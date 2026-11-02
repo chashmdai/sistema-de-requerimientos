@@ -7,7 +7,7 @@
 - [Traspaso principal para una sesión nueva](TRASPASO_CODEX_SIGER_H2.md); leer también `AGENTS.md` y los manuales vinculados.
 - Main remoto de entrada: `b322c9b905b533605fb53c8d706dbc144ed074a3` (U4.5), verificado mediante fetch sin divergencia antes de consolidar.
 - Base U5 conservada: `48dd236368ca7e2229b1342c5a5a86933d9bff5b` y sus cuatro commits posteriores a U4.5.
-- Commit de implementación H2: `610bf73a252bb4c58e717e62c801e0af18943aa4`. Los commits de cierre posteriores solo completan documentación; el código probado se conserva.
+- Commit de implementación H2: `610bf73a252bb4c58e717e62c801e0af18943aa4`. El código institucional probado se conserva; los commits posteriores completan documentación y corrigen la selección de ejecutables del build cuando PATH contiene varias instalaciones.
 - La referencia exacta publicada es el HEAD de `main`, consultable con los comandos siguientes y en el historial de GitHub. El comprobante local de publicación se conserva fuera de Git; el documento no intenta incluir su propio SHA.
 
 ```powershell
@@ -37,7 +37,7 @@ Las tres exclusiones históricas de estrés se mantienen mediante tag `stress`; 
 | Pérdida de exclusión del consumidor | Dos pruebas nuevas: antes de SQL no crea COM/ACK; después de COMMIT conserva recibo y concilia sin otro folio. Batería HTTP/planificador/bootstrap **29/29**, incluida después en el clon completo |
 | Equivalencia con QA activa | **239 clases Java y tres archivos web idénticos por SHA-256** entre el JAR del clon y el artefacto activo; este último no fue sustituido |
 | Guardas de regresión MySQL | Rechazo `QA_INTEGRADA_PRESERVADA` comprobado antes de fixtures. **No se ejecutó regresión destructiva MySQL en H2**. Las 245 pruebas MySQL de U5 son evidencia histórica, no resultados nuevos |
-| Scripts y documentación | 55 scripts PowerShell parseados sin errores; 65 enlaces locales de 12 entradas comprobados, sin enlaces rotos; rutas Git sin colisiones Windows ni symlinks |
+| Scripts y documentación | 55 scripts PowerShell parseados sin errores; 66 enlaces locales de 13 entradas comprobados, sin enlaces rotos; rutas Git sin colisiones Windows ni symlinks |
 | Publicación | Árbol e historial nuevo revisados sin material privado detectado; binarios, originales, DPAPI y evidencias reservadas permanecen fuera de Git. No se imprime ningún valor coincidente |
 
 No se repitió el E2E ciudadano ni la campaña de aislamiento de ocho controles ya acreditados para la misma cadena; se reutilizan sus evidencias identificadas. No se presentan pruebas con dobles o sondeos vacíos como una nueva recepción real. Los E2E manual y automático previos están en el [checkpoint automático](CHECKPOINT_CONSUMIDOR_AUTOMATICO_QA_2026-11-01.md).
@@ -79,3 +79,7 @@ La rama nueva `gate/h2-siger-2026-11-02` conserva la consolidación y documentac
 La topología destino es DDN-UBUNTU para Formulario y futura VM Windows para SIGER; Windows+WSL es desarrollo en DDN-TEST-SIGER. Nombre/IP/identidad y red de la VM siguen pendientes de TI. [Gates de despliegue](GATES_DESPLIEGUE_SIGER.md) explicita que `HabilitacionNucleo` y `ArranqueWindows` aún son de laboratorio: necesitan un modo institucional revisado, no quitar guardas para arrancar producción.
 
 El siguiente Codex puede reconocer/clonar/compilar sin secretos y preparar la futura instalación leyendo el [traspaso](TRASPASO_CODEX_SIGER_H2.md). El paso posterior es resolver entradas de infraestructura/identidad y los gates autorizados; las facultades U5 requieren definición institucional. No hay habilitación productiva, cutover, servicio permanente, restauración nueva acreditada ni campaña real nueva de proveedores.
+
+## Verificación de CI publicada
+
+La primera ejecución remota de Ubuntu detectó dos ubicaciones válidas de npm en PATH: PowerShell componía ambas como un solo ejecutable. Se corrigió la selección de Maven/npm para tomar la primera coincidencia, respetando PATH. No cambia código institucional, dependencias o configuración de la QA. La ejecución corregida de CI verifica Windows y Ubuntu; resultados y enlaces se conservan en evidencia privada y el historial de Actions, sin presentar una ejecución fallida como aprobada.
