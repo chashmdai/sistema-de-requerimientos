@@ -2,6 +2,8 @@
 
 Preparación Windows y conectividad verificadas el **02/11/2026**, zona America/Santiago. **E2E entre máquinas pendiente de la ventana coordinada con el responsable Ubuntu.** La QA WSL continúa operativa; no se hizo transición, pausa ni reemplazo de su consumidor.
 
+**Cierre posterior U4.4:** [U4_4_CERRADO_TOTAL_GO, informe definitivo cruzado](INFORME_FINAL_U4_4_WINDOWS_UBUNTU_2026-11-02.md). Un único E2E físico sintético concluido, Windows revisión2/Ubuntu revisión4 cerrados, túnel retirado, datos preservados y QA WSL intacta. Este documento conserva el reconocimiento y preparación iniciales.
+
 **Actualización posterior, 02/11/2026 11:04:** Ubuntu instaló la confianza ACK y la sonda independiente Windows confirmó **401/401/404**. U4.2 queda acreditado desde ambos equipos, sin abrir recepción/PULL ni iniciar U4.4. Ver [resultado y propuesta operativa de U4.4](U4_SONDA_CRUZADA_Y_PLAN_2026-11-02.md). Las secciones siguientes conservan el corte inicial de preparación.
 
 ## 1. Estado por subgate
