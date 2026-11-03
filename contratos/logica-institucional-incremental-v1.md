@@ -91,3 +91,46 @@ GET `/contexto`, base, `/{id}` y `/{id}/historial` ofrecen acreditación y metad
 POST TI histórico `/funcionarios/{id}/roles` conserva denegación propia 403 y devuelve 409 `APROBACION_INSTITUCIONAL_REQUERIDA` para terceros. No hay otorgamiento directo alternativo. DELETE histórico rechaza 409 si la asignación tiene instrucción: su revocación utiliza el circuito institucional. Las asignaciones anteriores se conservan sin aprobaciones inventadas; su retiro técnico anterior y la protección del último TI permanecen. Bootstrap inicial vacío continúa separado, sin crear autoridades institucionales.
 
 V15.2 H2/MySQL agrega únicamente tablas nuevas, posterior a V15.1, sin `outOfOrder`. Las pruebas sintéticas incluyen evolución desde V14 y V15.1 y circuito real de servicios sobre ambos motores. El informe U1.5 detalla evidencia, límites y próximos cortes. No se altera transporte/custodia, U5 bloqueado ni ambientes preservados.
+
+## U1.6a · Áreas acreditadas y autorización por recurso
+
+Este corte incorpora área a las concesiones y recursos ordinarios. **Materia, lectura regional transversal de Direcciones, FIR, reservas y excepciones sensibles permanecen pendientes.** Área no significa materia, cargo, unidad, sede ni una adscripción nominal inferida. Los datos de perfil técnico no conceden ámbito de área.
+
+### Evolución firmada de autoridad, versión 1.1
+
+El sobre y el dominio de firma Ed25519 de U1.5 se conservan; los bytes del payload incluyen su versión. `Registro` 1.0 conserva exactamente sus campos, interpretación y firmas, y no admite mandatos AREA. `Registro11` 1.1 agrega explícitamente tres listas obligatorias (pueden estar vacías):
+
+- `areas`: `{id,unidad,sede,nombre,jefatura,desde,hasta}`. Jefatura `COORDINACION` o `DIRECCION`; sin semillas nominales. Cada ID pertenece permanentemente a la misma unidad/sede; no se puede mover por una nueva revisión.
+- `ambitos`: `{mandato,area}`. Cada mandato cuyo alcance sea AREA necesita exactamente una referencia. El mandato conserva su forma anterior y debe coincidir en unidad/sede y vigencia. Un mandato de unidad/sede nunca aprueba AREA.
+- `cambiosArea`: `{id,persona,tipo,unidad,sede,origen,destino,desde,hasta,referencia,sha256}`. Acreditación específica de `DIRECCION` o `DELEGACION_EXPRESA` para autorizar el movimiento indicado. `origen:null` significa solo recurso histórico sin área, no comodín. No concede lectura ni roles: el actor necesita además concesiones de jefatura en origen y destino aprobadas por U1.5. Tener ambas jefaturas no sustituye esta facultad.
+
+Límite de 32 entradas por lista nueva, además de los límites anteriores y 32 KiB totales. Lectura estricta de versión/campos/duplicados, intervalos finitos, respaldo y vínculos canónicos. El catálogo se actualiza por entradas: omitir un área no la elimina ni extiende su vigencia; caduca al término firmado. Cambiar jefatura o fechas invalida epoch de sus cuentas; cambiar solo el rótulo no amplía autoridad. Mandatos y facultades de cambio proceden exclusivamente del registro firmado vigente. Retirar una facultad de cambio, vencerla, retirar confianza o cambiar su credencial suspende su ejercicio, también en reintentos. Para revocar una concesión de contenido ya ejecutada se conserva la operación institucional explícita U1.5.
+
+No existe editor TI o endpoint para fabricar este catálogo/facultades. Acreditar identidad, designación y control inicial de credencial continúa siendo una dependencia externa; SIGER verifica declaración, firma y vigencia, no certifica el documento de respaldo.
+
+### Concesiones, persistencia y acceso
+
+Solicitud AREA: JSON U1.5 más `{version:"1.1",area:"ID"}`, `alcance:"AREA"`, unidad/sede exactas. Roles admitidos: DIRECTOR, COORDINADOR, PROFESIONAL y ADMINISTRATIVO; DIRECTOR exige área acreditada con jefatura DIRECCION. Se reutilizan solicitud, aprobación independiente, ejecución TI y revocación; la separación de personas, rechazo de ciclos y vinculación de credencial siguen vigentes. API/contexto, identidad y React muestran el área exacta. Las solicitudes históricas sin área conservan su digest idempotente anterior.
+
+V15.3 agrega catálogo, ámbitos de mandato/instrucción/asignación, área de destino/Caso e historial; no altera tablas o CHECK históricos. V11 no admite scope AREA: la asignación nueva usa una **fila ancla inerte** UNIDAD_SEDE con unidad/sede NULL y un vínculo obligatorio `staff_assignment_area`. Nunca se representa como concesión general sobre su unidad. Los lectores actuales reconstruyen AREA desde el vínculo y exigen además instrucción ejecutada y enlace de aprobación coherentes con beneficiario, rol y vigencia. Sin ese respaldo no hay permiso. Los lectores SQL anteriores no pueden hacer coincidir el ancla con unidad/sede reales no nulas. Esto no autoriza volver a un JAR antiguo: ese binario ignora la segregación de recursos nuevos.
+
+Un recurso con área solo admite la concesión AREA exacta y vigente, para jefatura o profesional responsable según operación. Ni unidad, sede, distribución, TI ni combinar profesional A con jefatura B habilita jefatura A. Política común en detalle, listados, búsqueda, conteos, vínculos, reaperturas, contexto documental, tareas y avisos. El distribuidor conserva su consulta ordinaria del ingreso y destinos de distribución; no recibe contenido, historial ni conteos de Casos protegidos por área por esa facultad.
+
+Los recursos históricos sin área conservan explícitamente el régimen previo y no se atribuyen a áreas por perfil o texto. Una concesión AREA no autoriza esos históricos. Este tratamiento no ratifica normativamente todos los permisos heredados. Nuevos destinos pueden indicar área opcional, acreditada y compatible con su evaluador; el Caso la hereda al abrirse. Un destino sin área no permite gestionar sus Casos que después sean protegidos por área.
+
+### Cambio de área conectado
+
+- GET `/nucleo/areas` y campo `areas` del catálogo: áreas vigentes acreditadas, sin contenido de expedientes.
+- GET `/nucleo/casos/{id}/areas/disponibles`: destinos de cambio acreditados para el actor y recurso; sin facultad válida devuelve lista vacía. Requiere lectura del Caso.
+- POST `/nucleo/casos/{id}/area`: `{revision,origen,area,fundamento}`, sesión individual, CSRF e Idempotency-Key. Exige jefatura actual, facultad firmada específica y jefatura de destino; `origen` debe coincidir con la persistencia al ejecutar. Mismo ámbito unidad/sede, responsable actual habilitado en destino y ninguna derivación pendiente. No reasigna al responsable ni mueve tareas; no crea Caso, REQ, COM o folio.
+- GET `/nucleo/casos/{id}/areas/historial`: historia real bajo la misma lectura autorizada del Caso.
+
+Se serializa con identidad, revisión del Caso y COM. Área, revisión, historial, evento, auditoría de autoridad (revisión firmada, facultad, respaldo) e idempotencia confirman o revierten juntos. Se revalida la facultad antes de devolver una repetición; revocarla impide obtener éxito aparente de un comando anterior. La primera clasificación de un histórico exige además acceso histórico de origen y autorización expresa con origen nulo; no se ejecuta una migración automática de pertenencias. No se ofrece la acción si el servidor no acredita destinos.
+
+### Límites seguros de esta entrega
+
+Las derivaciones de Casos con área y hacia destinos con área quedan cerradas con 409 `DERIVACION_AREA_PENDIENTE`, hasta adaptar íntegramente sucesor, principal y permisos. No se degrada el área a unidad para reutilizar una transferencia histórica. Las derivaciones previas sin área mantienen su comportamiento histórico, todavía parcial respecto del rector.
+
+Los Casos con área no heredan el autocierre BAJA ni el autocierre de una jefatura central: responsable solicita y otra persona con jefatura competente confirma. Cuentas alias se comparan por persona acreditada en las concesiones ejecutadas, no por ID de cuenta; identidad ambigua cierra la operación. La excepción de titular regional y las demás políticas integrales de cierre/tareas no quedan acreditadas por este endurecimiento.
+
+No se habilitan por este contrato lectura por materia, reservas/FIR, excepciones ACC-10, SOL institucional U2 ni acciones U5 responder/canalizar/escalar. No se modifican transporte Formulario–SIGER 1.0/1.1, recibos, firmas, originales, folios o COMMIT→ACK. El informe U1.6a identifica pruebas H2, MySQL descartable, MockMvc y DOM por separado; no son E2E físicos.
