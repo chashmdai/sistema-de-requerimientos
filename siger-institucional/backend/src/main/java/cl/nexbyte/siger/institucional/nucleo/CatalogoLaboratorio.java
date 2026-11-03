@@ -6,9 +6,11 @@ import java.util.*;
 /** Matriz mínima de laboratorio, no organigrama ni matriz de permisos DDN aprobados. */
 public final class CatalogoLaboratorio {
     public enum Rol { DISTRIBUCION, JEFATURA, PROFESIONAL, TI, ADMINISTRATIVO, DIRECTOR, COORDINADOR, COORDINADOR_REGIONAL }
-    public record Acceso(String rol,String alcance,String unidad,String sede) {
+    public record Acceso(String rol,String alcance,String unidad,String sede,String area) {
+        public Acceso(String rol,String alcance,String unidad,String sede){this(rol,alcance,unidad,sede,null);}
         public boolean jefe(){return Set.of("JEFATURA","DIRECTOR","COORDINADOR","COORDINADOR_REGIONAL").contains(rol);}
-        public boolean cubre(String u,String s){return alcance.equals("INSTITUCION") || (Objects.equals(sede,s)&&(unidad==null||Objects.equals(unidad,u)));}
+        public boolean cubre(String u,String s){return area==null&&(alcance.equals("INSTITUCION") || ((alcance.equals("SEDE")||alcance.equals("UNIDAD_SEDE"))&&Objects.equals(sede,s)&&(unidad==null||Objects.equals(unidad,u))));}
+        public boolean cubre(String u,String s,String ar){return ar==null?cubre(u,s):"AREA".equals(alcance)&&Objects.equals(area,ar)&&Objects.equals(unidad,u)&&Objects.equals(sede,s);}
     }
     public record Operador(String id,String nombre,Rol rol,String unidad,String sede,List<Acceso> accesos,String correo,String cargo,long versionAcceso) {
         public Operador(String id,String nombre,Rol rol,String unidad,String sede){this(id,nombre,rol,unidad,sede,List.of(new Acceso(rol.name(),rol==Rol.DISTRIBUCION?"INSTITUCION":"UNIDAD_SEDE",unidad,sede)),null,null,0);}
@@ -17,6 +19,8 @@ public final class CatalogoLaboratorio {
         public boolean jefatura(){return accesos.stream().anyMatch(Acceso::jefe);}
         public boolean jefeEn(String u,String s){return accesos.stream().anyMatch(x->x.jefe()&&x.cubre(u,s));}
         public boolean profesionalEn(String u,String s){return accesos.stream().anyMatch(x->x.rol().equals("PROFESIONAL")&&x.cubre(u,s));}
+        public boolean jefeEn(String u,String s,String area){return accesos.stream().anyMatch(x->x.jefe()&&x.cubre(u,s,area));}
+        public boolean profesionalEn(String u,String s,String area){return accesos.stream().anyMatch(x->x.rol().equals("PROFESIONAL")&&x.cubre(u,s,area));}
         public boolean alcance(String u,String s){return jefeEn(u,s)||profesionalEn(u,s);}
         public boolean distribuyeSede(String s){return distribuidor() || s!=null&&accesos.stream().anyMatch(x->x.rol().equals("COORDINADOR_REGIONAL")&&Objects.equals(s,x.sede()));}
     }

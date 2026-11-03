@@ -10,12 +10,15 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** Gestión separada del registro firmado. Cada mutación serializa la Comunicación raíz y confirma su auditoría en la misma transacción. */
 public final class NucleoInstitucional {
-    private final BaseJdbc db;private final CatalogoLaboratorio catalogo;private final RecepcionInstitucionalJdbc recepcion;
+    private final PoliticaAreas areas;private final cl.nexbyte.siger.institucional.identidad.AutoridadesInstitucionales autoridad;private final BaseJdbc db;private final CatalogoLaboratorio catalogo;private final RecepcionInstitucionalJdbc recepcion;
     private final org.springframework.transaction.support.TransactionTemplate lectura;private final JsonMapper mapper;private final Clock clock;private final String prefix;private final int width;
     public NucleoInstitucional(BaseJdbc db,CatalogoLaboratorio catalogo,RecepcionInstitucionalJdbc recepcion,JsonMapper mapper,Clock clock){this(db,catalogo,recepcion,mapper,clock,"COM",6);}
     public NucleoInstitucional(BaseJdbc db,CatalogoLaboratorio catalogo,RecepcionInstitucionalJdbc recepcion,JsonMapper mapper,Clock clock,String prefix,int width){
+        this(db,catalogo,recepcion,mapper,clock,prefix,width,null);
+    }
+    public NucleoInstitucional(BaseJdbc db,CatalogoLaboratorio catalogo,RecepcionInstitucionalJdbc recepcion,JsonMapper mapper,Clock clock,String prefix,int width,cl.nexbyte.siger.institucional.identidad.AutoridadesInstitucionales autoridad){
         if(prefix==null||!prefix.matches("[A-Z][A-Z0-9]{1,15}")||width<1||width>18)throw new IllegalArgumentException("Folio inválido");
-        this.lectura=new org.springframework.transaction.support.TransactionTemplate(db.tx.getTransactionManager());this.lectura.setIsolationLevelName("ISOLATION_REPEATABLE_READ");this.lectura.setReadOnly(true);this.lectura.setTimeout(5);this.db=db;this.catalogo=catalogo;this.recepcion=recepcion;this.mapper=mapper;this.clock=clock;this.prefix=prefix;this.width=width;
+        this.autoridad=autoridad;this.areas=new PoliticaAreas(db,clock);this.lectura=new org.springframework.transaction.support.TransactionTemplate(db.tx.getTransactionManager());this.lectura.setIsolationLevelName("ISOLATION_REPEATABLE_READ");this.lectura.setReadOnly(true);this.lectura.setTimeout(5);this.db=db;this.catalogo=catalogo;this.recepcion=recepcion;this.mapper=mapper;this.clock=clock;this.prefix=prefix;this.width=width;
     }
     private long now(){return clock.millis();}
     private static String id(UUID value){if(value==null)throw new FalloTecnico(400);return value.toString();}
@@ -60,8 +63,32 @@ public final class NucleoInstitucional {
     private Map<String,Object> caseRow(UUID caseId){
         var rows=db.sql.queryForList("SELECT c.*,d.unit_code,d.site_id FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.id=?",id(caseId));if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();
     }
-    private boolean canCase(Operador a,Map<String,Object> row){return a.jefeEn(str(row,"unit_code"),str(row,"site_id"))||a.profesionalEn(str(row,"unit_code"),str(row,"site_id"))&&a.id().equals(str(row,"responsible_id"));}
-    private void head(Operador a,Map<String,Object> row){if(!a.jefeEn(str(row,"unit_code"),str(row,"site_id")))throw new FalloTecnico(404);}
+    private boolean canCase(Operador a,Map<String,Object> row){return areas.jefe(a,row)||areas.profesional(a,row)&&a.id().equals(str(row,"responsible_id"));}
+    private void head(Operador a,Map<String,Object> row){if(!areas.jefe(a,row))throw new FalloTecnico(404);}
+    private int casosVisiblesDestino(Operador a,Object destination){return db.sql.queryForObject("SELECT COUNT(*) FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.destination_id=? AND "+caseScope(a),Integer.class,destination);}
+    private void todosCasosDelDestino(Operador a,UUID destination){for(var c:db.sql.queryForList("SELECT c.*,d.unit_code,d.site_id FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.destination_id=?",id(destination)))head(a,c);}
+    public void autorizarJefaturaDestino(Operador a,UUID id){actor(a);head(a,destination(id));}
+    public List<cl.nexbyte.siger.institucional.identidad.CatalogoAreas.Area> areas(Operador a){actor(a);return new cl.nexbyte.siger.institucional.identidad.CatalogoAreas(db,clock).listar();}
+    public List<String> cambiosAreaDisponibles(Operador a,UUID caso){
+        actor(a);var c=caseRow(caso);if(!areas.jefe(a,c)||autoridad==null)return List.of();
+        try{return autoridad.cambiosArea(a.id()).stream().filter(x->x.unidad().equals(str(c,"unit_code"))&&x.sede().equals(str(c,"site_id"))&&Objects.equals(x.origen(),areas.area(c))&&a.jefeEn(x.unidad(),x.sede(),x.destino())).map(x->x.destino()).distinct().toList();}catch(FalloTecnico e){if(e.status==409)return List.of();throw e;}
+    }
+    private void cambioAcreditado(Operador a,Map<String,Object> c,CambiarArea request,UUID caso,boolean auditar){if(autoridad==null)throw new FalloTecnico(403,"CAMBIO_AREA_NO_ACREDITADO");autoridad.autorizarCambioArea(a.id(),str(c,"unit_code"),str(c,"site_id"),request.origen(),request.area(),id(caso),auditar);}
+    public Resultado cambiarArea(Operador a,UUID key,UUID caseId,CambiarArea request){
+        actor(a);if(request==null)throw new FalloTecnico(400);var first=caseRow(caseId);head(a,first);text(request.fundamento(),1000);cambioAcreditado(a,first,request,caseId,false);
+        return execute(key,a,"CAMBIAR_AREA",List.of(caseId,request),()->{
+            lock(uuid(first.get("communication_id")));var c=caseRow(caseId);head(a,c);revision(c,request.revision());String previous=areas.area(c);
+            if(!Objects.equals(previous,request.origen()))throw new FalloTecnico(409,"VERSION_OBSOLETA");cambioAcreditado(a,c,request,caseId,true);
+            new cl.nexbyte.siger.institucional.identidad.CatalogoAreas(db,clock).exigir(request.area(),str(c,"unit_code"),str(c,"site_id"));
+            if(!a.jefeEn(str(c,"unit_code"),str(c,"site_id"),request.area()))throw new FalloTecnico(403);
+            if(Objects.equals(previous,request.area())||pendiente(caseId))throw new FalloTecnico(409);
+            var responsible=responsableHabilitado(str(c,"responsible_id"));if(!responsible.jefeEn(str(c,"unit_code"),str(c,"site_id"),request.area())&&!responsible.profesionalEn(str(c,"unit_code"),str(c,"site_id"),request.area()))throw new FalloTecnico(409,"RESPONSABLE_FUERA_AREA");
+            if(previous==null)db.sql.update("INSERT INTO case_area VALUES(?,?)",id(caseId),request.area());else db.sql.update("UPDATE case_area SET area_id=? WHERE case_id=?",request.area(),id(caseId));
+            db.sql.update("INSERT INTO case_area_history(case_id,previous_area,area_id,actor_id,at_ms,reason_text) VALUES(?,?,?,?,?,?)",id(caseId),previous,request.area(),a.id(),now(),request.fundamento());
+            db.sql.update("UPDATE core_case SET revision=revision+1 WHERE id=?",id(caseId));var com=uuid(c.get("communication_id"));bump(com);event(com,"CASO",caseId,a,"AREA_ACREDITADA_CAMBIADA");return new Resultado(caseId,request.revision()+1);
+        });
+    }
+    public List<Map<String,Object>> historialArea(Operador a,UUID caseId){return lectura.execute(status->{autorizarCaso(a,caseId);return db.sql.queryForList("SELECT previous_area,area_id,actor_id,at_ms,reason_text FROM case_area_history WHERE case_id=? ORDER BY seq DESC",id(caseId)).stream().map(r->{Map<String,Object> result=new LinkedHashMap<>();r.forEach((k,v)->result.put(k.toLowerCase(Locale.ROOT),v));return result;}).toList();});}
     /** Misma facultad/estado que registrar actuación; el llamador mantiene la transacción y su auditoría documental. */
     public Caso autorizarGestionDocumental(Operador a,UUID caseId){
         if(catalogo.individual())db.sql.queryForObject("SELECT id FROM identity_guard WHERE id=1 FOR UPDATE",Integer.class);actor(a);var first=caseRow(caseId);lock(uuid(first.get("communication_id")));var current=caseRow(caseId);
@@ -84,17 +111,18 @@ public final class NucleoInstitucional {
     private static String literal(String v){if(v==null)return "NULL";if(!v.matches("[A-Za-z0-9_.-]{1,64}"))throw new FalloTecnico(403);return "'"+v+"'";}
     private String grantSql(Operador a,String unit,String site,boolean head){
         var terms=new ArrayList<String>();
-        for(var x:a.accesos())if(head?x.jefe():x.rol().equals("PROFESIONAL")){
+        for(var x:a.accesos())if(x.area()==null&&(head?x.jefe():x.rol().equals("PROFESIONAL"))){
             terms.add(x.alcance().equals("INSTITUCION")?"1=1":"("+site+"="+literal(x.sede())+(x.unidad()==null?"":" AND "+unit+"="+literal(x.unidad()))+")");
         }
         return "("+String.join(" OR ",terms.isEmpty()?List.of("1=0"):terms)+")";
     }
-    private String caseScopeGestion(Operador a){return "("+grantSql(a,"d.unit_code","d.site_id",true)+" OR (c.responsible_id="+literal(a.id())+" AND "+grantSql(a,"d.unit_code","d.site_id",false)+"))";}
-    private String caseScope(Operador a){return a.distribuidor()?"1=1":caseScopeGestion(a);}
+    private String scoped(Operador a,String kind,String resource,String unit,String site,boolean head){return areas.scope(a,kind,resource,unit,site,head,grantSql(a,unit,site,head));}
+    private String caseScopeGestion(Operador a){return "("+scoped(a,"case","c.id","d.unit_code","d.site_id",true)+" OR (c.responsible_id="+literal(a.id())+" AND "+scoped(a,"case","c.id","d.unit_code","d.site_id",false)+"))";}
+    private String caseScope(Operador a){return a.distribuidor()?"(NOT EXISTS(SELECT 1 FROM case_area ca WHERE ca.case_id=c.id) OR "+caseScopeGestion(a)+")":caseScopeGestion(a);}
     private ArrayList<Object> caseArgs(Operador a){return new ArrayList<>();}
     private String communicationScope(Operador a){
         if(a.distribuidor())return "1=1";
-        String scope="EXISTS(SELECT 1 FROM core_destination d WHERE d.communication_id=r.comunicacion_id AND "+grantSql(a,"d.unit_code","d.site_id",true)+") OR EXISTS(SELECT 1 FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.communication_id=r.comunicacion_id AND c.responsible_id="+literal(a.id())+" AND "+grantSql(a,"d.unit_code","d.site_id",false)+")";
+        String scope="EXISTS(SELECT 1 FROM core_destination d WHERE d.communication_id=r.comunicacion_id AND "+scoped(a,"destination","d.id","d.unit_code","d.site_id",true)+") OR EXISTS(SELECT 1 FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.communication_id=r.comunicacion_id AND "+caseScopeGestion(a)+")";
         if(catalogo.individual()){
             scope+=" OR EXISTS(SELECT 1 FROM core_manual m WHERE m.communication_id=r.comunicacion_id AND m.actor_id="+literal(a.id())+")";
             for(var x:a.accesos())if(x.rol().equals("COORDINADOR_REGIONAL"))scope+=" OR EXISTS(SELECT 1 FROM core_communication o WHERE o.id=r.comunicacion_id AND o.site_id="+literal(x.sede())+")";
@@ -114,7 +142,7 @@ public final class NucleoInstitucional {
             if(d==null)throw new FalloTecnico(400);
             if(!a.distribuidor()&&!Objects.equals(origin,d.sede()))throw new FalloTecnico(403);
             if(catalogo.presencias().stream().noneMatch(p->p.unidad().equals(d.unidad())&&p.sede().equals(d.sede())))throw new FalloTecnico(400);
-            if(!catalogo.operador(d.evaluador()).jefeEn(d.unidad(),d.sede()))throw new FalloTecnico(400);
+            if(d.area()!=null)new cl.nexbyte.siger.institucional.identidad.CatalogoAreas(db,clock).exigir(d.area(),d.unidad(),d.sede());if(!responsableHabilitado(d.evaluador()).jefeEn(d.unidad(),d.sede(),d.area()))throw new FalloTecnico(400);
         }
     }
     private void openCommunication(UUID communication,Map<String,Object> row){
@@ -163,39 +191,43 @@ public final class NucleoInstitucional {
     }
     public Resultado distribuir(Operador a,UUID key,UUID communication,Distribucion request){
         actor(a);distributionTargetsAllowed(a,communication,request);
-        return execute(key,a,"DISTRIBUIR",List.of(communication,request),()->{
+        Object payload=request.destinos().stream().allMatch(d->d.area()==null)?new Distribucion10(request.revision(),request.destinos().stream().map(d->new Destino10(d.unidad(),d.sede(),d.evaluador())).toList()):request;
+        return execute(key,a,"DISTRIBUIR",List.of(communication,payload),()->{
             var row=lock(communication);distributionTargetsAllowed(a,communication,request);revision(row,request.revision());openCommunication(communication,row);
             var pairs=new HashSet<String>();for(var d:request.destinos())if(catalogo.individual()&&(!pairs.add(d.unidad()+"|"+d.sede())||db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND unit_code=? AND site_id=?",Integer.class,id(communication),d.unidad(),d.sede())>0))throw new FalloTecnico(409);
-            for(var d:request.destinos()){var did=UUID.randomUUID();db.sql.update("INSERT INTO core_destination(id,communication_id,unit_code,site_id,evaluator_id,state,revision,created_ms,created_by) VALUES(?,?,?,?,?,'EVALUANDO',0,?,?)",id(did),id(communication),d.unidad(),d.sede(),d.evaluador(),now(),a.id());db.sql.update("INSERT INTO distribution_event VALUES(?,?,?,?,?,?,?)",id(did),id(communication),a.id(),row.get("site_id"),d.unidad(),d.sede(),now());event(communication,"DESTINO",did,a,"DESTINO_DISTRIBUIDO");}
+            for(var d:request.destinos()){var did=UUID.randomUUID();db.sql.update("INSERT INTO core_destination(id,communication_id,unit_code,site_id,evaluator_id,state,revision,created_ms,created_by) VALUES(?,?,?,?,?,'EVALUANDO',0,?,?)",id(did),id(communication),d.unidad(),d.sede(),d.evaluador(),now(),a.id());db.sql.update("INSERT INTO distribution_event VALUES(?,?,?,?,?,?,?)",id(did),id(communication),a.id(),row.get("site_id"),d.unidad(),d.sede(),now());if(d.area()!=null)db.sql.update("INSERT INTO destination_area VALUES(?,?)",id(did),d.area());event(communication,"DESTINO",did,a,"DESTINO_DISTRIBUIDO");}
             bump(communication);return result(communication,communication);
         });
     }
+    private record Destino10(String unidad,String sede,String evaluador){}
+    private record Distribucion10(long revision,List<Destino10> destinos){}
     public Resultado abrirCaso(Operador a,UUID key,UUID destination,Asignacion request){
         actor(a);var initial=destination(destination);head(a,initial);var communication=uuid(initial.get("communication_id"));validarResponsable(initial,request.responsable());DeclaracionNna.texto(request.complejidadProvisional(),300,false);
         return execute(key,a,"ABRIR_CASO",List.of(destination,request),()->{
-            var root=lock(communication);openCommunication(communication,root);var d=destination(destination);head(a,d);revision(d,request.revision());
+            var root=lock(communication);openCommunication(communication,root);var d=destination(destination);head(a,d);validarResponsable(d,request.responsable());revision(d,request.revision());
             if(!"EVALUANDO".equals(d.get("state")))throw new FalloTecnico(409);
             var reqs=db.sql.queryForList("SELECT id FROM core_requirement WHERE communication_id=?",id(communication));UUID requirement;
             if(reqs.isEmpty()){requirement=UUID.randomUUID();db.sql.update("INSERT INTO core_requirement(id,communication_id,state,revision,created_ms,created_by) VALUES(?,?,'ACTIVO',0,?,?)",id(requirement),id(communication),now(),a.id());event(communication,"REQUERIMIENTO",requirement,a,"PRIMER_REQUERIMIENTO_CREADO");}else requirement=uuid(reqs.getFirst().get("id"));
             var cid=UUID.randomUUID();db.sql.update("INSERT INTO core_case(id,communication_id,requirement_id,destination_id,responsible_id,complexity_text,state,revision,created_ms,created_by) VALUES(?,?,?,?,?,?,'EN_GESTION',0,?,?)",id(cid),id(communication),id(requirement),id(destination),request.responsable(),request.complejidadProvisional(),now(),a.id());
-            assignment(cid,a,request);db.sql.update("UPDATE core_destination SET revision=revision+1 WHERE id=?",id(destination));bump(communication);event(communication,"CASO",cid,a,"CASO_ABIERTO");reevaluate(communication,a);return new Resultado(cid,0);
+            if(areas.area(d)!=null){db.sql.update("INSERT INTO case_area VALUES(?,?)",id(cid),areas.area(d));db.sql.update("INSERT INTO case_area_history(case_id,previous_area,area_id,actor_id,at_ms,reason_text) VALUES(?,NULL,?,?,?,?)",id(cid),areas.area(d),a.id(),now(),"Área del destino acreditado");}assignment(cid,a,request);db.sql.update("UPDATE core_destination SET revision=revision+1 WHERE id=?",id(destination));bump(communication);event(communication,"CASO",cid,a,"CASO_ABIERTO");reevaluate(communication,a);return new Resultado(cid,0);
         });
     }
-    private void validarResponsable(Map<String,Object> row,String id){var responsible=catalogo.operador(id);if(!responsible.alcance(str(row,"unit_code"),str(row,"site_id"))||!(responsible.jefeEn(str(row,"unit_code"),str(row,"site_id"))||responsible.profesionalEn(str(row,"unit_code"),str(row,"site_id"))))throw new FalloTecnico(400);}
+    private Operador responsableHabilitado(String id){try{return catalogo.operador(id);}catch(FalloTecnico e){if(e.status==401||e.status==404)throw new FalloTecnico(400,"RESPONSABLE_NO_HABILITADO");throw e;}}
+    private void validarResponsable(Map<String,Object> row,String id){var responsible=responsableHabilitado(id);if(!(areas.jefe(responsible,row)||areas.profesional(responsible,row)))throw new FalloTecnico(400);}
     private void assignment(UUID caseId,Operador a,Asignacion request){db.sql.update("INSERT INTO core_assignment VALUES(?,?,?,?,?,?)",id(UUID.randomUUID()),id(caseId),request.responsable(),request.complejidadProvisional(),a.id(),now());}
     public Resultado asignar(Operador a,UUID key,UUID caseId,Asignacion request){
         actor(a);var initial=caseRow(caseId);head(a,initial);validarResponsable(initial,request.responsable());DeclaracionNna.texto(request.complejidadProvisional(),300,false);var communication=uuid(initial.get("communication_id"));
         return execute(key,a,"ASIGNAR_CASO",List.of(caseId,request),()->{
-            lock(communication);var c=caseRow(caseId);head(a,c);revision(c,request.revision());if(!Set.of("EN_GESTION","CERRADO").contains(c.get("state")))throw new FalloTecnico(409);
+            lock(communication);var c=caseRow(caseId);head(a,c);validarResponsable(c,request.responsable());revision(c,request.revision());if(!Set.of("EN_GESTION","CERRADO").contains(c.get("state")))throw new FalloTecnico(409);
             // Reasignar un cerrado permite encaminar antecedentes; nunca lo reabre.
             if("CERRADO".equals(c.get("state"))&&!Objects.equals(request.complejidadProvisional(),c.get("complexity_text")))throw new FalloTecnico(409);
             db.sql.update("UPDATE core_case SET responsible_id=?,complexity_text=?,revision=revision+1 WHERE id=?",request.responsable(),request.complejidadProvisional(),id(caseId));assignment(caseId,a,request);bump(communication);event(communication,"CASO",caseId,a,"RESPONSABLE_Y_COMPLEJIDAD_REGISTRADOS");return new Resultado(caseId,number(c,"revision")+1);
         });
     }
     public Resultado resolverDestino(Operador a,UUID key,UUID destination,Decision request,boolean sinCaso){
-        actor(a);var initial=destination(destination);head(a,initial);var communication=uuid(initial.get("communication_id"));text(request.texto(),2000);
+        actor(a);var initial=destination(destination);head(a,initial);todosCasosDelDestino(a,destination);var communication=uuid(initial.get("communication_id"));text(request.texto(),2000);
         return execute(key,a,sinCaso?"RESPONDER_DESTINO":"FINALIZAR_DESTINO",List.of(destination,request),()->{
-            lock(communication);var d=destination(destination);head(a,d);revision(d,request.revision());if(!"EVALUANDO".equals(d.get("state")))throw new FalloTecnico(409);
+            lock(communication);var d=destination(destination);head(a,d);todosCasosDelDestino(a,destination);revision(d,request.revision());if(!"EVALUANDO".equals(d.get("state")))throw new FalloTecnico(409);
             long cases=db.sql.queryForObject("SELECT COUNT(*) FROM core_case WHERE destination_id=?",Long.class,id(destination));
             long open=db.sql.queryForObject("SELECT COUNT(*) FROM core_case WHERE destination_id=? AND state<>'CERRADO'",Long.class,id(destination));
             if(sinCaso?cases!=0:cases==0||open!=0)throw new FalloTecnico(409);
@@ -213,12 +245,14 @@ public final class NucleoInstitucional {
     public Resultado revisarCaso(Operador a,UUID key,UUID caseId,Decision request,String decision){
         actor(a);if(!Set.of("SOLICITUD_TERMINO","DEVOLUCION","CIERRE").contains(decision))throw new FalloTecnico(400);text(request.texto(),2000);
         var initial=caseRow(caseId);if(!canCase(a,initial))throw new FalloTecnico(404);var communication=uuid(initial.get("communication_id"));
+        confirmarIndependiente(a,initial,decision);
         return execute(key,a,decision,List.of(caseId,request),()->{
             lock(communication);var c=caseRow(caseId);if(!canCase(a,c))throw new FalloTecnico(404);revision(c,request.revision());String state=str(c,"state"),next;String modality=null;
+            confirmarIndependiente(a,c,decision);
             if(!decision.equals("DEVOLUCION")&&pendiente(caseId))throw new FalloTecnico(409);
             if(decision.equals("SOLICITUD_TERMINO")){
                 if(!a.id().equals(c.get("responsible_id"))||!state.equals("EN_GESTION"))throw new FalloTecnico(409);next="REVISION_TERMINO";
-            }else if(decision.equals("CIERRE")&&!a.jefeEn(str(c,"unit_code"),str(c,"site_id"))&&a.profesionalEn(str(c,"unit_code"),str(c,"site_id"))){
+            }else if(decision.equals("CIERRE")&&!areas.jefe(a,c)&&areas.profesional(a,c)){
                 if(!a.id().equals(c.get("responsible_id"))||!state.equals("EN_GESTION")||!"BAJA".equals(c.get("complexity_code")))throw new FalloTecnico(409);
                 next="CERRADO";modality="PROFESIONAL_BAJA";
             }else{
@@ -235,6 +269,7 @@ public final class NucleoInstitucional {
             bump(communication);reevaluate(communication,a);event(communication,"CASO",caseId,a,decision.equals("CIERRE")?("PROFESIONAL_BAJA".equals(modality)?"CASO_CERRADO_PROFESIONAL_BAJA":"CASO_CERRADO"):decision.equals("DEVOLUCION")?"TERMINO_DEVUELTO_CON_OBSERVACIONES":"TERMINO_SOLICITADO");return new Resultado(caseId,number(c,"revision")+1);
         });
     }
+    private void confirmarIndependiente(Operador a,Map<String,Object> c,String decision){String ar=areas.area(c);if(ar!=null&&decision.equals("CIERRE")&&(!areas.jefe(a,c)||areas.persona(a.id(),ar).equals(areas.persona(str(c,"responsible_id"),ar))))throw new FalloTecnico(409,"CIERRE_REQUIERE_PERSONA_INDEPENDIENTE");}
     public Resultado vincular(Operador a,UUID key,UUID child,Vinculacion request){
         actor(a);distributor(a);if(child.equals(request.padre()))throw new FalloTecnico(400);id(request.padre());text(request.motivo(),1000);
         return execute(key,a,"VINCULAR_COMUNICACION",List.of(child,request),()->{
@@ -246,7 +281,7 @@ public final class NucleoInstitucional {
                 var parents=db.sql.queryForList("SELECT parent_id FROM core_link WHERE child_id=?",id(cursor));cursor=parents.isEmpty()?null:uuid(parents.getFirst().get("parent_id"));
             }
             String recipient=null;
-            if(request.casoReferencia()!=null){var c=caseRow(request.casoReferencia());if(!request.padre().equals(uuid(c.get("communication_id"))))throw new FalloTecnico(400);recipient=str(c,"responsible_id");}
+            if(request.casoReferencia()!=null){var c=caseRow(request.casoReferencia());if(areas.area(c)!=null&&!canCase(a,c))throw new FalloTecnico(404);if(!request.padre().equals(uuid(c.get("communication_id"))))throw new FalloTecnico(400);recipient=str(c,"responsible_id");}
             var requirements=db.sql.queryForList("SELECT id FROM core_requirement WHERE communication_id=?",id(request.padre()));
             if(requirements.isEmpty())throw new FalloTecnico(409);
             db.sql.update("INSERT INTO core_link(child_id,parent_id,case_reference,actor_id,at_ms,reason_text,requirement_reference,revision) VALUES(?,?,?,?,?,?,?,0)",id(child),id(request.padre()),request.casoReferencia()==null?null:id(request.casoReferencia()),a.id(),now(),request.motivo(),requirements.getFirst().get("id"));
@@ -280,26 +315,27 @@ public final class NucleoInstitucional {
         var rows=db.sql.queryForList("SELECT t.*,c.communication_id,c.requirement_id,c.revision AS origin_revision,c.state AS origin_state,d.unit_code AS origin_unit,d.site_id AS origin_site FROM core_transfer t JOIN core_case c ON c.id=t.origin_case_id JOIN core_destination d ON d.id=c.destination_id WHERE t.id=?",id(requestId));
         if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();
     }
-    private void transferReader(Operador a,Map<String,Object> t){if(!(a.jefeEn(str(t,"target_unit"),str(t,"target_site"))||a.jefeEn(str(t,"origin_unit"),str(t,"origin_site"))))throw new FalloTecnico(404);}
+    private void transferReader(Operador a,Map<String,Object> t){if(areas.area(caseRow(uuid(t.get("origin_case_id"))))!=null)throw new FalloTecnico(404);if(!(a.jefeEn(str(t,"target_unit"),str(t,"target_site"))||a.jefeEn(str(t,"origin_unit"),str(t,"origin_site"))))throw new FalloTecnico(404);}
     private Derivacion transferView(Map<String,Object> t){
-        var compatible=db.sql.queryForList("SELECT id,revision,state FROM core_destination WHERE communication_id=? AND unit_code=? AND site_id=? AND state='EVALUANDO' ORDER BY created_ms,id",t.get("communication_id"),t.get("target_unit"),t.get("target_site")).stream().map(r->new DestinoCompatible(uuid(r.get("id")),number(r,"revision"),str(r,"state"))).toList();
+        var compatible=db.sql.queryForList("SELECT id,revision,state FROM core_destination WHERE communication_id=? AND unit_code=? AND site_id=? AND state='EVALUANDO' AND NOT EXISTS(SELECT 1 FROM destination_area da WHERE da.destination_id=core_destination.id) ORDER BY created_ms,id",t.get("communication_id"),t.get("target_unit"),t.get("target_site")).stream().map(r->new DestinoCompatible(uuid(r.get("id")),number(r,"revision"),str(r,"state"))).toList();
         return new Derivacion(uuid(t.get("id")),uuid(t.get("origin_case_id")),uuid(t.get("requirement_id")),str(t,"origin_unit"),str(t,"origin_site"),str(t,"target_unit"),str(t,"target_site"),str(t,"requested_by"),date(t,"requested_ms"),number(t,"origin_revision_at_request"),str(t,"reason_text"),str(t,"evaluation_text"),str(t,"state"),number(t,"revision"),number(t,"origin_revision"),str(t,"origin_state"),str(t,"decided_by"),date(t,"decided_ms"),str(t,"decision_text"),uuid(t.get("target_case_id")),compatible);
     }
     public Derivacion derivacion(Operador a,UUID requestId){actor(a);return lectura.execute(status->{var t=transferRow(requestId);transferReader(a,t);return transferView(t);});}
-    public List<Derivacion> entrantes(Operador a){actor(a);if(!a.jefatura())throw new FalloTecnico(403);return lectura.execute(status->db.sql.queryForList("SELECT id FROM core_transfer WHERE "+grantSql(a,"target_unit","target_site",true)+" ORDER BY requested_ms DESC,id LIMIT 100").stream().map(r->transferView(transferRow(uuid(r.get("id"))))).toList());}
-    public Pagina<Derivacion> entrantesPagina(Operador a,int page,int size){actor(a);if(!a.jefatura())throw new FalloTecnico(403);page(page,size);return lectura.execute(s->{long total=db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE "+grantSql(a,"target_unit","target_site",true)+" AND state='PENDIENTE'",Long.class);var items=db.sql.queryForList("SELECT id FROM core_transfer WHERE "+grantSql(a,"target_unit","target_site",true)+" AND state='PENDIENTE' ORDER BY requested_ms,id LIMIT ? OFFSET ?",size,page*size).stream().map(r->transferView(transferRow(uuid(r.get("id"))))).toList();return new Pagina<>(items,total,page,size);});}
+    private String transferScope(Operador a){return "("+grantSql(a,"target_unit","target_site",true)+" AND NOT EXISTS(SELECT 1 FROM case_area xa WHERE xa.case_id=core_transfer.origin_case_id))";}
+    public List<Derivacion> entrantes(Operador a){actor(a);if(!a.jefatura())throw new FalloTecnico(403);return lectura.execute(status->db.sql.queryForList("SELECT id FROM core_transfer WHERE "+transferScope(a)+" ORDER BY requested_ms DESC,id LIMIT 100").stream().map(r->transferView(transferRow(uuid(r.get("id"))))).toList());}
+    public Pagina<Derivacion> entrantesPagina(Operador a,int page,int size){actor(a);if(!a.jefatura())throw new FalloTecnico(403);page(page,size);return lectura.execute(s->{long total=db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE "+transferScope(a)+" AND state='PENDIENTE'",Long.class);var items=db.sql.queryForList("SELECT id FROM core_transfer WHERE "+transferScope(a)+" AND state='PENDIENTE' ORDER BY requested_ms,id LIMIT ? OFFSET ?",size,page*size).stream().map(r->transferView(transferRow(uuid(r.get("id"))))).toList();return new Pagina<>(items,total,page,size);});}
     public List<Derivacion> salientes(Operador a,UUID caseId){actor(a);var c=caseRow(caseId);head(a,c);return lectura.execute(status->db.sql.queryForList("SELECT id FROM core_transfer WHERE origin_case_id=?",id(caseId)).stream().map(r->transferView(transferRow(uuid(r.get("id"))))).toList());}
     public Resultado solicitarDerivacion(Operador a,UUID key,UUID caseId,SolicitarDerivacion request){
-        actor(a);var initial=caseRow(caseId);head(a,initial);text(request.motivo(),1000);DeclaracionNna.relato(request.antecedentesEvaluacion());
+        actor(a);var initial=caseRow(caseId);head(a,initial);if(areas.area(initial)!=null)throw new FalloTecnico(409,"DERIVACION_AREA_PENDIENTE");text(request.motivo(),1000);DeclaracionNna.relato(request.antecedentesEvaluacion());
         if(catalogo.presencias().stream().noneMatch(p->p.unidad().equals(request.unidad())&&p.sede().equals(request.sede()))||(Objects.equals(initial.get("unit_code"),request.unidad())&&Objects.equals(initial.get("site_id"),request.sede())))throw new FalloTecnico(400);
         var communication=uuid(initial.get("communication_id"));return execute(key,a,"SOLICITAR_DERIVACION",List.of(caseId,request),()->{
-            lock(communication);var c=caseRow(caseId);head(a,c);revision(c,request.revision());if(!"EN_GESTION".equals(c.get("state"))||pendiente(caseId))throw new FalloTecnico(409);
+            lock(communication);var c=caseRow(caseId);head(a,c);if(areas.area(c)!=null)throw new FalloTecnico(409,"DERIVACION_AREA_PENDIENTE");revision(c,request.revision());if(!"EN_GESTION".equals(c.get("state"))||pendiente(caseId))throw new FalloTecnico(409);
             var rid=UUID.randomUUID();db.sql.update("INSERT INTO core_transfer(id,origin_case_id,target_unit,target_site,requested_by,requested_ms,origin_revision_at_request,reason_text,evaluation_text,state,revision) VALUES(?,?,?,?,?,?,?,?,?,'PENDIENTE',0)",id(rid),id(caseId),request.unidad(),request.sede(),a.id(),now(),request.revision(),request.motivo(),request.antecedentesEvaluacion());
             db.sql.update("UPDATE core_case SET revision=revision+1 WHERE id=?",id(caseId));bump(communication);event(communication,"CASO",caseId,a,"DERIVACION_SOLICITADA_ORIGEN_ABIERTO");return new Resultado(rid,0);
         });
     }
     public Resultado aceptarDerivacion(Operador a,UUID key,UUID requestId,AceptarDerivacion request){
-        actor(a);var initial=transferRow(requestId);if(!a.jefeEn(str(initial,"target_unit"),str(initial,"target_site")))throw new FalloTecnico(404);text(request.fundamento(),2000);
+        actor(a);var initial=transferRow(requestId);if(areas.area(caseRow(uuid(initial.get("origin_case_id"))))!=null)throw new FalloTecnico(409,"DERIVACION_AREA_PENDIENTE");if(!a.jefeEn(str(initial,"target_unit"),str(initial,"target_site")))throw new FalloTecnico(404);text(request.fundamento(),2000);
         var communication=uuid(initial.get("communication_id"));return execute(key,a,"ACEPTAR_DERIVACION",List.of(requestId,request),()->{
             lock(communication);var t=transferRow(requestId);
             if(!a.jefeEn(str(t,"target_unit"),str(t,"target_site")))throw new FalloTecnico(404);
@@ -311,7 +347,7 @@ public final class NucleoInstitucional {
                 db.sql.update("INSERT INTO core_destination(id,communication_id,unit_code,site_id,evaluator_id,state,revision,created_ms,created_by) VALUES(?,?,?,?,?,'EVALUANDO',0,?,?)",id(target),id(communication),t.get("target_unit"),t.get("target_site"),a.id(),now(),a.id());
                 event(communication,"DESTINO",target,a,"DESTINO_CREADO_POR_DERIVACION_ACEPTADA");
             }else{
-                var d=destination(target);if(!communication.equals(uuid(d.get("communication_id")))||!a.jefeEn(str(d,"unit_code"),str(d,"site_id")))throw new FalloTecnico(409);
+                var d=destination(target);if(areas.area(d)!=null)throw new FalloTecnico(409,"DERIVACION_AREA_PENDIENTE");if(!communication.equals(uuid(d.get("communication_id")))||!areas.jefe(a,d))throw new FalloTecnico(409);
                 if(request.revisionDestino()==null)throw new FalloTecnico(400);revision(d,request.revisionDestino());if(!"EVALUANDO".equals(d.get("state")))throw new FalloTecnico(409);
             }
             var newCase=UUID.randomUUID();db.sql.update("INSERT INTO core_case(id,communication_id,requirement_id,destination_id,responsible_id,complexity_text,state,revision,created_ms,created_by,origin_case_id) VALUES(?,?,?,?,NULL,NULL,'EN_GESTION',0,?,?,?)",id(newCase),id(communication),c.get("requirement_id"),id(target),now(),a.id(),id(origin));
@@ -328,23 +364,23 @@ public final class NucleoInstitucional {
     // Antecedentes: autorización por contexto. Un vínculo nunca amplía el alcance al resto del agrupador.
     private Map<String,Object> linkRow(UUID child){var rows=db.sql.queryForList("SELECT * FROM core_link WHERE child_id=?",id(child));if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();}
     private void linkReader(Operador a,Map<String,Object> l){
-        if(a.distribuidor())return;
+        if(a.distribuidor()&&(l.get("case_reference")==null||areas.area(caseRow(uuid(l.get("case_reference"))))==null))return;
         if(l.get("case_reference")!=null){if(canCase(a,caseRow(uuid(l.get("case_reference")))))return;}
-        else if(db.sql.queryForObject("SELECT COUNT(*) FROM core_destination d WHERE d.communication_id=? AND "+grantSql(a,"d.unit_code","d.site_id",true),Long.class,l.get("parent_id"))>0)return;
+        else if(db.sql.queryForObject("SELECT COUNT(*) FROM core_destination d WHERE d.communication_id=? AND "+scoped(a,"destination","d.id","d.unit_code","d.site_id",true),Long.class,l.get("parent_id"))>0)return;
         throw new FalloTecnico(404);
     }
-    private void evaluator(Operador a,Map<String,Object> c){if(!a.profesionalEn(str(c,"unit_code"),str(c,"site_id"))||!canCase(a,c)||!a.id().equals(c.get("responsible_id")))throw new FalloTecnico(404);}
+    private void evaluator(Operador a,Map<String,Object> c){if(!areas.profesional(a,c)||!canCase(a,c)||!a.id().equals(c.get("responsible_id")))throw new FalloTecnico(404);}
     private Antecedente linkView(Operador a,Map<String,Object> l,boolean content){
         var child=uuid(l.get("child_id"));var c=l.get("case_reference")==null?null:caseRow(uuid(l.get("case_reference")));
         var evals=db.sql.queryForList("SELECT * FROM core_link_evaluation WHERE child_id=?",id(child));var e=evals.isEmpty()?Map.<String,Object>of():evals.getFirst();
         String state=e.isEmpty()?(l.get("requirement_reference")==null?"SIN_EVALUACION_HISTORICA":c==null?"PENDIENTE_ASIGNACION":"PENDIENTE"):str(e,"decision");
         String responsible=null;
-        if(c!=null&&c.get("responsible_id")!=null){try{var current=catalogo.operador(str(c,"responsible_id"));if(current.profesionalEn(str(c,"unit_code"),str(c,"site_id"))&&canCase(current,c))responsible=current.id();}catch(FalloTecnico inactive){if(inactive.status!=401&&inactive.status!=404&&inactive.status!=403)throw inactive;}}
+        if(c!=null&&c.get("responsible_id")!=null){try{var current=catalogo.operador(str(c,"responsible_id"));if(areas.profesional(current,c)&&canCase(current,c))responsible=current.id();}catch(FalloTecnico inactive){if(inactive.status!=401&&inactive.status!=404&&inactive.status!=403)throw inactive;}}
         if(state.equals("PENDIENTE")&&responsible==null)state="PENDIENTE_ASIGNACION";
-        return new Antecedente(child,resumen(registry(child,false)).folio(),uuid(l.get("parent_id")),uuid(l.get("requirement_reference")),uuid(l.get("case_reference")),state,number(l,"revision"),str(l,"reason_text"),str(l,"actor_id"),date(l,"at_ms"),responsible,str(e,"reason_text"),str(e,"actor_id"),date(e,"at_ms"),content?contenidoOriginal(child):null);
+        return new Antecedente(child,resumen(a,registry(child,false)).folio(),uuid(l.get("parent_id")),uuid(l.get("requirement_reference")),uuid(l.get("case_reference")),state,number(l,"revision"),str(l,"reason_text"),str(l,"actor_id"),date(l,"at_ms"),responsible,str(e,"reason_text"),str(e,"actor_id"),date(e,"at_ms"),content?contenidoOriginal(child):null);
     }
     public Antecedente antecedente(Operador a,UUID child){actor(a);return lectura.execute(s->{var l=linkRow(child);linkReader(a,l);return linkView(a,l,a.distribuidor()||l.get("case_reference")!=null);});}
-    private String linkScope(Operador a){return a.distribuidor()?"1=1":"(EXISTS(SELECT 1 FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.id=l.case_reference AND "+caseScope(a)+") OR (l.case_reference IS NULL AND EXISTS(SELECT 1 FROM core_destination d WHERE d.communication_id=l.parent_id AND "+grantSql(a,"d.unit_code","d.site_id",true)+")))";}
+    private String linkScope(Operador a){return a.distribuidor()?"(l.case_reference IS NULL OR EXISTS(SELECT 1 FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.id=l.case_reference AND "+caseScope(a)+"))":"(EXISTS(SELECT 1 FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.id=l.case_reference AND "+caseScope(a)+") OR (l.case_reference IS NULL AND EXISTS(SELECT 1 FROM core_destination d WHERE d.communication_id=l.parent_id AND "+scoped(a,"destination","d.id","d.unit_code","d.site_id",true)+")))";}
     private ArrayList<Object> linkArgs(Operador a){return new ArrayList<>();}
     private static void page(int page,int size){if(page<0||page>100000||size<1||size>50)throw new FalloTecnico(400);}
     public Pagina<Antecedente> antecedentes(Operador a,UUID caseId,boolean pending,int page,int size){
@@ -368,7 +404,7 @@ public final class NucleoInstitucional {
     }
     private Map<String,Object> reopenRow(UUID requestId){var rows=db.sql.queryForList("SELECT * FROM core_reopen WHERE id=?",id(requestId));if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();}
     private List<UUID> reopenEvidence(UUID requestId){return db.sql.queryForList("SELECT child_id FROM core_reopen_evidence WHERE request_id=? ORDER BY child_id",id(requestId)).stream().map(r->uuid(r.get("child_id"))).toList();}
-    private Reapertura reopenView(Map<String,Object> r){var c=caseRow(uuid(r.get("case_id")));return new Reapertura(uuid(r.get("id")),uuid(c.get("id")),uuid(c.get("requirement_id")),str(c,"unit_code"),str(c,"site_id"),str(r,"requested_by"),date(r,"requested_ms"),number(r,"case_revision"),number(c,"revision"),str(c,"responsible_id"),date(r,"closed_ms"),str(r,"closure_mode"),str(r,"reason_text"),reopenEvidence(uuid(r.get("id"))),str(r,"state"),number(r,"revision"),str(r,"decided_by"),date(r,"decided_ms"),str(r,"decision_text"),uuid(r.get("supersedes_id")));}
+    private Reapertura reopenView(Map<String,Object> r){var c=caseRow(uuid(r.get("case_id")));return new Reapertura(uuid(r.get("id")),uuid(c.get("id")),uuid(c.get("requirement_id")),str(c,"unit_code"),str(c,"site_id"),str(r,"requested_by"),date(r,"requested_ms"),number(r,"case_revision"),number(c,"revision"),str(c,"responsible_id"),date(r,"closed_ms"),str(r,"closure_mode"),str(r,"reason_text"),reopenEvidence(uuid(r.get("id"))),str(r,"state"),number(r,"revision"),str(r,"decided_by"),date(r,"decided_ms"),str(r,"decision_text"),uuid(r.get("supersedes_id")),areas.area(c));}
     public Reapertura reapertura(Operador a,UUID requestId){actor(a);return lectura.execute(s->{var r=reopenRow(requestId);if(!canCase(a,caseRow(uuid(r.get("case_id")))))throw new FalloTecnico(404);return reopenView(r);});}
     public Pagina<Reapertura> reaperturas(Operador a,UUID caseId,boolean pending,int page,int size){actor(a);page(page,size);if(a.distribuidor()&&!a.jefatura()&&a.accesos().stream().noneMatch(x->x.rol().equals("PROFESIONAL")))throw new FalloTecnico(403);return lectura.execute(s->{
         String from=" FROM core_reopen r JOIN core_case c ON c.id=r.case_id JOIN core_destination d ON d.id=c.destination_id WHERE "+caseScopeGestion(a);var args=caseArgs(a);
@@ -424,19 +460,19 @@ public final class NucleoInstitucional {
         String from=" FROM core_case c JOIN core_destination d ON d.id=c.destination_id JOIN communication_registry r ON r.comunicacion_id=c.communication_id WHERE "+caseScope(a);var args=caseArgs(a);
         if(state!=null&&!state.isBlank()){if(!Set.of("EN_GESTION","REVISION_TERMINO","CERRADO").contains(state))throw new FalloTecnico(400);from+=" AND c.state=?";args.add(state);}
         long total=db.sql.queryForObject("SELECT COUNT(*)"+from,Long.class,args.toArray());args.add(size);args.add(page*size);
-        var items=db.sql.queryForList("SELECT c.*,d.unit_code,d.site_id,r.numero,r.folio_prefix,r.folio_width"+from+" ORDER BY c.created_ms DESC,c.id LIMIT ? OFFSET ?",args.toArray()).stream().map(c->new CasoResumen(uuid(c.get("id")),uuid(c.get("communication_id")),str(c,"folio_prefix")+"-"+String.format(Locale.ROOT,"%0"+number(c,"folio_width")+"d",number(c,"numero")),uuid(c.get("requirement_id")),str(c,"unit_code"),str(c,"site_id"),str(c,"responsible_id"),str(c,"complexity_code"),str(c,"state"),number(c,"revision"),pendiente(uuid(c.get("id"))),db.sql.queryForObject("SELECT COUNT(*) FROM core_reopen WHERE case_id=? AND state='PENDIENTE'",Long.class,c.get("id"))>0)).toList();return new Pagina<>(items,total,page,size);
+        var items=db.sql.queryForList("SELECT c.*,d.unit_code,d.site_id,r.numero,r.folio_prefix,r.folio_width"+from+" ORDER BY c.created_ms DESC,c.id LIMIT ? OFFSET ?",args.toArray()).stream().map(c->new CasoResumen(uuid(c.get("id")),uuid(c.get("communication_id")),str(c,"folio_prefix")+"-"+String.format(Locale.ROOT,"%0"+number(c,"folio_width")+"d",number(c,"numero")),uuid(c.get("requirement_id")),str(c,"unit_code"),str(c,"site_id"),str(c,"responsible_id"),str(c,"complexity_code"),str(c,"state"),number(c,"revision"),pendiente(uuid(c.get("id"))),db.sql.queryForObject("SELECT COUNT(*) FROM core_reopen WHERE case_id=? AND state='PENDIENTE'",Long.class,c.get("id"))>0,areas.area(c))).toList();return new Pagina<>(items,total,page,size);
     });}
     public Pagina<Resumen> buscar(Operador a,String query,boolean requirements,int page,int size){actor(a);page(page,size);if(query==null||query.length()>60||!query.matches("[a-zA-Z0-9-]*"))throw new FalloTecnico(400);return lectura.execute(s->{
         String scope=communicationScope(a);
         var args=caseArgs(a);String where=scope+" AND LOWER(CONCAT(r.folio_prefix,'-',LPAD(CONCAT('',r.numero),r.folio_width,'0'))) LIKE ?";args.add("%"+query.toLowerCase(Locale.ROOT)+"%");
         if(requirements)where+=" AND EXISTS(SELECT 1 FROM core_requirement q WHERE q.communication_id=r.comunicacion_id)";
         long total=db.sql.queryForObject("SELECT COUNT(*) FROM communication_registry r WHERE "+where,Long.class,args.toArray());args.add(size);args.add(page*size);
-        return new Pagina<>(db.sql.queryForList("SELECT r.* FROM communication_registry r WHERE "+where+" ORDER BY r.numero DESC LIMIT ? OFFSET ?",args.toArray()).stream().map(this::resumen).toList(),total,page,size);
+        return new Pagina<>(db.sql.queryForList("SELECT r.* FROM communication_registry r WHERE "+where+" ORDER BY r.numero DESC LIMIT ? OFFSET ?",args.toArray()).stream().map(r->resumen(a,r)).toList(),total,page,size);
     });}
     public Bandeja bandeja(Operador a){actor(a);return lectura.execute(s->{
         long communications=buscar(a,"",false,0,1).total();long cases=casos(a,"EN_GESTION",0,1).total();long reviews=casos(a,"REVISION_TERMINO",0,1).total();long links=antecedentes(a,null,true,0,1).total();
         long unassigned=a.distribuidor()?db.sql.queryForObject("SELECT COUNT(*) FROM core_link WHERE case_reference IS NULL",Long.class):0;
-        long reopen=a.distribuidor()&&!a.jefatura()&&a.accesos().stream().noneMatch(x->x.rol().equals("PROFESIONAL"))?0:reaperturas(a,null,true,0,1).total();long transfers=a.jefatura()?db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE state='PENDIENTE' AND "+grantSql(a,"target_unit","target_site",true),Long.class):0;
+        long reopen=a.distribuidor()&&!a.jefatura()&&a.accesos().stream().noneMatch(x->x.rol().equals("PROFESIONAL"))?0:reaperturas(a,null,true,0,1).total();long transfers=a.jefatura()?db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE state='PENDIENTE' AND "+transferScope(a),Long.class):0;
         return new Bandeja(communications,cases,links,unassigned,reopen,transfers,reviews);
     });}
     public List<Resumen> buzon(Operador a,long despues,int limite){return lectura.execute(status->buzonSnapshot(a,despues,limite));}
@@ -445,13 +481,13 @@ public final class NucleoInstitucional {
         String scope=communicationScope(a);
         var args=new ArrayList<Object>();args.add(despues);args.addAll(caseArgs(a));args.add(limite);
         var rows=db.sql.queryForList("SELECT r.* FROM communication_registry r WHERE r.numero>? AND "+scope+" ORDER BY r.numero LIMIT ?",args.toArray());
-        return rows.stream().map(r->resumen(r)).toList();
+        return rows.stream().map(r->resumen(a,r)).toList();
     }
-    private Resumen resumen(Map<String,Object> r){
+    private Resumen resumen(Operador a,Map<String,Object> r){
         var cid=uuid(r.get("comunicacion_id"));var core=db.sql.queryForList("SELECT state,revision FROM core_communication WHERE id=?",id(cid));var req=db.sql.queryForList("SELECT id,state FROM core_requirement WHERE communication_id=?",id(cid));
-        int open=db.sql.queryForObject("SELECT COUNT(*) FROM core_case WHERE communication_id=? AND state<>'CERRADO'",Integer.class,id(cid));int pending=db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND state<>'RESUELTO'",Integer.class,id(cid));
+        int open=db.sql.queryForObject("SELECT COUNT(*) FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.communication_id=? AND c.state<>'CERRADO' AND "+caseScope(a),Integer.class,id(cid));int pending=db.sql.queryForObject("SELECT COUNT(*) FROM core_destination d WHERE d.communication_id=? AND d.state<>'RESUELTO' AND "+(a.distribuidor()?"1=1":scoped(a,"destination","d.id","d.unit_code","d.site_id",true)),Integer.class,id(cid));
         String state=core.isEmpty()?"ABIERTA":str(core.getFirst(),"state");if(state.equals("ABIERTA")&&!req.isEmpty())state="REQUERIMIENTO_"+str(req.getFirst(),"state");
-        else if(state.equals("ABIERTA")&&pending==0&&db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,id(cid))>0)state="ATENDIDA_SIN_CASO";
+        else if(state.equals("ABIERTA")&&db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND state<>'RESUELTO'",Integer.class,id(cid))==0&&db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,id(cid))>0)state="ATENDIDA_SIN_CASO";
         String folio=str(r,"folio_prefix")+"-"+String.format(Locale.ROOT,"%0"+number(r,"folio_width")+"d",number(r,"numero"));
         var origins=db.sql.queryForList("SELECT * FROM communication_origin WHERE communication_id=?",id(cid));var origin=origins.isEmpty()?Map.<String,Object>of():origins.getFirst();var manual=db.sql.queryForList("SELECT channel_declared FROM core_manual WHERE communication_id=?",id(cid));
         return new Resumen(cid,number(r,"numero"),folio,date(r,"registrada_ms"),str(r,"canal"),state,core.isEmpty()?0:number(core.getFirst(),"revision"),req.isEmpty()?null:uuid(req.getFirst().get("id")),req.isEmpty()?null:str(req.getFirst(),"state"),open,pending,"REGISTRO_FUNCIONARIO".equals(r.get("source"))?"REGISTRO_FUNCIONARIO":"WEB",str(origin,"site_id"),str(origin,"subject_region"),manual.isEmpty()?null:str(manual.getFirst(),"channel_declared"));
@@ -477,17 +513,17 @@ public final class NucleoInstitucional {
         actor(a);readable(a,communication);var r=registry(communication,false);var root=db.sql.queryForList("SELECT * FROM core_communication WHERE id=?",id(communication));
         var content=contenidoOriginal(communication);
         var destinations=db.sql.queryForList("SELECT * FROM core_destination WHERE communication_id=? ORDER BY created_ms,id",id(communication)).stream()
-            .filter(d->a.distribuidor()||a.jefeEn(str(d,"unit_code"),str(d,"site_id"))||a.profesionalEn(str(d,"unit_code"),str(d,"site_id"))&&db.sql.queryForObject("SELECT COUNT(*) FROM core_case WHERE destination_id=? AND responsible_id=?",Long.class,d.get("id"),a.id())>0)
-            .map(d->new Destino(uuid(d.get("id")),str(d,"unit_code"),str(d,"site_id"),str(d,"evaluator_id"),str(d,"state"),number(d,"revision"),str(d,"decision"),a.distribuidor()||a.jefeEn(str(d,"unit_code"),str(d,"site_id"))?str(d,"decision_text"):null,str(d,"decided_by"),date(d,"decided_ms"),db.sql.queryForObject("SELECT COUNT(*) FROM core_case WHERE destination_id=?",Integer.class,d.get("id")))).toList();
+            .filter(d->a.distribuidor()||areas.jefe(a,d)||casosVisiblesDestino(a,d.get("id"))>0)
+            .map(d->new Destino(uuid(d.get("id")),str(d,"unit_code"),str(d,"site_id"),str(d,"evaluator_id"),str(d,"state"),number(d,"revision"),str(d,"decision"),(a.distribuidor()&&areas.area(d)==null)||areas.jefe(a,d)?str(d,"decision_text"):null,str(d,"decided_by"),date(d,"decided_ms"),db.sql.queryForObject("SELECT COUNT(*) FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.destination_id=? AND "+caseScope(a),Integer.class,d.get("id")),areas.area(d))).toList();
         var rows=db.sql.queryForList("SELECT c.*,d.unit_code,d.site_id FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.communication_id=? ORDER BY c.created_ms,c.id",id(communication));
-        var cases=rows.stream().filter(c->a.distribuidor()||canCase(a,c)).map(c->caseView(c,!a.distribuidor())).toList();
+        var cases=rows.stream().filter(c->canCase(a,c)||a.distribuidor()&&areas.area(c)==null).map(c->caseView(c,!a.distribuidor())).toList();
         var visible=new HashSet<UUID>();cases.forEach(c->visible.add(c.id()));destinations.forEach(d->visible.add(d.id()));
         var history=db.sql.queryForList("SELECT * FROM core_event WHERE communication_id=? ORDER BY seq DESC LIMIT 200",id(communication)).stream()
-            .filter(e->a.distribuidor()||str(e,"resource_kind").equals("COMUNICACION")||visible.contains(uuid(e.get("resource_id"))))
+            .filter(e->str(e,"resource_kind").equals("COMUNICACION")||visible.contains(uuid(e.get("resource_id"))))
             .map(e->new Evento(number(e,"seq"),str(e,"resource_kind"),uuid(e.get("resource_id")),str(e,"actor_id"),date(e,"at_ms"),str(e,"code"))).toList();
-        var links=a.distribuidor()?db.sql.queryForList("SELECT * FROM core_link WHERE child_id=? OR parent_id=? ORDER BY at_ms",id(communication),id(communication)).stream().map(l->new Vinculo(uuid(l.get("child_id")),uuid(l.get("parent_id")),uuid(l.get("case_reference")),str(l,"actor_id"),date(l,"at_ms"),str(l,"reason_text"))).toList():List.<Vinculo>of();
+        var links=a.distribuidor()?db.sql.queryForList("SELECT * FROM core_link WHERE child_id=? OR parent_id=? ORDER BY at_ms",id(communication),id(communication)).stream().filter(l->l.get("case_reference")==null||areas.area(caseRow(uuid(l.get("case_reference"))))==null||canCase(a,caseRow(uuid(l.get("case_reference"))))).map(l->new Vinculo(uuid(l.get("child_id")),uuid(l.get("parent_id")),uuid(l.get("case_reference")),str(l,"actor_id"),date(l,"at_ms"),str(l,"reason_text"))).toList():List.<Vinculo>of();
         var core=root.isEmpty()?Map.<String,Object>of():root.getFirst();
-        return new Detalle(resumen(r),content,destinations,cases,history,links,str(core,"decision_text"),str(core,"decided_by"),date(core,"decided_ms"),true,true,List.of("Matriz DDN y catálogos pendientes de aprobación","Finalizar evaluación del destino sigue siendo una decisión provisional; su reanudación por reapertura autorizada es explícita","Derivación aceptada confirmada por F04; promoción, rechazo y cancelación de derivación pendientes. Encaminamiento de vínculos solo a Requerimiento pendiente"));
+        return new Detalle(resumen(a,r),content,destinations,cases,history,links,str(core,"decision_text"),str(core,"decided_by"),date(core,"decided_ms"),true,true,List.of("Matriz DDN y catálogos pendientes de aprobación","Finalizar evaluación del destino sigue siendo una decisión provisional; su reanudación por reapertura autorizada es explícita","Derivación aceptada confirmada por F04; promoción, rechazo y cancelación de derivación pendientes. Encaminamiento de vínculos solo a Requerimiento pendiente"));
     }
     public Caso caso(Operador a,UUID caseId){return lectura.execute(status->{actor(a);var row=caseRow(caseId);if(!canCase(a,row))throw new FalloTecnico(404);return caseView(row,true);});}
     private Caso caseView(Map<String,Object> c,boolean details){
@@ -495,7 +531,7 @@ public final class NucleoInstitucional {
         var actions=details?db.sql.queryForList("SELECT * FROM core_action WHERE case_id=? ORDER BY at_ms,id",id(caseId)).stream().map(r->new Actuacion(uuid(r.get("id")),str(r,"actor_id"),date(r,"at_ms"),str(r,"body_text"))).toList():List.<Actuacion>of();
         var reviews=details?db.sql.queryForList("SELECT * FROM core_review WHERE case_id=? ORDER BY at_ms,id",id(caseId)).stream().map(r->new Revision(uuid(r.get("id")),str(r,"actor_id"),date(r,"at_ms"),str(r,"decision"),str(r,"body_text"))).toList():List.<Revision>of();
         var assignments=details?db.sql.queryForList("SELECT * FROM core_assignment WHERE case_id=? ORDER BY at_ms,id",id(caseId)).stream().map(r->new AsignacionHistorica(str(r,"responsible_id"),str(r,"complexity_text"),str(r,"actor_id"),date(r,"at_ms"))).toList():List.<AsignacionHistorica>of();
-        return new Caso(caseId,uuid(c.get("communication_id")),uuid(c.get("requirement_id")),uuid(c.get("destination_id")),str(c,"unit_code"),str(c,"site_id"),str(c,"responsible_id"),str(c,"complexity_text"),str(c,"state"),number(c,"revision"),actions,reviews,assignments,str(c,"complexity_code"),details?classificationHistory(caseId):List.of(),str(c,"closure_mode"),uuid(c.get("origin_case_id")),pendiente(caseId));
+        return new Caso(caseId,uuid(c.get("communication_id")),uuid(c.get("requirement_id")),uuid(c.get("destination_id")),str(c,"unit_code"),str(c,"site_id"),str(c,"responsible_id"),str(c,"complexity_text"),str(c,"state"),number(c,"revision"),actions,reviews,assignments,str(c,"complexity_code"),details?classificationHistory(caseId):List.of(),str(c,"closure_mode"),uuid(c.get("origin_case_id")),pendiente(caseId),areas.area(c));
     }
 }
 

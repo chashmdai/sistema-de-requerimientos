@@ -12,7 +12,7 @@ public class NucleoController {
     private CatalogoLaboratorio.Operador actor(Authentication auth){return SesionFuncionario.actual(auth,catalogo);}
     public record Sesion(boolean autenticado,CatalogoLaboratorio.Operador operador,String modo,boolean notificacionesHabilitadas,boolean solicitudesHabilitadas,boolean cambioClaveObligatorio){}
     public record Csrf(String token,String headerName,String parameterName){}
-    public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores,List<CatalogoLaboratorio.Region> regiones){}
+    public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores,List<CatalogoLaboratorio.Region> regiones,List<cl.nexbyte.siger.institucional.identidad.CatalogoAreas.Area> areas){}
     @GetMapping("/session") Sesion session(Authentication auth){
         boolean valid=auth!=null&&auth.isAuthenticated()&&auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails;
         boolean cambio=valid&&auth.getPrincipal() instanceof cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional.Principal p&&p.cambioClavePendiente();
@@ -21,7 +21,7 @@ public class NucleoController {
     @GetMapping("/csrf") Csrf csrf(CsrfToken token){return new Csrf(token.getToken(),token.getHeaderName(),token.getParameterName());}
     @GetMapping("/catalogo") Catalogo catalogo(Authentication auth){
         var a=actor(auth);return new Catalogo(catalogo.unidades(),catalogo.sedes(),catalogo.presencias(),
-            catalogo.operadores(),catalogo.regiones());
+            catalogo.operadores(),catalogo.regiones(),core.areas(a));
     }
     @GetMapping("/comunicaciones") List<Resumen> buzon(Authentication auth,@RequestParam(defaultValue="0")long despues,@RequestParam(defaultValue="100")int limite){return core.buzon(actor(auth),despues,limite);}
     @GetMapping("/comunicaciones/{id}") Detalle detalle(Authentication auth,@PathVariable UUID id){return core.detalle(actor(auth),id);}
@@ -34,6 +34,10 @@ public class NucleoController {
     @PostMapping("/destinos/{id}/responder") Resultado resolver(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.resolverDestino(actor(auth),key,id,body,true);}
     @PostMapping("/destinos/{id}/finalizar-evaluacion") Resultado finalizar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.resolverDestino(actor(auth),key,id,body,false);}
     @GetMapping("/casos/{id}") Caso caso(Authentication auth,@PathVariable UUID id){return core.caso(actor(auth),id);}
+    @GetMapping("/areas") List<cl.nexbyte.siger.institucional.identidad.CatalogoAreas.Area> areas(Authentication auth){return core.areas(actor(auth));}
+    @GetMapping("/casos/{id}/areas/historial") List<Map<String,Object>> historialArea(Authentication auth,@PathVariable UUID id){return core.historialArea(actor(auth),id);}
+    @GetMapping("/casos/{id}/areas/disponibles") List<String> cambiosArea(Authentication auth,@PathVariable UUID id){core.autorizarCaso(actor(auth),id);return core.cambiosAreaDisponibles(actor(auth),id);}
+    @PostMapping("/casos/{id}/area") Resultado area(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody CambiarArea body){return core.cambiarArea(actor(auth),key,id,body);}
     @PostMapping("/casos/{id}/asignar") Resultado asignar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Asignacion body){return core.asignar(actor(auth),key,id,body);}
     @PostMapping("/casos/{id}/actuaciones") Resultado actuar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.actuar(actor(auth),key,id,body);}
     @PostMapping("/casos/{id}/solicitar-termino") Resultado solicitar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.revisarCaso(actor(auth),key,id,body,"SOLICITUD_TERMINO");}

@@ -18,7 +18,7 @@ $port=Get-Random -Minimum 55000 -Maximum 61000
 if(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue){throw 'Puerto efímero ocupado; ejecutar nuevamente crea otro destino.'}
 $password=[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 $schema='siger_u15_test_'+[guid]::NewGuid().ToString('N');$init=Join-Path $base 'init.sql';$client=Join-Path $base 'client.cnf'
-Set-Content -LiteralPath $init -Encoding utf8 -Value ("ALTER USER 'root'@'localhost' IDENTIFIED BY '$password';`nCREATE USER 'root'@'127.0.0.1' IDENTIFIED BY '$password';`nGRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1';`nCREATE DATABASE $($schema)_14 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_151 CHARACTER SET utf8mb4;")
+Set-Content -LiteralPath $init -Encoding utf8 -Value ("ALTER USER 'root'@'localhost' IDENTIFIED BY '$password';`nCREATE USER 'root'@'127.0.0.1' IDENTIFIED BY '$password';`nGRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1';`nCREATE DATABASE $($schema)_14 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_151 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_152 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_area CHARACTER SET utf8mb4;")
 Set-Content -LiteralPath $client -Encoding utf8 -Value ("[client]`nuser=root`npassword=$password`nhost=127.0.0.1`nprotocol=TCP`nport=$port")
 # --no-defaults debe ser el primer argumento: nunca leer my.ini ni usar MySQL80.
 & (Join-Path $MySqlBin 'mysqld.exe') --no-defaults --initialize-insecure ('--basedir='+[IO.Path]::GetFullPath((Join-Path $MySqlBin '..'))) ('--datadir='+$dir) --innodb-buffer-pool-size=64M ('--log-error='+$base+'\initialize.log')
@@ -32,8 +32,8 @@ try{
  if(-not $ready){throw 'La instancia propia no aceptó autenticación dentro del plazo.'}
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$password;$env:JAVA_HOME=$JavaHome;$env:MAVEN_OPTS='-Xmx256m -XX:-UsePerfData'
  Push-Location (Join-Path $PSScriptRoot '../backend')
- try{& $Maven -B -ntp '-Dtest=AutoridadMigracionTest' ('-Dsiger.test.autoridad.mysql=jdbc:mysql://127.0.0.1:'+$port+'/'+$schema) ('-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir='+$base) test *> (Join-Path $base 'tests.log');if($LASTEXITCODE){throw 'Falló AutoridadMigracionTest; ver tests.log privado.'}}finally{Pop-Location}
- Write-Output 'MySQL descartable: dos rutas de migración y circuito transaccional correctos; tres tests sin omisiones.'
+ try{& $Maven -B -ntp '-Dtest=AutoridadMigracionTest,AreasMigracionTest' ('-Dsiger.test.autoridad.mysql=jdbc:mysql://127.0.0.1:'+$port+'/'+$schema) ('-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir='+$base) test *> (Join-Path $base 'tests.log');if($LASTEXITCODE){throw 'Falló AutoridadMigracionTest; ver tests.log privado.'}}finally{Pop-Location}
+ Write-Output 'MySQL descartable: tres rutas de migración, áreas y circuito transaccional correctos; seis tests sin omisiones.'
 }finally{
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$null;$env:JAVA_HOME=$oldJava;$env:MAVEN_OPTS=$oldMaven
  if($proc){
