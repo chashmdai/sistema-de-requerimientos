@@ -1,5 +1,7 @@
 # Entrega progresiva de lógica SIGER · 02/11/2026
 
+La continuidad vigente de autoridad/concesiones está en [U1.5](LOGICA_U1_5_AUTORIDAD_2026-11-02.md), además de U1.3/U1.4. Los resultados de este informe mantienen su corte histórico.
+
 Continuidad posterior a `d19fa87d`: [U1.3 y siguientes](LOGICA_CONTINUIDAD_U1_2026-11-02.md). Los resultados siguientes conservan el corte acreditado de U1.1/U1.2; no se presentan como las pruebas nuevas de continuidad.
 
 ## U0

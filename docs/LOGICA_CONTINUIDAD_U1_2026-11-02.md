@@ -1,5 +1,7 @@
 # Continuidad de lógica institucional · U1.3 en adelante
 
+El corte vigente de autoridad/concesiones está en [U1.5](LOGICA_U1_5_AUTORIDAD_2026-11-02.md). Este archivo conserva la evidencia de U1.3/U1.4; sus pendientes de aprobación a terceros se actualizan allí.
+
 ## Partida y alcance
 
 Continuación autorizada desde `d19fa87d772041455549fd73583d3b2bc96eee0b`, rama `feature/siger-logica-negocio`, worktree exclusivo `C:\req\worktrees\siger-logica`. Se comprobaron HEAD/upstream/remoto iguales y árbol limpio. `origin/main` seguía en G0 `95cf2ae8173b4c6cab3eb8a1531659b8459dd898`. Se reutilizan [U0](LOGICA_U0_DIAGNOSTICO_2026-11-02.md), [matriz de 138 reglas](LOGICA_MATRIZ_REGLAS_2026-11-02.csv), [entrega anterior](LOGICA_ENTREGA_2026-11-02.md) y [contrato incremental](../contratos/logica-institucional-incremental-v1.md), sin repetir el diagnóstico ni reconstruir U1.1/U1.2.
