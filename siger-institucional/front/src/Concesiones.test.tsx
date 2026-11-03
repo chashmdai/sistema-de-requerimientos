@@ -1,0 +1,39 @@
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import {beforeEach,expect,test,vi} from 'vitest';
+import {Concesiones} from './Concesiones';
+import * as api from './api';
+vi.mock('./api',async original=>({...await original<typeof import('./api')>(),contextoAutoridad:vi.fn(),concesiones:vi.fn(),historialConcesion:vi.fn()}));
+const catalog:api.Catalog={unidades:[{codigo:'UPR',nombre:'Unidad sintética'}],sedes:[{id:'A',nombre:'Sede A'}],presencias:[{unidad:'UPR',sede:'A'}],operadores:[{id:'beneficiario',nombre:'Persona sintética',rol:'ADMINISTRATIVO',unidad:null,sede:null,accesos:[]}]};
+const ti:api.Actor={id:'ti',nombre:'TI',rol:'TI',unidad:null,sede:null,accesos:[{rol:'TI',alcance:'INSTITUCION',unidad:null,sede:null}]};
+const autoridad:api.Actor={id:'autoridad',nombre:'Autoridad sintética',rol:'ADMINISTRATIVO',unidad:null,sede:null,accesos:[]};
+const mandato:api.MandatoAutoridad={id:'m',function_code:'Función sintética',role_code:'PROFESIONAL',scope_code:'UNIDAD_SEDE',unit_code:'UPR',site_id:'A',valid_from:1,valid_until:4102444800000,can_approve:true,can_revoke:true,basis_ref:'Referencia sintética'};
+const row:api.InstruccionAcceso={id:'11111111-1111-4111-8111-111111111111',requester_id:'ti',beneficiary_id:'beneficiario',role_code:'PROFESIONAL',scope_code:'UNIDAD_SEDE',unit_code:'UPR',site_id:'A',valid_from:1,valid_until:4102444800000,reason_text:'Necesidad acreditada',state:'PENDIENTE',revision:0,approver_id:null,authority_revision:null,executed_by:null};
+const run=vi.fn<(route:string,payload?:object)=>Promise<void>>();
+beforeEach(()=>{vi.clearAllMocks();vi.mocked(api.contextoAutoridad).mockResolvedValue({revisionRegistro:1,identidad:'ACREDITADA',mandatos:[]});vi.mocked(api.concesiones).mockResolvedValue([row]);vi.mocked(api.historialConcesion).mockResolvedValue([]);run.mockResolvedValue();});
+async function revisar(actor=ti){render(<Concesiones actor={actor} catalog={catalog} run={run} busy={false}/>);fireEvent.click(await screen.findByText('Revisar instrucción 11111111'));await screen.findByText('Revisión de la instrucción');}
+test('sin acreditación no ofrece solicitudes ni consulta instrucciones',async()=>{
+ vi.mocked(api.contextoAutoridad).mockResolvedValue({revisionRegistro:0,identidad:'NO_ACREDITADA',mandatos:[]});render(<Concesiones actor={ti} catalog={catalog} run={run} busy={false}/>);await screen.findByText('Acreditación pendiente');expect(screen.queryByText('Registrar solicitud sin conceder acceso')).toBeNull();expect(api.concesiones).not.toHaveBeenCalled();
+});
+test('TI solicita ámbito y vigencia finitos sin actor ni aprobador inyectados',async()=>{
+ render(<Concesiones actor={ti} catalog={catalog} run={run} busy={false}/>);await screen.findByText('Preparar solicitud de concesión');
+ for(const [label,value]of [['Funcionario beneficiario','beneficiario'],['Unidad y sede solicitadas','UPR|A'],['Inicio solicitado','2026-11-02T12:00'],['Término solicitado','2026-11-03T12:00'],['Fundamento de la solicitud','Necesidad sintética']])fireEvent.change(screen.getByLabelText(label),{target:{value}});
+ fireEvent.click(screen.getByText('Registrar solicitud sin conceder acceso'));await waitFor(()=>expect(run).toHaveBeenCalledWith('/nucleo/concesiones',expect.objectContaining({beneficiario:'beneficiario',rol:'PROFESIONAL',alcance:'UNIDAD_SEDE',unidad:'UPR',sede:'A',fundamento:'Necesidad sintética'})));expect(run.mock.calls[0][1]).not.toHaveProperty('actor');expect(run.mock.calls[0][1]).not.toHaveProperty('approver_id');expect(screen.queryByText('Aprobar instrucción sin ejecutarla')).toBeNull();
+});
+test('autoridad sin rol TI aprueba con fundamento y revisión, sin ejecutar',async()=>{
+ vi.mocked(api.contextoAutoridad).mockResolvedValue({revisionRegistro:1,identidad:'ACREDITADA',mandatos:[mandato]});await revisar(autoridad);fireEvent.change(screen.getByLabelText('Fundamento de la decisión'),{target:{value:'Respaldo verificado'}});fireEvent.click(screen.getByText('Aprobar instrucción sin ejecutarla'));await waitFor(()=>expect(run).toHaveBeenCalledWith(`/nucleo/concesiones/${row.id}/aprobar`,{revision:0,fundamento:'Respaldo verificado'}));expect(screen.queryByText('Ejecutar concesión aprobada')).toBeNull();
+});
+test('solicitante no se autoaprueba aunque tenga mandato',async()=>{
+ vi.mocked(api.contextoAutoridad).mockResolvedValue({revisionRegistro:1,identidad:'ACREDITADA',mandatos:[mandato]});await revisar(ti);expect(screen.queryByText('Aprobar instrucción sin ejecutarla')).toBeNull();
+});
+test('mandatos separados de aprobar y revocar no dependen de su orden',async()=>{
+ vi.mocked(api.contextoAutoridad).mockResolvedValue({revisionRegistro:1,identidad:'ACREDITADA',mandatos:[{...mandato,id:'solo-revoca',can_approve:false},{...mandato,id:'solo-aprueba',can_revoke:false}]});await revisar(autoridad);expect(screen.getByText('Aprobar instrucción sin ejecutarla')).toBeTruthy();expect(screen.getByText('Revocar instrucción y acceso vinculado')).toBeTruthy();
+});
+test('TI ejecuta aprobación independiente y muestra conflicto sin éxito ficticio',async()=>{
+ vi.mocked(api.concesiones).mockResolvedValue([{...row,state:'APROBADA',revision:1,approver_id:'autoridad',authority_revision:1}]);run.mockRejectedValue(new api.ApiError(409,'DISTRIBUIDOR_CENTRAL_SOLAPADO'));await revisar();fireEvent.click(screen.getByText('Ejecutar concesión aprobada'));await waitFor(()=>expect(run).toHaveBeenCalledWith(`/nucleo/concesiones/${row.id}/ejecutar`,{revision:1}));expect((await screen.findByRole('alert')).textContent).toContain('Ya existe una designación central');
+});
+test('cambio de registro bloquea ejecutar aprobación obsoleta',async()=>{
+ vi.mocked(api.concesiones).mockResolvedValue([{...row,state:'APROBADA',revision:1,approver_id:'autoridad',authority_revision:0}]);await revisar();expect((screen.getByText('Ejecutar concesión aprobada')as HTMLButtonElement).disabled).toBe(true);expect(run).not.toHaveBeenCalled();
+});
+test('revocación institucional y auditoría se conectan al backend',async()=>{
+ vi.mocked(api.contextoAutoridad).mockResolvedValue({revisionRegistro:1,identidad:'ACREDITADA',mandatos:[mandato]});vi.mocked(api.concesiones).mockResolvedValue([{...row,state:'EJECUTADA',revision:2,approver_id:'autoridad',authority_revision:1,executed_by:'ti'}]);vi.mocked(api.historialConcesion).mockResolvedValue([{actor_id:'ti',action_code:'EJECUTAR',result_code:'CONFIRMADO',at_ms:1}]);await revisar(autoridad);await screen.findByText(/EJECUTAR · CONFIRMADO/);fireEvent.change(screen.getByLabelText('Fundamento de la decisión'),{target:{value:'Retiro fundado'}});fireEvent.click(screen.getByText('Revocar instrucción y acceso vinculado'));await waitFor(()=>expect(run).toHaveBeenCalledWith(`/nucleo/concesiones/${row.id}/revocar`,{revision:2,fundamento:'Retiro fundado'}));
+});

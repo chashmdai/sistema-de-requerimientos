@@ -25,7 +25,7 @@ final class DatosNucleoTest implements AutoCloseable {
         core=new NucleoInstitucional(db,catalogo,recepcion,mapper,Clock.systemUTC());
         historica=mapper.readValue(getClass().getResourceAsStream("/contratos/entrega-v2.json"),EntregaVerificada.class);
     }
-    void limpiar(){for(var table:LIMPIEZA){if(table.equals("core_reopen"))db.sql.update("UPDATE core_reopen SET supersedes_id=NULL");if(table.equals("core_case"))db.sql.update("UPDATE core_case SET origin_case_id=NULL");db.sql.update("DELETE FROM "+table);}}
+    void limpiar(){for(var t:List.of("authority_command","authority_event","approved_assignment","access_instruction","authority_mandate","authority_binding","authority_batch"))db.sql.update("DELETE FROM "+t);db.sql.update("UPDATE authority_registry SET revision=0 WHERE id=1");for(var table:LIMPIEZA){if(table.equals("core_reopen"))db.sql.update("UPDATE core_reopen SET supersedes_id=NULL");if(table.equals("core_case"))db.sql.update("UPDATE core_case SET origin_case_id=NULL");db.sql.update("DELETE FROM "+table);}}
     CatalogoLaboratorio.Operador actor(String name){return catalogo.operador(name);}
     UUID web(){return recepcion.guardar(historica).registro().comunicacionId();}
     UUID nuevaWeb(){
@@ -38,7 +38,7 @@ final class DatosNucleoTest implements AutoCloseable {
         if(System.getenv("ROBUST_DB_URL")==null){work.accept(db.sql);return;}
         try(var ddl=new BaseJdbc(System.getenv("ROBUST_DB_URL"),System.getenv("ROBUST_DB_MIGRATION_USER"),System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){work.accept(ddl.sql);}
     }
-    public void close(){if(System.getenv("ROBUST_DB_URL")!=null)limpiar();db.close();}
+    public void close(){if(System.getenv("ROBUST_DB_URL")!=null)limpiar();ConcesionFixture.cerrar(db);db.close();}
 }
 
 

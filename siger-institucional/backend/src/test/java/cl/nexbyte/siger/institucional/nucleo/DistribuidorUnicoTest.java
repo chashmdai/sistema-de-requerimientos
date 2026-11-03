@@ -36,7 +36,7 @@ class DistribuidorUnicoTest {
     @AfterEach void close(){limpiarIdentidad();data.close();}
     Cuenta user(String name){return ids.crear(ti,new Crear(name,"Persona sintética "+name,name+"@example.invalid","Sin facultad por cargo",null,null,UUID.randomUUID()+"aZ"));}
     Otorgar distribucion(Instant from,Instant until){return new Otorgar("DISTRIBUCION","INSTITUCION",null,null,from,until);}
-    String otorgar(Cuenta account,Instant from,Instant until){return ids.otorgar(ti,account.id(),distribucion(from,until));}
+    String otorgar(Cuenta account,Instant from,Instant until){return ConcesionFixture.otorgar(data.db,ids,ti,account.id(),distribucion(from,until),clock);}
     Cuenta actual(Cuenta account){return ids.cuentas(ti).stream().filter(a->a.id().equals(account.id())).findFirst().orElseThrow();}
     Perfil perfil(Cuenta account,boolean enabled){var a=actual(account);return new Perfil(a.nombre(),a.correo(),a.cargo(),a.unidad(),a.sede(),enabled,a.revision());}
     void conflicto(org.junit.jupiter.api.function.Executable work){var error=assertThrows(FalloTecnico.class,work);assertEquals(409,error.status);assertEquals("DISTRIBUIDOR_CENTRAL_SOLAPADO",error.code);}
@@ -56,7 +56,8 @@ class DistribuidorUnicoTest {
         clock.instante=corte;
         assertFalse(catalogo.operador(a.id()).distribuidor());assertTrue(catalogo.operador(b.id()).distribuidor());
         // Los intervalos terminados son historia, no reservas operativas futuras.
-        otorgar(a,corte.minusSeconds(7200),corte.minusSeconds(3600));assertFalse(catalogo.operador(a.id()).distribuidor());
+        // Historia preexistente en la base descartable: el circuito nuevo no admite concesiones ya vencidas.
+        data.db.sql.update("INSERT INTO staff_assignment(id,actor_id,role_code,scope_code,valid_from,valid_until,granted_by) VALUES(?,?,'DISTRIBUCION','INSTITUCION',?,?,?)",UUID.randomUUID().toString(),a.id(),corte.minusSeconds(7200).toEpochMilli(),corte.minusSeconds(3600).toEpochMilli(),ti);assertFalse(catalogo.operador(a.id()).distribuidor());
     }
     @Test void org11ConcesionesConcurrentesConfirmanSoloUna()throws Exception{
         var a=user("candidato.a");var b=user("candidato.b");var ready=new CountDownLatch(2);var start=new CountDownLatch(1);
@@ -70,12 +71,12 @@ class DistribuidorUnicoTest {
         assertEquals(1,List.of(a,b).stream().filter(u->catalogo.operador(u.id()).distribuidor()).count());
     }
     @Test void activarCuentaConDesignacionSolapadaReviertePerfilYPermisos(){
-        var a=user("vigente");var b=user("inactivo");otorgar(a,clock.instant(),null);
-        ids.actualizar(ti,b.id(),perfil(b,false));otorgar(b,clock.instant(),null);
+        var a=user("vigente");var b=user("inactivo");otorgar(b,clock.instant(),null);
+        ids.actualizar(ti,b.id(),perfil(b,false));otorgar(a,clock.instant(),null);
         var previous=actual(b);int eventos=data.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event",Integer.class);
         conflicto(()->ids.actualizar(ti,b.id(),perfil(b,true)));
         assertFalse(actual(b).activo());assertEquals(previous.revision(),actual(b).revision());assertEquals(eventos,data.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event",Integer.class));
-        ids.revocar(ti,a.id(),actual(a).asignaciones().getFirst().get("id").toString());ids.actualizar(ti,b.id(),perfil(b,true));assertTrue(catalogo.operador(b.id()).distribuidor());
+        ConcesionFixture.revocar(data.db,ids,ti,a.id(),actual(a).asignaciones().getFirst().get("id").toString(),clock);ids.actualizar(ti,b.id(),perfil(b,true));assertTrue(catalogo.operador(b.id()).distribuidor());
     }
     @Test void solapamientoHistoricoFallaCerradoHastaRevocacionExplicita(){
         var a=user("historico.a");var b=user("historico.b");otorgar(a,clock.instant(),null);String other=UUID.randomUUID().toString();
@@ -89,7 +90,7 @@ class DistribuidorUnicoTest {
     @Test void relevoRevocaSesionYActorAnteriorConservandoPendienteOriginalYFolio(){
         var a=user("saliente");var b=user("entrante");String grant=otorgar(a,clock.instant(),null);var principal=(Principal)ids.autenticar(a.usuario());var old=catalogo.operador(a.id());
         var com=data.nuevaWeb();var registro=data.db.sql.queryForMap("SELECT * FROM communication_registry WHERE comunicacion_id=?",com.toString());var inbox=data.db.sql.queryForList("SELECT * FROM institutional_inbox");
-        ids.revocar(ti,a.id(),grant);otorgar(b,clock.instant(),null);
+        ConcesionFixture.revocar(data.db,ids,ti,a.id(),grant,clock);otorgar(b,clock.instant(),null);
         assertFalse(ids.vigente(principal));var error=assertThrows(FalloTecnico.class,()->core.buzon(old,0,100));assertEquals(403,error.status);
         assertEquals(1,core.buzon(catalogo.operador(b.id()),0,100).size());assertEquals(registro,data.db.sql.queryForMap("SELECT * FROM communication_registry WHERE comunicacion_id=?",com.toString()));assertEquals(inbox,data.db.sql.queryForList("SELECT * FROM institutional_inbox"));
         assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement",Integer.class));assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_case",Integer.class));

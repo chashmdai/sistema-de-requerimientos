@@ -90,7 +90,7 @@ public final class IdentidadInstitucional {
         evento(admin==null?id:admin,id,"CUENTA_CREADA",id);snapshot(admin==null?id:admin,id);return cuenta(id);
     }
     private void snapshot(String author,String id){var r=row(id);db.sql.update("INSERT INTO staff_profile_history(actor_id,label,email,cargo,unit_code,site_id,enabled,security_epoch,changed_by,changed_ms) VALUES(?,?,?,?,?,?,?,?,?,?)",id,r.get("label"),r.get("email"),r.get("cargo"),r.get("unit_code"),r.get("site_id"),r.get("enabled"),r.get("security_epoch"),author,now());}
-    private Cuenta cuenta(String id){var r=row(id);return new Cuenta(id,str(r,"username"),str(r,"label"),str(r,"email"),str(r,"cargo"),str(r,"unit_code"),str(r,"site_id"),enabled(r),num(r,"security_epoch"),db.sql.queryForList("SELECT id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,revoked_ms,granted_by,revoked_by FROM staff_assignment WHERE actor_id=? ORDER BY valid_from,id",id),Boolean.TRUE.equals(r.get("must_change_password")));}
+    private Cuenta cuenta(String id){var r=row(id);return new Cuenta(id,str(r,"username"),str(r,"label"),str(r,"email"),str(r,"cargo"),str(r,"unit_code"),str(r,"site_id"),enabled(r),num(r,"security_epoch"),db.sql.queryForList("SELECT a.id,a.role_code,a.scope_code,a.unit_code,a.site_id,a.valid_from,a.valid_until,a.revoked_ms,a.granted_by,a.revoked_by,g.instruction_id FROM staff_assignment a LEFT JOIN approved_assignment g ON g.assignment_id=a.id WHERE a.actor_id=? ORDER BY a.valid_from,a.id",id).stream().map(AutoridadesInstitucionales::salida).toList(),Boolean.TRUE.equals(r.get("must_change_password")));}
     public List<Cuenta> cuentas(String admin){ti(admin);return db.sql.queryForList("SELECT actor_id FROM staff_account ORDER BY username LIMIT 500").stream().map(r->cuenta(str(r,"actor_id"))).toList();}
     private void ultimaTi(){long count=db.sql.queryForObject("SELECT COUNT(*) FROM staff_account s WHERE enabled=TRUE AND EXISTS(SELECT 1 FROM staff_assignment a WHERE a.actor_id=s.actor_id AND a.role_code='TI' AND a.scope_code='INSTITUCION' AND a.revoked_ms IS NULL AND a.valid_from<=? AND (a.valid_until IS NULL OR a.valid_until>?))",Long.class,now(),now());if(count==0)throw new FalloTecnico(409,"ULTIMO_TI");}
     public Cuenta actualizar(String admin,String id,Perfil p){ti(admin);perfilValido(p.nombre(),p.correo(),p.cargo(),p.unidad(),p.sede());return db.transaction(()->{guard();ti(admin);revision(row(id),p.revision());db.sql.update("UPDATE core_actor SET label=? WHERE id=?",p.nombre(),id);db.sql.update("UPDATE staff_account SET email=?,cargo=?,unit_code=?,site_id=?,enabled=?,security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",p.correo().toLowerCase(Locale.ROOT),p.cargo(),p.unidad(),p.sede(),p.activo(),now(),admin,id);if(p.activo())validarActivacionDistribuidor(id);ultimaTi();evento(admin,id,p.activo()?"PERFIL_HABILITADO":"CUENTA_DESACTIVADA",id);snapshot(admin,id);return cuenta(id);});}
@@ -101,6 +101,12 @@ public final class IdentidadInstitucional {
         if(o.rol().equals("COORDINADOR_REGIONAL")){if(!"SEDE".equals(o.alcance())||o.unidad()!=null||sedes().stream().noneMatch(s->s.id().equals(o.sede())))throw new FalloTecnico(400);return;}
         if(!"UNIDAD_SEDE".equals(o.alcance()))throw new FalloTecnico(400);ubicacion(o.unidad(),o.sede());if(o.unidad()==null)throw new FalloTecnico(400);
     }
+    public void validarConcesion(Otorgar o){validar(o);}
+    public void exigirCuentaHabilitada(String id){var r=row(id);if(!enabled(r))throw new FalloTecnico(401);if(Boolean.TRUE.equals(r.get("must_change_password")))throw new FalloTecnico(403,"CAMBIO_CLAVE_REQUERIDO");}
+    String otorgarRespaldado(String admin,String id,Otorgar o){
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Transacción de instrucción requerida");
+        ti(admin);if(Objects.equals(admin,id))throw new FalloTecnico(403,"AUTOASIGNACION_NO_PERMITIDA");return otorgarInterno(admin,id,o);
+    }
     private String otorgarInterno(String admin,String id,Otorgar o){validar(o);var target=row(id);if(o.rol().equals("DISTRIBUCION")&&enabled(target))distribucionDisponible("",o.desde().toEpochMilli(),o.hasta()==null?null:o.hasta().toEpochMilli());String grant=UUID.randomUUID().toString();db.sql.update("INSERT INTO staff_assignment(id,actor_id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,granted_by) VALUES(?,?,?,?,?,?,?,?,?)",grant,id,o.rol(),o.alcance(),o.unidad(),o.sede(),o.desde().toEpochMilli(),o.hasta()==null?null:o.hasta().toEpochMilli(),admin);db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",now(),admin,id);evento(admin,id,"ROL_OTORGADO",grant);return grant;}
     public String otorgar(String admin,String id,Otorgar o){
         ti(admin);
@@ -109,9 +115,13 @@ public final class IdentidadInstitucional {
             db.transaction(()->{guard();ti(admin);evento(admin,id,"AUTOASIGNACION_DENEGADA",id);return null;});
             throw new FalloTecnico(403,"AUTOASIGNACION_NO_PERMITIDA");
         }
-        return db.transaction(()->{guard();ti(admin);return otorgarInterno(admin,id,o);});
+        validar(o);throw new FalloTecnico(409,"APROBACION_INSTITUCIONAL_REQUERIDA");
     }
-    public void revocar(String admin,String id,String grant){ti(admin);db.transaction(()->{guard();ti(admin);if(db.sql.update("UPDATE staff_assignment SET revoked_ms=?,revoked_by=? WHERE id=? AND actor_id=? AND revoked_ms IS NULL",now(),admin,grant,id)!=1)throw new FalloTecnico(404);db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",now(),admin,id);ultimaTi();evento(admin,id,"ROL_REVOCADO",grant);return null;});}
+    public void revocar(String admin,String id,String grant){ti(admin);db.transaction(()->{guard();ti(admin);if(!db.sql.queryForList("SELECT instruction_id FROM approved_assignment WHERE assignment_id=?",grant).isEmpty())throw new FalloTecnico(409,"REVOCACION_INSTITUCIONAL_REQUERIDA");revocarRespaldado(admin,id,grant);return null;});}
+    void revocarRespaldado(String actor,String id,String grant){
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Transacción de revocación requerida");
+        if(db.sql.update("UPDATE staff_assignment SET revoked_ms=?,revoked_by=? WHERE id=? AND actor_id=? AND revoked_ms IS NULL",now(),actor,grant,id)!=1)throw new FalloTecnico(404);db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1,updated_ms=?,updated_by=? WHERE actor_id=?",now(),actor,id);ultimaTi();evento(actor,id,"ROL_REVOCADO",grant);
+    }
     private void marcarCambioClave(String id,boolean pendiente){
         if(db.sql.queryForList("SELECT actor_id FROM staff_credential_state WHERE actor_id=?",id).isEmpty())db.sql.update("INSERT INTO staff_credential_state VALUES(?,?)",id,pendiente);
         else db.sql.update("UPDATE staff_credential_state SET must_change_password=? WHERE actor_id=?",pendiente,id);
