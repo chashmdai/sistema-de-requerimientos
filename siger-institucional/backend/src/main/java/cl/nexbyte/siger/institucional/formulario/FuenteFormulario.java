@@ -17,7 +17,7 @@ public final class FuenteFormulario implements AutoCloseable {
         }catch(java.security.GeneralSecurityException e){throw new IOException("CA inválida");}
         http=builder.build();
     }
-    private HttpRequest.Builder request(String path){return HttpRequest.newBuilder(origin.resolve(ROOT+path)).timeout(Duration.ofSeconds(20)).header("Authorization","Bearer "+token);}
+    private HttpRequest.Builder request(String path){return HttpRequest.newBuilder(origin.resolve(ROOT+path)).timeout(Duration.ofSeconds(20)).header("User-Agent","DDN-SMR/1.0").header("Authorization","Bearer "+token);}
     public record Conexion(int sinCredencial,int credencialInvalida,int autenticada){public boolean preparada(){return sinCredencial==401&&credencialInvalida==401&&autenticada==404;}}
     /** Solo HEAD sobre UUID nulos inexistentes: no reclama, descarga ni confirma entregas. */
     public Conexion comprobarConexion(){
@@ -25,13 +25,14 @@ public final class FuenteFormulario implements AutoCloseable {
         int absent=sonda(path,null),invalid=sonda(path,"Bearer credencial-sintetica-invalida"),valid=sonda(path,"Bearer "+token);
         return new Conexion(absent,invalid,valid);
     }
+    public Conexion comprobarSinCredencial(){String path="/00000000-0000-0000-0000-000000000000/adjuntos/00000000-0000-0000-0000-000000000000";return new Conexion(sonda(path,null),sonda(path,"Bearer credencial-sintetica-invalida"),0);}
     private int sonda(String path,String authorization){
-        try{var b=HttpRequest.newBuilder(origin.resolve(ROOT+path)).timeout(Duration.ofSeconds(8)).header("X-Reserva","00000000-0000-0000-0000-000000000000").method("HEAD",HttpRequest.BodyPublishers.noBody());if(authorization!=null)b.header("Authorization",authorization);return http.send(b.build(),HttpResponse.BodyHandlers.discarding()).statusCode();}
+        try{var b=HttpRequest.newBuilder(origin.resolve(ROOT+path)).timeout(Duration.ofSeconds(8)).header("User-Agent","DDN-SMR/1.0").header("X-Reserva","00000000-0000-0000-0000-000000000000").method("HEAD",HttpRequest.BodyPublishers.noBody());if(authorization!=null)b.header("Authorization",authorization);return http.send(b.build(),HttpResponse.BodyHandlers.discarding()).statusCode();}
         catch(InterruptedException e){Thread.currentThread().interrupt();throw new FalloTecnico(503,"SONDA_INTERRUMPIDA");}
         catch(javax.net.ssl.SSLException e){throw new FalloTecnico(503,"TLS_NO_VERIFICADO");}
         catch(IOException e){throw new FalloTecnico(503,"ORIGEN_NO_DISPONIBLE");}
     }
-    private byte[] post(String path,Object value,int expected){try{var response=http.send(request(path).header("Content-Type","application/json").header("X-Formulario-Versiones","1.0,1.1").POST(HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(value))).build(),HttpResponse.BodyHandlers.limiting(HttpResponse.BodyHandlers.ofByteArray(),2*1024*1024));if(response.statusCode()!=expected)throw new FalloTecnico(response.statusCode());return response.body();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new FalloTecnico(503);}catch(IOException e){throw new FalloTecnico(503);}}
+    private byte[] post(String path,Object value,int expected){try{var response=http.send(request(path).header("Content-Type","application/json").header("X-Formulario-Versiones","1.0,1.1").POST(HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(value))).build(),HttpResponse.BodyHandlers.limiting(HttpResponse.BodyHandlers.ofByteArray(),2*1024*1024));if(response.statusCode()!=expected)throw new FalloTecnico(response.statusCode());return response.body();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new FalloTecnico(503);}catch(javax.net.ssl.SSLException e){throw new FalloTecnico(503,"TLS_NO_VERIFICADO");}catch(java.net.http.HttpTimeoutException e){throw new FalloTecnico(503,"TIMEOUT_ORIGEN");}catch(IOException e){throw new FalloTecnico(503,"ORIGEN_NO_DISPONIBLE");}}
     public List<Reserva> reclamar(){Lote b;try{b=mapper.readValue(post("/reclamar",Map.of("limite",1),200),Lote.class);}catch(tools.jackson.core.JacksonException|IllegalArgumentException invalid){throw new FalloTecnico(502);}if(b==null||b.entregas()==null||b.entregas().size()>1||b.entregas().stream().anyMatch(r->r==null||r.reserva()==null||r.entrega()==null||r.intento()<1||r.venceEn()<=System.currentTimeMillis()))throw new FalloTecnico(502);return List.copyOf(b.entregas());}
     public void descargar(Reserva r,EntregaCompleta.Adjunto a,ArchivoInstitucional files)throws IOException{
         if(files.disponible(r.entrega().id(),a))return;

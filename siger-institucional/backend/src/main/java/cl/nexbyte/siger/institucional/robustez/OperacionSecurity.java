@@ -10,6 +10,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Configuration
 public class OperacionSecurity{
     @Bean @Order(0) SecurityFilterChain operacion(HttpSecurity http,Environment env)throws Exception{
+        if(env.getProperty("institucional.smr.habilitado",Boolean.class,false))return http.securityMatcher("/operacion/**").sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(a->a.anyRequest().denyAll()).build();
         var token=env.getProperty("operacion.token","");
         var allowLocal=env.getProperty("operacion.http-local",Boolean.class,false)&&env.matchesProfiles("jdbc-reception")&&"127.0.0.1".equals(env.getProperty("server.address"));
         return http.securityMatcher("/operacion/**").csrf(c->c.disable()).requestCache(c->c.disable())

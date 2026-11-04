@@ -1,0 +1,11 @@
+{
+  "referencia": "PENDIENTE_CONFIRMACION_OPERADOR_UBUNTU",
+  "ventanaHastaUtc": "PENDIENTE_VENTANA_UTC",
+  "ackTrustSha256": "HUELLA_REAL_DEL_MAPA_ACK_ACORDADO",
+  "custodiaEnEstePc": false,
+  "todaColaElegible": false,
+  "receptorUnico": false,
+  "respaldoVerificado": false,
+  "confianzaAckInstalada": false,
+  "pullUbuntuAbierto": false
+}

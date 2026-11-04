@@ -7,9 +7,10 @@ public final class RecuperarFormulario {
     public RecuperarFormulario(FuenteFormulario source,RecepcionInstitucionalJdbc recepcion,ArchivoInstitucional files){this(source,recepcion,files,()->{});}
     public RecuperarFormulario(FuenteFormulario source,RecepcionInstitucionalJdbc recepcion,ArchivoInstitucional files,Runnable exclusividad){this.source=source;this.recepcion=recepcion;this.files=files;this.exclusividad=exclusividad;}
     public record Resultado(int recuperadas,int confirmadas,int fallidas,boolean solapada){}
+    public boolean enCurso(){return active.get();}
     public Resultado ejecutar(){if(!active.compareAndSet(false,true))return new Resultado(0,0,0,true);try{exclusividad.run();int done=0;var batch=source.reclamar();for(var item:batch){boolean committed=false;try{
         recepcion.validarCompleta(item.entrega());for(var a:item.entrega().adjuntos())source.descargar(item,a,files);
-        exclusividad.run();var receipt=recepcion.guardarCompleta(item.entrega(),files);committed=true;recepcion.prepararConfirmacion(item.entrega().id(),item.reserva());
+        exclusividad.run();var receipt=recepcion.guardarCompleta(item.entrega(),files,item.reserva());committed=true;
         receipt=recepcion.registroCompletoConservado(item.entrega(),files);exclusividad.run();source.confirmar(item,receipt);recepcion.confirmacionEntregada(item.entrega().id());done++;
     }catch(RuntimeException|java.io.IOException error){
         if(committed){recepcion.aplazarConfirmacion(item.entrega().id(),item.reserva(),error instanceof FalloTecnico f?f.status:503);}

@@ -5,6 +5,9 @@ import org.springframework.stereotype.Component;import org.springframework.core.
 public final class HabilitacionNucleo {
     private final boolean enabled;
     public HabilitacionNucleo(Environment env){
+        if(env.getProperty("institucional.smr.habilitado",Boolean.class,false)){
+            cl.nexbyte.siger.institucional.smr.ArranqueSmr.validar(env);enabled=true;return;
+        }
         enabled=env.getProperty("institucional.nucleo.habilitado",Boolean.class,false);
         if(enabled&&(!env.matchesProfiles("nucleo-lab")||!env.matchesProfiles("jdbc-reception")||env.matchesProfiles("prod","production")
             ||!"LABORATORIO".equals(env.getProperty("institucional.nucleo.entorno"))||!"127.0.0.1".equals(env.getProperty("server.address"))

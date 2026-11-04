@@ -1,0 +1,14 @@
+{
+  "instance": "recepcion",
+  "release": "RUTA_ABSOLUTA_DEL_RELEASE",
+  "javaHome": "RUTA_ABSOLUTA_DEL_RELEASE/runtime/java25",
+  "port": 18444,
+  "schema": "smr_recepcion",
+  "dbUrl": "jdbc:mysql://HOST_MYSQL:PUERTO/smr_recepcion?sslMode=VERIFY_IDENTITY&connectTimeout=5000&socketTimeout=15000",
+  "dbPrincipal": "smr_recepcion_app@HOST_APROBADO",
+  "installationId": "UUID_PERSISTENTE_DE_LA_INSTALACION",
+  "origin": "https://formulario.defensorianinez.gob.cl",
+  "consumerEnabled": false,
+  "synthetic": false,
+  "ownerSid": "SID_DE_LA_CUENTA_EFECTIVA"
+}

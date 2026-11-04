@@ -50,6 +50,10 @@ public class SeguridadInstitucional {
             .addFilterBefore(new OncePerRequestFilter(){
                 protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest q,jakarta.servlet.http.HttpServletResponse r,jakarta.servlet.FilterChain chain)throws java.io.IOException,jakarta.servlet.ServletException{
                     r.setHeader("Cache-Control","no-store");
+                    if(env.getProperty("institucional.smr.habilitado",Boolean.class,false)){
+                        String path=q.getRequestURI();
+                        if(!(Set.of("/api/estado","/","/index.html","/nucleo/session","/nucleo/csrf","/nucleo/login","/nucleo/logout").contains(path)||path.startsWith("/assets/")||path.startsWith("/nucleo/smr/")||path.matches("/nucleo/comunicaciones/[a-f0-9-]{36}/documentos(?:/[a-f0-9-]{36}/original)?"))){r.setStatus(403);return;}
+                    }
                     if(!q.getRequestURI().equals("/api/estado")&&!q.isSecure()){r.setStatus(403);return;}
                     if(q.getRequestURI().equals("/nucleo/login")&&q.getMethod().equals("POST"))synchronized(attempts){
                         long minute=clock.millis()/60000;attempts.entrySet().removeIf(e->e.getValue()[0]!=minute);
