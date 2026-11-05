@@ -14,7 +14,7 @@ final class DatosNucleoTest implements AutoCloseable {
     DatosNucleoTest(Path dir,String isolatedUrl)throws Exception{
         String supplied=System.getenv("ROBUST_DB_URL");
         String url=supplied==null?"jdbc:h2:file:"+dir.resolve("nucleo").toAbsolutePath().toString().replace('\\','/')+";DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0":supplied;
-        if(isolatedUrl!=null){if(supplied!=null||!isolatedUrl.matches("jdbc:mysql://127\\.0\\.0\\.1:[5-6][0-9]{4}/siger_u15_test_[a-f0-9]{32}_area\\?.*"))throw new IllegalStateException("Destino aislado U16 requerido");url=isolatedUrl;}
+        if(isolatedUrl!=null){if(supplied!=null||!isolatedUrl.matches("jdbc:mysql://127\\.0\\.0\\.1:[5-6][0-9]{4}/siger_u15_test_[a-f0-9]{32}_(?:area|materia)\\?.*"))throw new IllegalStateException("Destino aislado U16 requerido");url=isolatedUrl;}
         if(supplied!=null)cl.nexbyte.siger.institucional.robustez.DestinoJdbcPruebas.validar(url);
         try(var migration=new BaseJdbc(url,isolatedUrl!=null?"root":supplied==null?"sa":System.getenv("ROBUST_DB_MIGRATION_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):supplied==null?"":System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){migration.migrate("institucional");}
         db=new BaseJdbc(url,isolatedUrl!=null?"root":supplied==null?"sa":System.getenv("ROBUST_DB_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):supplied==null?"":System.getenv("ROBUST_DB_PASSWORD"),12);
@@ -27,7 +27,7 @@ final class DatosNucleoTest implements AutoCloseable {
         core=new NucleoInstitucional(db,catalogo,recepcion,mapper,Clock.systemUTC());
         historica=mapper.readValue(getClass().getResourceAsStream("/contratos/entrega-v2.json"),EntregaVerificada.class);
     }
-    void limpiar(){for(var t:List.of("case_area_history","case_area","destination_area","staff_assignment_area","instruction_area","authority_area_mandate","institution_area","authority_command","authority_event","approved_assignment","access_instruction","authority_mandate","authority_binding","authority_batch"))db.sql.update("DELETE FROM "+t);db.sql.update("UPDATE authority_registry SET revision=0 WHERE id=1");for(var table:LIMPIEZA){if(table.equals("core_reopen"))db.sql.update("UPDATE core_reopen SET supersedes_id=NULL");if(table.equals("core_case"))db.sql.update("UPDATE core_case SET origin_case_id=NULL");db.sql.update("DELETE FROM "+table);}}
+    void limpiar(){for(var t:List.of("matter_access_event","case_matter_history","case_matter","staff_assignment_matter","instruction_matter","authority_matter_mandate","matter_regional_site","institution_matter","case_area_history","case_area","destination_area","staff_assignment_area","instruction_area","authority_area_mandate","institution_area","authority_command","authority_event","approved_assignment","access_instruction","authority_mandate","authority_binding","authority_batch"))db.sql.update("DELETE FROM "+t);db.sql.update("UPDATE authority_registry SET revision=0 WHERE id=1");for(var table:LIMPIEZA){if(table.equals("core_reopen"))db.sql.update("UPDATE core_reopen SET supersedes_id=NULL");if(table.equals("core_case"))db.sql.update("UPDATE core_case SET origin_case_id=NULL");db.sql.update("DELETE FROM "+table);}}
     CatalogoLaboratorio.Operador actor(String name){return catalogo.operador(name);}
     UUID web(){return recepcion.guardar(historica).registro().comunicacionId();}
     UUID nuevaWeb(){

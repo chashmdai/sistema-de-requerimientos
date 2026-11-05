@@ -6,8 +6,9 @@ import java.util.*;
 /** Matriz mínima de laboratorio, no organigrama ni matriz de permisos DDN aprobados. */
 public final class CatalogoLaboratorio {
     public enum Rol { DISTRIBUCION, JEFATURA, PROFESIONAL, TI, ADMINISTRATIVO, DIRECTOR, COORDINADOR, COORDINADOR_REGIONAL }
-    public record Acceso(String rol,String alcance,String unidad,String sede,String area) {
-        public Acceso(String rol,String alcance,String unidad,String sede){this(rol,alcance,unidad,sede,null);}
+    public record Acceso(String rol,String alcance,String unidad,String sede,String area,String materia) {
+        public Acceso(String rol,String alcance,String unidad,String sede,String area){this(rol,alcance,unidad,sede,area,null);}
+        public Acceso(String rol,String alcance,String unidad,String sede){this(rol,alcance,unidad,sede,null,null);}
         public boolean jefe(){return Set.of("JEFATURA","DIRECTOR","COORDINADOR","COORDINADOR_REGIONAL").contains(rol);}
         public boolean cubre(String u,String s){return area==null&&(alcance.equals("INSTITUCION") || ((alcance.equals("SEDE")||alcance.equals("UNIDAD_SEDE"))&&Objects.equals(sede,s)&&(unidad==null||Objects.equals(unidad,u))));}
         public boolean cubre(String u,String s,String ar){return ar==null?cubre(u,s):"AREA".equals(alcance)&&Objects.equals(area,ar)&&Objects.equals(unidad,u)&&Objects.equals(sede,s);}

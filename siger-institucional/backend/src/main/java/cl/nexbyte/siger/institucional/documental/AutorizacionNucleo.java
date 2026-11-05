@@ -16,6 +16,6 @@ public final class AutorizacionNucleo implements AutorizacionDocumental {
         var evidence=core.antecedente(a,com);
         if(!caso.equals(evidence.casoId()) || evidence.contenido()==null) throw new FalloTecnico(404);
     }
-    public Caso leerCaso(Operador a, UUID caso) { return core.caso(a,caso); }
+    public Caso leerCaso(Operador a, UUID caso) { core.autorizarCaso(a,caso);return core.caso(a,caso); }
     public Caso gestionarCaso(Operador a, UUID caso) { return core.autorizarGestionDocumental(a,caso); }
 }

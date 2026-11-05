@@ -9,7 +9,8 @@ import static cl.nexbyte.siger.institucional.identidad.AutoridadesInstitucionale
 
 /** Solicitud inmutable → aprobación institucional independiente → ejecución TI. Ninguna etapa crea autoridad raíz. */
 public final class ConcesionesInstitucionales {
-    public record Solicitud(String beneficiario,String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta,String fundamento,String version,String area){public Solicitud(String beneficiario,String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta,String fundamento){this(beneficiario,rol,alcance,unidad,sede,desde,hasta,fundamento,null,null);}}
+    public record Solicitud(String beneficiario,String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta,String fundamento,String version,String area,String materia){public Solicitud(String beneficiario,String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta,String fundamento,String version,String area){this(beneficiario,rol,alcance,unidad,sede,desde,hasta,fundamento,version,area,null);}public Solicitud(String beneficiario,String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta,String fundamento){this(beneficiario,rol,alcance,unidad,sede,desde,hasta,fundamento,null,null,null);}}
+    private record Solicitud11(String beneficiario,String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta,String fundamento,String version,String area){}
     private record Solicitud10(String beneficiario,String rol,String alcance,String unidad,String sede,Instant desde,Instant hasta,String fundamento){}
     public record Decision(long revision,String fundamento){}
     public record Ejecucion(long revision){}
@@ -20,8 +21,8 @@ public final class ConcesionesInstitucionales {
     private final JsonMapper json;
     private final Clock clock;
     public ConcesionesInstitucionales(BaseJdbc db,IdentidadInstitucional ids,AutoridadesInstitucionales authority,JsonMapper json,Clock clock){this.db=db;this.ids=ids;this.authority=authority;this.json=json;this.clock=clock;}
-    private Map<String,Object> fila(UUID id){var rows=db.sql.queryForList("SELECT i.*,s.area_id FROM access_instruction i LEFT JOIN instruction_area s ON s.instruction_id=i.id WHERE i.id=?",id.toString());if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();}
-    private IdentidadInstitucional.Otorgar grant(Map<String,Object> row){return new IdentidadInstitucional.Otorgar(str(row,"role_code"),str(row,"scope_code"),str(row,"unit_code"),str(row,"site_id"),Instant.ofEpochMilli(num(row,"valid_from")),Instant.ofEpochMilli(num(row,"valid_until")),str(row,"area_id"));}
+    private Map<String,Object> fila(UUID id){var rows=db.sql.queryForList("SELECT i.*,s.area_id,m.matter_id FROM access_instruction i LEFT JOIN instruction_area s ON s.instruction_id=i.id LEFT JOIN instruction_matter m ON m.instruction_id=i.id WHERE i.id=?",id.toString());if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();}
+    private IdentidadInstitucional.Otorgar grant(Map<String,Object> row){return new IdentidadInstitucional.Otorgar(str(row,"role_code"),str(row,"scope_code"),str(row,"unit_code"),str(row,"site_id"),Instant.ofEpochMilli(num(row,"valid_from")),Instant.ofEpochMilli(num(row,"valid_until")),str(row,"area_id"),str(row,"matter_id"));}
     private void ti(String actor){if(!ids.operador(actor).ti())throw new FalloTecnico(403);}
     private void revision(Map<String,Object> row,long expected){if(expected<0||num(row,"revision")!=expected)throw new FalloTecnico(409,"VERSION_OBSOLETA");}
     private void estado(Map<String,Object> row,String required){if(!required.equals(row.get("state")))throw new FalloTecnico(409,"ESTADO_INSTRUCCION_INCOMPATIBLE");}
@@ -32,11 +33,11 @@ public final class ConcesionesInstitucionales {
         if(s==null)throw new FalloTecnico(400);codigo(s.beneficiario());texto(s.fundamento(),1000);
         if(s.desde()==null||s.hasta()==null||!s.hasta().isAfter(clock.instant())||!s.hasta().isAfter(s.desde()))throw new FalloTecnico(400);
         intervalo(s.desde(),s.hasta(),s.hasta());
-        if(s.area()!=null?(!"1.1".equals(s.version())||!"AREA".equals(s.alcance())):s.version()!=null&&!"1.0".equals(s.version()))throw new FalloTecnico(400);
-        ids.validarConcesion(new IdentidadInstitucional.Otorgar(s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde(),s.hasta(),s.area()));
+        if(s.materia()!=null?(!"1.2".equals(s.version())||!"MATERIA".equals(s.alcance())||s.area()!=null):(s.area()!=null?(!"1.1".equals(s.version())||!"AREA".equals(s.alcance())):s.version()!=null&&!"1.0".equals(s.version())))throw new FalloTecnico(400);
+        ids.validarConcesion(new IdentidadInstitucional.Otorgar(s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde(),s.hasta(),s.area(),s.materia()));
     }
-    private String hashSolicitud(Solicitud s){var data=new ArrayList<Object>(Arrays.asList(s.beneficiario(),s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde().toEpochMilli(),s.hasta().toEpochMilli(),s.fundamento()));if(s.area()!=null){data.add("1.1");data.add(s.area());}return sha(json.writeValueAsBytes(data));}
-    private void integro(Map<String,Object> row){var g=grant(row);String actual=hashSolicitud(new Solicitud(str(row,"beneficiary_id"),g.rol(),g.alcance(),g.unidad(),g.sede(),g.desde(),g.hasta(),str(row,"reason_text"),g.area()==null?null:"1.1",g.area()));if(!actual.equals(row.get("request_hash")))throw new FalloTecnico(409,"INSTRUCCION_ALTERADA");}
+    private String hashSolicitud(Solicitud s){var data=new ArrayList<Object>(Arrays.asList(s.beneficiario(),s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde().toEpochMilli(),s.hasta().toEpochMilli(),s.fundamento()));if(s.area()!=null){data.add("1.1");data.add(s.area());}if(s.materia()!=null){data.add("1.2");data.add(s.materia());}return sha(json.writeValueAsBytes(data));}
+    private void integro(Map<String,Object> row){var g=grant(row);String actual=hashSolicitud(new Solicitud(str(row,"beneficiary_id"),g.rol(),g.alcance(),g.unidad(),g.sede(),g.desde(),g.hasta(),str(row,"reason_text"),g.materia()!=null?"1.2":g.area()==null?null:"1.1",g.area(),g.materia()));if(!actual.equals(row.get("request_hash")))throw new FalloTecnico(409,"INSTRUCCION_ALTERADA");}
     private Resultado comando(String actor,UUID key,String op,Object body,UUID resource,Supplier<Resultado> work){
         if(key==null)throw new FalloTecnico(400);String hash=sha(json.writeValueAsBytes(Arrays.asList("CONCESION_1",actor,op,resource,body)));
         try{return db.transaction(()->{
@@ -65,11 +66,11 @@ public final class ConcesionesInstitucionales {
     }
     public Resultado solicitar(String actor,UUID key,Solicitud s){
         validar(s);
-        Object body=s.area()==null?new Solicitud10(s.beneficiario(),s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde(),s.hasta(),s.fundamento()):s;
+        Object body=s.materia()!=null?s:s.area()==null?new Solicitud10(s.beneficiario(),s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde(),s.hasta(),s.fundamento()):new Solicitud11(s.beneficiario(),s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde(),s.hasta(),s.fundamento(),s.version(),s.area());
         return comando(actor,key,"SOLICITAR",body,null,()->{
             ti(actor);beneficiarioHabilitado(s.beneficiario());distinto(actor,s.beneficiario());
             UUID id=UUID.randomUUID();String hash=hashSolicitud(s);
-            db.sql.update("INSERT INTO access_instruction(id,requester_id,beneficiary_id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,reason_text,request_hash,state,revision,created_ms) VALUES(?,?,?,?,?,?,?,?,?,?,?,'PENDIENTE',0,?)",id.toString(),actor,s.beneficiario(),s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde().toEpochMilli(),s.hasta().toEpochMilli(),s.fundamento(),hash,clock.millis());if(s.area()!=null)db.sql.update("INSERT INTO instruction_area VALUES(?,?)",id.toString(),s.area());return new Resultado(id,0);
+            db.sql.update("INSERT INTO access_instruction(id,requester_id,beneficiary_id,role_code,scope_code,unit_code,site_id,valid_from,valid_until,reason_text,request_hash,state,revision,created_ms) VALUES(?,?,?,?,?,?,?,?,?,?,?,'PENDIENTE',0,?)",id.toString(),actor,s.beneficiario(),s.rol(),s.alcance(),s.unidad(),s.sede(),s.desde().toEpochMilli(),s.hasta().toEpochMilli(),s.fundamento(),hash,clock.millis());if(s.area()!=null)db.sql.update("INSERT INTO instruction_area VALUES(?,?)",id.toString(),s.area());if(s.materia()!=null)db.sql.update("INSERT INTO instruction_matter VALUES(?,?)",id.toString(),s.materia());return new Resultado(id,0);
         });
     }
     public Resultado decidir(String actor,UUID key,UUID id,Decision d,boolean aprobar){
@@ -117,7 +118,7 @@ public final class ConcesionesInstitucionales {
         authority.actor(actor);var row=fila(id);if(!visible(actor,row))throw new FalloTecnico(404);return salida(row);
     }
     public List<Map<String,Object>> listar(String actor){
-        authority.actor(actor);return db.sql.queryForList("SELECT i.*,s.area_id FROM access_instruction i LEFT JOIN instruction_area s ON s.instruction_id=i.id ORDER BY i.created_ms DESC,i.id LIMIT 500").stream().filter(r->visible(actor,r)).map(AutoridadesInstitucionales::salida).toList();
+        authority.actor(actor);return db.sql.queryForList("SELECT i.*,s.area_id,m.matter_id FROM access_instruction i LEFT JOIN instruction_area s ON s.instruction_id=i.id LEFT JOIN instruction_matter m ON m.instruction_id=i.id ORDER BY i.created_ms DESC,i.id LIMIT 500").stream().filter(r->visible(actor,r)).map(AutoridadesInstitucionales::salida).toList();
     }
     public List<Map<String,Object>> historial(String actor,UUID id){leer(actor,id);return db.sql.queryForList("SELECT actor_id,action_code,result_code,at_ms,snapshot_doc FROM authority_event WHERE resource_id=? ORDER BY seq DESC LIMIT 100",id.toString()).stream().map(AutoridadesInstitucionales::salida).toList();}
 }

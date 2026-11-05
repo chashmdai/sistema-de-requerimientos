@@ -14,6 +14,7 @@ public final class ContratosNucleo {
     public record Asignacion(long revision,String responsable,String complejidadProvisional){}
     public record Clasificacion(long revision,String clasificacion,String fundamento){}
     public record CambiarArea(long revision,String area,String fundamento,String origen){}
+    public record RectificarMateria(long revision,String materia,boolean consultaOrdinaria,String fundamento){}
     public record ClasificacionHistorica(String clasificacion,String fundamento,String autor,Instant fecha){}
     public record SolicitarDerivacion(long revision,String unidad,String sede,String motivo,String antecedentesEvaluacion){}
     public record AceptarDerivacion(long revision,long revisionOrigen,UUID destinoId,Long revisionDestino,String fundamento){}
@@ -41,7 +42,7 @@ public final class ContratosNucleo {
     public record AsignacionHistorica(String responsable,String complejidadProvisional,String autor,Instant fecha){}
     public record Caso(UUID id,UUID comunicacionId,UUID requerimientoId,UUID destinoId,String unidad,String sede,String responsable,String complejidadProvisional,String estado,long revision,
         List<Actuacion> actuaciones,List<Revision> revisiones,List<AsignacionHistorica> asignaciones,String clasificacion,List<ClasificacionHistorica> clasificaciones,
-        String modalidadCierre,UUID casoOrigen,boolean derivacionPendiente,String area){}
+        String modalidadCierre,UUID casoOrigen,boolean derivacionPendiente,String area,String materia,boolean soloLectura){}
     public record Evento(long secuencia,String tipo,UUID recurso,String autor,Instant fecha,String codigo){}
     public record Vinculo(UUID hija,UUID padre,UUID casoReferencia,String autor,Instant fecha,String motivo){}
     public record Aviso(UUID id,UUID hija,UUID padre,Instant fecha,boolean leido){}

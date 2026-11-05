@@ -17,7 +17,9 @@ public final class AutoridadesInstitucionales {
     public record AmbitoMandato(String mandato,String area){}
     public record CambioArea(String id,String persona,String tipo,String unidad,String sede,String origen,String destino,Instant desde,Instant hasta,String referencia,String sha256){}
     public record Registro11(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea){@Override public String toString(){return "RegistroAutoridad11[reservado]";}}
-    private record Leido(Registro base,List<Area> areas,Map<String,String> ambitos,List<CambioArea> cambios){}
+    public record AmbitoMateria(String mandato,String materia){}
+    public record Registro12(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedesRegionales,List<AmbitoMateria> ambitosMateria){@Override public String toString(){return "RegistroAutoridad12[reservado]";}}
+    private record Leido(Registro base,List<Area> areas,Map<String,String> ambitos,List<CambioArea> cambios,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedes,Map<String,String> ambitosMateria){Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c){this(r,a,m,c,List.of(),List.of(),Map.of());}}
     public record Sobre(String keyId,String payload,String firma){@Override public String toString(){return "SobreAutoridad[reservado]";}}
     private static final byte[] DOMAIN="SIGER_AUTORIDAD_1\0".getBytes(StandardCharsets.UTF_8);
     private final BaseJdbc db;
@@ -72,22 +74,23 @@ public final class AutoridadesInstitucionales {
                 if(previous.isEmpty())db.sql.update("INSERT INTO institution_area VALUES(?,?,?,?,?,?,?,?)",area.id(),area.unidad(),area.sede(),area.nombre(),area.jefatura(),area.desde().toEpochMilli(),area.hasta().toEpochMilli(),registro.revision());
                 else{boolean securityChange=!area.jefatura().equals(previous.getFirst().get("head_mode"))||area.desde().toEpochMilli()!=num(previous.getFirst(),"valid_from")||area.hasta().toEpochMilli()!=num(previous.getFirst(),"valid_until");db.sql.update("UPDATE institution_area SET label=?,head_mode=?,valid_from=?,valid_until=?,authority_revision=? WHERE id=?",area.nombre(),area.jefatura(),area.desde().toEpochMilli(),area.hasta().toEpochMilli(),registro.revision(),area.id());if(securityChange)db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1 WHERE actor_id IN (SELECT a.actor_id FROM staff_assignment a JOIN staff_assignment_area s ON s.assignment_id=a.id WHERE s.area_id=?)",area.id());}
             }
+            importarMaterias(ampliado);
             for(var cambio:ampliado.cambios()){
                 var catalogo=new CatalogoAreas(db,clock);var destino=catalogo.exigir(cambio.destino(),cambio.unidad(),cambio.sede());
                 if(cambio.desde().isBefore(destino.desde())||cambio.hasta().isAfter(destino.hasta()))throw new FalloTecnico(400);
                 if(cambio.origen()!=null){var origen=catalogo.exigir(cambio.origen(),cambio.unidad(),cambio.sede());if(cambio.desde().isBefore(origen.desde())||cambio.hasta().isAfter(origen.hasta()))throw new FalloTecnico(400);}
             }
             for(var m:registro.mandatos()){
-                String area=ampliado.ambitos().get(m.id());ids.validarConcesion(new IdentidadInstitucional.Otorgar(m.rol(),m.alcance(),m.unidad(),m.sede(),m.desde(),m.hasta(),area));
+                String area=ampliado.ambitos().get(m.id()),materia=ampliado.ambitosMateria().get(m.id());var grant=new IdentidadInstitucional.Otorgar(m.rol(),m.alcance(),m.unidad(),m.sede(),m.desde(),m.hasta(),area,materia);if(materia!=null&&!m.aprobar()&&m.revocar())ids.validarRevocacionMateria(grant);else ids.validarConcesion(grant);
                 if(registro.vinculos().stream().noneMatch(v->v.persona().equals(m.persona())))throw new FalloTecnico(400);
                 db.sql.update("INSERT INTO authority_mandate VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",registro.revision(),m.id(),m.persona(),m.funcion(),m.rol(),m.alcance(),m.unidad(),m.sede(),m.desde().toEpochMilli(),m.hasta().toEpochMilli(),m.aprobar(),m.revocar(),m.referencia(),m.sha256());
-                if(area!=null)db.sql.update("INSERT INTO authority_area_mandate VALUES(?,?,?)",registro.revision(),m.id(),area);
+                if(area!=null)db.sql.update("INSERT INTO authority_area_mandate VALUES(?,?,?)",registro.revision(),m.id(),area);if(materia!=null)db.sql.update("INSERT INTO authority_matter_mandate VALUES(?,?,?)",registro.revision(),m.id(),materia);
             }
             db.sql.update("UPDATE authority_registry SET revision=? WHERE id=1",registro.revision());evento(null,Long.toString(registro.revision()),"REGISTRO_IMPORTADO","FIRMA_VERIFICADA",Map.of("sha256",hash,"keyId",sobre.keyId()));return registro.revision();
         });
     }
     private void validar(Registro r){
-        if(r==null||!Set.of("1.0","1.1").contains(r.version())||r.revision()<1||r.emitida()==null||r.expira()==null||r.emitida().isAfter(clock.instant())||!r.expira().isAfter(clock.instant())||r.vinculos()==null||r.mandatos()==null||r.vinculos().size()>128||r.mandatos().size()>32)throw new FalloTecnico(400);
+        if(r==null||!Set.of("1.0","1.1","1.2").contains(r.version())||r.revision()<1||r.emitida()==null||r.expira()==null||r.emitida().isAfter(clock.instant())||!r.expira().isAfter(clock.instant())||r.vinculos()==null||r.mandatos()==null||r.vinculos().size()>128||r.mandatos().size()>32)throw new FalloTecnico(400);
         intervalo(r.emitida(),r.expira(),r.expira());Set<String> actors=new HashSet<>(),mandates=new HashSet<>();
         for(var v:r.vinculos()){
             if(v==null)throw new FalloTecnico(400);codigo(v.actor());codigo(v.persona());intervalo(v.desde(),v.hasta(),r.expira());if(v.autenticacion()==null||!v.autenticacion().matches("[a-f0-9]{64}")||!actors.add(v.actor()))throw new FalloTecnico(400);
@@ -100,14 +103,38 @@ public final class AutoridadesInstitucionales {
     }
     private Leido decodificar(byte[] bytes){
         var reader=lectorPrivado();String version=reader.readTree(bytes).path("version").asString();
-        if(version.equals("1.0")){var r=reader.readValue(bytes,Registro.class);validar(r);if(r.mandatos().stream().anyMatch(m->m.alcance().equals("AREA")))throw new FalloTecnico(400);return new Leido(r,List.of(),Map.of(),List.of());}
-        if(!version.equals("1.1"))throw new FalloTecnico(400);var r=reader.readValue(bytes,Registro11.class);var base=new Registro(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos());validar(base);
+        if(version.equals("1.0")){var r=reader.readValue(bytes,Registro.class);validar(r);if(r.mandatos().stream().anyMatch(m->Set.of("AREA","MATERIA").contains(m.alcance())))throw new FalloTecnico(400);return new Leido(r,List.of(),Map.of(),List.of());}
+        if(version.equals("1.2"))return decodificar12(reader.readValue(bytes,Registro12.class));
+        if(!version.equals("1.1"))throw new FalloTecnico(400);var r=reader.readValue(bytes,Registro11.class);var result=decodificar11(r);if(r.mandatos().stream().anyMatch(m->m.alcance().equals("MATERIA")))throw new FalloTecnico(400);return result;
+    }
+    private Leido decodificar11(Registro11 r){var base=new Registro(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos());validar(base);
         if(r.areas()==null||r.areas().size()>32||r.ambitos()==null||r.ambitos().size()>32)throw new FalloTecnico(400);var areaIds=new HashSet<String>();var scopes=new HashMap<String,String>();
         for(var a:r.areas()){codigo(a.id());codigo(a.unidad());codigo(a.sede());texto(a.nombre(),120);intervalo(a.desde(),a.hasta(),r.expira());if(!Set.of("COORDINACION","DIRECCION").contains(a.jefatura())||!areaIds.add(a.id()))throw new FalloTecnico(400);}
         for(var a:r.ambitos()){codigo(a.mandato());codigo(a.area());if(scopes.putIfAbsent(a.mandato(),a.area())!=null||r.mandatos().stream().noneMatch(m->m.id().equals(a.mandato())&&m.alcance().equals("AREA")))throw new FalloTecnico(400);}
         if(r.mandatos().stream().anyMatch(m->m.alcance().equals("AREA")&&!scopes.containsKey(m.id()))||r.cambiosArea()==null||r.cambiosArea().size()>32)throw new FalloTecnico(400);
         var changes=new HashSet<String>();for(var c:r.cambiosArea()){codigo(c.id());codigo(c.persona());codigo(c.unidad());codigo(c.sede());if(c.origen()!=null)codigo(c.origen());codigo(c.destino());texto(c.referencia(),180);intervalo(c.desde(),c.hasta(),r.expira());if(!Set.of("DIRECCION","DELEGACION_EXPRESA").contains(c.tipo())||c.sha256()==null||!c.sha256().matches("[a-f0-9]{64}")||!changes.add(c.id())||Objects.equals(c.origen(),c.destino())||r.vinculos().stream().noneMatch(v->v.persona().equals(c.persona())))throw new FalloTecnico(400);}
         return new Leido(base,r.areas(),Map.copyOf(scopes),r.cambiosArea());
+    }
+    private Leido decodificar12(Registro12 r){
+        var common=decodificar11(new Registro11(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea()));
+        if(r.materias()==null||r.sedesRegionales()==null||r.ambitosMateria()==null||r.materias().size()>32||r.sedesRegionales().size()>32||r.ambitosMateria().size()>32)throw new FalloTecnico(400);
+        var seen=new HashSet<String>();for(var m:r.materias()){codigo(m.id());texto(m.nombre(),120);if(!Set.of("UPR","UPD").contains(m.competencia())||!Set.of("ACTIVA","SUSPENDIDA").contains(m.estado())||!seen.add(m.id()))throw new FalloTecnico(400);intervalo(m.desde(),m.hasta(),r.expira());}
+        seen.clear();for(var s:r.sedesRegionales()){codigo(s.id());if(!Set.of("ACTIVA","SUSPENDIDA").contains(s.estado())||!seen.add(s.id()))throw new FalloTecnico(400);intervalo(s.desde(),s.hasta(),r.expira());}
+        var scopes=new HashMap<String,String>();for(var a:r.ambitosMateria()){codigo(a.mandato());codigo(a.materia());if(scopes.putIfAbsent(a.mandato(),a.materia())!=null||r.mandatos().stream().noneMatch(m->m.id().equals(a.mandato())&&m.alcance().equals("MATERIA")))throw new FalloTecnico(400);}
+        if(r.mandatos().stream().anyMatch(m->m.alcance().equals("MATERIA")&&!scopes.containsKey(m.id())))throw new FalloTecnico(400);
+        return new Leido(common.base(),common.areas(),common.ambitos(),common.cambios(),r.materias(),r.sedesRegionales(),Map.copyOf(scopes));
+    }
+    private void importarMaterias(Leido r){
+        for(var m:r.materias()){
+            var old=db.sql.queryForList("SELECT * FROM institution_matter WHERE id=?",m.id());if(!old.isEmpty()&&!m.competencia().equals(old.getFirst().get("functional_unit")))throw new FalloTecnico(409,"COMPETENCIA_NO_REASIGNABLE");
+            if(old.isEmpty())db.sql.update("INSERT INTO institution_matter VALUES(?,?,?,?,?,?,?)",m.id(),m.nombre(),m.competencia(),m.desde().toEpochMilli(),m.hasta().toEpochMilli(),m.estado(),r.base().revision());
+            else{var o=old.getFirst();boolean changed=!m.estado().equals(o.get("status"))||m.desde().toEpochMilli()!=num(o,"valid_from")||m.hasta().toEpochMilli()!=num(o,"valid_until");db.sql.update("UPDATE institution_matter SET label=?,valid_from=?,valid_until=?,status=?,authority_revision=? WHERE id=?",m.nombre(),m.desde().toEpochMilli(),m.hasta().toEpochMilli(),m.estado(),r.base().revision(),m.id());if(changed)db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1 WHERE actor_id IN (SELECT a.actor_id FROM staff_assignment a JOIN staff_assignment_matter x ON x.assignment_id=a.id WHERE x.matter_id=?)",m.id());}
+        }
+        for(var s:r.sedes()){
+            var old=db.sql.queryForList("SELECT * FROM matter_regional_site WHERE site_id=?",s.id());
+            if(old.isEmpty())db.sql.update("INSERT INTO matter_regional_site VALUES(?,?,?,?,?)",s.id(),s.desde().toEpochMilli(),s.hasta().toEpochMilli(),s.estado(),r.base().revision());
+            else{var o=old.getFirst();boolean changed=!s.estado().equals(o.get("status"))||s.desde().toEpochMilli()!=num(o,"valid_from")||s.hasta().toEpochMilli()!=num(o,"valid_until");db.sql.update("UPDATE matter_regional_site SET valid_from=?,valid_until=?,status=?,authority_revision=? WHERE site_id=?",s.desde().toEpochMilli(),s.hasta().toEpochMilli(),s.estado(),r.base().revision(),s.id());if(changed)db.sql.update("UPDATE staff_account SET security_epoch=security_epoch+1 WHERE actor_id IN (SELECT i.beneficiary_id FROM access_instruction i JOIN instruction_matter x ON x.instruction_id=i.id WHERE i.site_id=?)",s.id());}
+        }
     }
     public List<CambioArea> cambiosArea(String actor){
         ids.exigirCuentaHabilitada(actor);var r=vigenteCompleto();String p=persona(actor,r.base());String fingerprint=sha(db.sql.queryForObject("SELECT password_hash FROM staff_account WHERE actor_id=?",String.class,actor).getBytes(StandardCharsets.UTF_8));
@@ -141,14 +168,14 @@ public final class AutoridadesInstitucionales {
         String fingerprint=sha(credential.getBytes(StandardCharsets.UTF_8));
         if(r.mandatos().stream().anyMatch(m->m.persona().equals(person))&&r.vinculos().stream().noneMatch(v->v.actor().equals(actor)&&v.autenticacion().equals(fingerprint)))throw new FalloTecnico(409,"ACREDITACION_CREDENCIAL_OBSOLETA");
         return r.mandatos().stream().filter(m->m.persona().equals(person)&&!m.desde().isAfter(clock.instant())&&m.hasta().isAfter(clock.instant())).sorted(Comparator.comparing(Mandato::id)).map(m->{
-            Map<String,Object> row=new LinkedHashMap<>();row.put("id",m.id());row.put("batch_revision",r.revision());row.put("person_id",m.persona());row.put("function_code",m.funcion());row.put("role_code",m.rol());row.put("scope_code",m.alcance());row.put("unit_code",m.unidad());row.put("site_id",m.sede());row.put("area_id",expanded.ambitos().get(m.id()));row.put("valid_from",m.desde().toEpochMilli());row.put("valid_until",m.hasta().toEpochMilli());row.put("can_approve",m.aprobar());row.put("can_revoke",m.revocar());row.put("basis_ref",m.referencia());row.put("basis_sha256",m.sha256());return row;
+            Map<String,Object> row=new LinkedHashMap<>();row.put("id",m.id());row.put("batch_revision",r.revision());row.put("person_id",m.persona());row.put("function_code",m.funcion());row.put("role_code",m.rol());row.put("scope_code",m.alcance());row.put("unit_code",m.unidad());row.put("site_id",m.sede());row.put("area_id",expanded.ambitos().get(m.id()));row.put("matter_id",expanded.ambitosMateria().get(m.id()));row.put("valid_from",m.desde().toEpochMilli());row.put("valid_until",m.hasta().toEpochMilli());row.put("can_approve",m.aprobar());row.put("can_revoke",m.revocar());row.put("basis_ref",m.referencia());row.put("basis_sha256",m.sha256());return row;
         }).toList();
     }
     Map<String,Object> mandato(String actor,IdentidadInstitucional.Otorgar grant,boolean revoke){
         return mandatos(actor).stream().filter(m->Boolean.TRUE.equals(m.get(revoke?"can_revoke":"can_approve"))&&cubre(m,grant)).findFirst().orElseThrow(()->new FalloTecnico(403,"AUTORIDAD_NO_ACREDITADA"));
     }
     private boolean cubre(Map<String,Object> m,IdentidadInstitucional.Otorgar grant){
-        return Objects.equals(m.get("role_code"),grant.rol())&&Objects.equals(m.get("scope_code"),grant.alcance())&&Objects.equals(m.get("unit_code"),grant.unidad())&&Objects.equals(m.get("site_id"),grant.sede())&&Objects.equals(m.get("area_id"),grant.area())
+        return Objects.equals(m.get("role_code"),grant.rol())&&Objects.equals(m.get("scope_code"),grant.alcance())&&Objects.equals(m.get("unit_code"),grant.unidad())&&Objects.equals(m.get("site_id"),grant.sede())&&Objects.equals(m.get("area_id"),grant.area())&&Objects.equals(m.get("matter_id"),grant.materia())
             &&num(m,"valid_from")<=Math.max(clock.millis(),grant.desde().toEpochMilli())&&num(m,"valid_until")>=grant.hasta().toEpochMilli();
     }
     void comprobarDecision(String approver,long batch,String mandateId,IdentidadInstitucional.Otorgar grant){

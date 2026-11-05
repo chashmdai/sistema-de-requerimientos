@@ -10,6 +10,7 @@ public final class RecursosNotificacion {
   switch(tipo){
    case "COMUNICACION"->core.autorizarLectura(a,id);
    case "CASO"->core.autorizarCaso(a,id);
+   case "CASO_CONSULTA"->core.autorizarConsultaCaso(a,id);
    case "REQUERIMIENTO"->{var rows=db.sql.queryForList("SELECT communication_id FROM core_requirement WHERE id=?",id.toString());if(rows.isEmpty())throw new FalloTecnico(404);core.autorizarLectura(a,UUID.fromString(rows.getFirst().get("communication_id").toString()));}
    case "SOLICITUD"->solicitud(a,id);
    default->throw new FalloTecnico(400);
@@ -25,5 +26,5 @@ public final class RecursosNotificacion {
  public void derivacion(Operador a,UUID id){core.autorizarDerivacion(a,id);var t=fila("core_transfer",id.toString());if(!a.jefeEn(t.get("target_unit").toString(),t.get("target_site").toString()))throw new FalloTecnico(404);}
  public void reapertura(Operador a,UUID id){core.autorizarReapertura(a,id);var r=fila("core_reopen",id.toString());var c=caso(a,UUID.fromString(r.get("case_id").toString()));if(!a.jefeEn(c.unidad(),c.sede(),c.area()))throw new FalloTecnico(404);}
  public void antecedente(Operador a,UUID id){core.autorizarAntecedente(a,id);}
- public String href(String tipo,UUID id){return switch(tipo){case "COMUNICACION"->"comunicacion/"+id;case "CASO"->"caso/"+id;case "SOLICITUD"->"solicitudes/"+id;case "TAREA"->"tareas/"+id;case "ANTECEDENTE"->"antecedentes";case "DESTINO"->{var d=fila("core_destination",id.toString());yield "comunicacion/"+d.get("communication_id");}case "DERIVACION","REAPERTURA"->"decisiones";default->"bandeja";};}
+ public String href(String tipo,UUID id){return switch(tipo){case "COMUNICACION"->"comunicacion/"+id;case "CASO","CASO_CONSULTA"->"caso/"+id;case "SOLICITUD"->"solicitudes/"+id;case "TAREA"->"tareas/"+id;case "ANTECEDENTE"->"antecedentes";case "DESTINO"->{var d=fila("core_destination",id.toString());yield "comunicacion/"+d.get("communication_id");}case "DERIVACION","REAPERTURA"->"decisiones";default->"bandeja";};}
 }
