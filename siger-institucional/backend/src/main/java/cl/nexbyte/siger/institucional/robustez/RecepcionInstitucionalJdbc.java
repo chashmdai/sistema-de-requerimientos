@@ -152,29 +152,39 @@ public final class RecepcionInstitucionalJdbc {
         return result;
     }
     public RegistroInstitucional guardarCompleta(EntregaCompleta entrega,ArchivoInstitucional files){
-        return guardarCompletaInterna(entrega,files,null);
+        return guardarCompletaInterna(entrega,files,null,0,0);
     }
-    private RegistroInstitucional guardarCompletaInterna(EntregaCompleta entrega,ArchivoInstitucional files,UUID lease){
+    private RegistroInstitucional guardarCompletaInterna(EntregaCompleta entrega,ArchivoInstitucional files,UUID lease,long venceEn,int intento){
         entrega.validar(publicTrust,mapper);
         try{for(var a:entrega.adjuntos())if(!files.disponible(entrega.id(),a))throw new java.io.IOException();}catch(java.io.IOException e){throw new FalloTecnico(503);}
-        var previous=existenteCompleta(entrega);if(previous!=null){if(lease!=null)prepararConfirmacion(entrega.id(),lease);return previous;}
+        var previous=existenteCompleta(entrega);if(previous!=null){if(lease!=null)db.transaction(()->{persistirReservaCompleta(entrega.id(),lease,venceEn,intento);return null;});return previous;}
         try{return db.transaction(()->{
             var rows=db.sql.queryForList("SELECT document_kind FROM institutional_inbox WHERE source=? AND id=? FOR UPDATE",SOURCE,entrega.id().toString());
-            if(!rows.isEmpty()){var same=existenteCompleta(entrega);if(same==null)throw new FalloTecnico(409);if(lease!=null)prepararConfirmacion(entrega.id(),lease);return same;}
+            if(!rows.isEmpty()){var same=existenteCompleta(entrega);if(same==null)throw new FalloTecnico(409);if(lease!=null)persistirReservaCompleta(entrega.id(),lease,venceEn,intento);return same;}
             var control=new ControlesOperacion(db).estado();if(!control.aceptarNuevos()||!control.contingencia().equals("NORMAL"))throw new FalloTecnico(503);
             var at=clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);var com=UUID.randomUUID();
             db.sql.update("INSERT INTO institutional_inbox(source,id,content_hash,body,receipt,ack_pending,created_ms,document_kind) VALUES(?,?,?,?,?,TRUE,?,'FORMULARIO_COMPLETO')",SOURCE,entrega.id().toString(),fingerprint(entrega),mapper.writeValueAsString(entrega),"{}",at.toEpochMilli());
             var receipt=emitir(entrega.id(),com,at,entrega.canal(),entrega.sha256(),entrega.huellaProcedencia());entrega.validarRegistro(receipt,institutionTrust,mapper);
             for(var a:entrega.adjuntos())db.sql.update("INSERT INTO institution_document(id,communication_id,operation_id,attachment_id,origin,name,size_bytes,sha256,media_type,storage_key,created_ms) VALUES(?,?,?,?,'INGRESO_CIUDADANO',?,?,?,?,?,?)",UUID.randomUUID().toString(),com.toString(),entrega.id().toString(),a.id().toString(),a.nombre(),a.tamanio(),a.sha256(),a.tipo(),files.key(entrega.id(),a.id()),at.toEpochMilli());
             db.sql.update("UPDATE institutional_inbox SET receipt=? WHERE source=? AND id=?",mapper.writeValueAsString(receipt),SOURCE,entrega.id().toString());
-            if(lease!=null)prepararConfirmacion(entrega.id(),lease);
+            if(lease!=null)persistirReservaCompleta(entrega.id(),lease,venceEn,intento);
             db.event("COMUNICACION",com.toString(),"COMUNICACION_REGISTRADA");return receipt;
-        });}catch(DuplicateKeyException race){var winner=existenteCompleta(entrega);if(winner==null)throw new FalloTecnico(503);if(lease!=null)prepararConfirmacion(entrega.id(),lease);return winner;}
+        });}catch(DuplicateKeyException race){var winner=existenteCompleta(entrega);if(winner==null)throw new FalloTecnico(503);if(lease!=null)db.transaction(()->{persistirReservaCompleta(entrega.id(),lease,venceEn,intento);return null;});return winner;}
     }
     /** Reserva y ACK quedan recuperables en el mismo COMMIT, incluso si no llega a transmitirse. */
     public RegistroInstitucional guardarCompleta(EntregaCompleta entrega,ArchivoInstitucional files,UUID lease){
         if(lease==null)throw new FalloTecnico(400);
-        return guardarCompletaInterna(entrega,files,lease);
+        return guardarCompletaInterna(entrega,files,lease,0,0);
+    }
+    public RegistroInstitucional guardarCompleta(EntregaCompleta entrega,ArchivoInstitucional files,UUID lease,long venceEn,int intento){
+        if(lease==null||venceEn<=0||intento<1||intento>10)throw new FalloTecnico(400);
+        return guardarCompletaInterna(entrega,files,lease,venceEn,intento);
+    }
+    private void persistirReservaCompleta(UUID id,UUID lease,long venceEn,int intento){
+        prepararConfirmacion(id,lease);
+        // Estado contractual privado, en el mismo COMMIT que el token/ACK; no se registra en logs.
+        // UUID(36)+separadores+epoch long(19)+intento(2) cabe en code(64).
+        if(venceEn>0)db.event("FORMULARIO_RESERVA",id.toString(),lease+"|"+venceEn+"|"+intento);
     }
     /** Recupera el comprobante ya confirmado y verifica custodia antes de cada ACK. */
     public RegistroInstitucional registroCompletoConservado(EntregaCompleta entrega,ArchivoInstitucional files){

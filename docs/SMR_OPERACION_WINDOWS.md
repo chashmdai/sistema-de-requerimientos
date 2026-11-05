@@ -10,7 +10,7 @@ SMR reutiliza SIGER para recibir el formulario completo, conservar documento y o
 | Esquema | smr_sintetico | smr_recepcion |
 | Datos/configuración | C:\req\smr\instances\sintetico | C:\req\smr\instances\recepcion |
 | Origen | https://localhost:19443 | https://formulario.defensorianinez.gob.cl |
-| Estado de entrega | Cinco registros recibidos por PULL local | Sin PULL público; transporte desactivado |
+| Estado de entrega | Bandeja sintética persistente por PULL local | Sin PULL público; transporte desactivado |
 
 Motor nuevo MySQL 8.0.46 en `127.0.0.1:13316`, con datos/configuración/TLS propios bajo `C:\req\smr\mysql`. Reutiliza el ejecutable ya instalado, sin modificar MySQL80 ni su configuración. App: SELECT/INSERT/UPDATE/DELETE; migrador separado; respaldo: SELECT/SHOW VIEW. Ninguna identidad de runtime usa root. El administrador DPAPI pertenece exclusivamente al motor nuevo.
 
@@ -34,7 +34,7 @@ Ejecutar con el PowerShell portable del release:
 
 Para el receptor público preparado, cambiar Instance a `recepcion`. El visor muestra usuario y contraseña enmascarada; permite revelarla localmente. Nunca copiar la contraseña al chat, logs o evidencias. No hay contraseña predeterminada. El archivo `access.dpapi` solo puede descifrarse bajo la identidad Windows que lo creó.
 
-Login/logout, cookie Secure/HttpOnly/SameSite, sesión renovada, CSRF, límites de login, bcrypt y revocación reutilizan SIGER. Lectura y operación SMR son facultades explícitas persistidas como eventos de identidad; TI por sí solo no concede lectura. Se reutiliza `identity_event` y `security_epoch`, sin migraciones adicionales ni reinterpretar cargos. El bootstrap es transaccional y recuperable si cae después del COMMIT y antes de marcar el archivo aplicado; retira el texto claro inicial. No se entrega consola de administración institucional.
+Login/logout, cookie propia por instalación Secure/HttpOnly/SameSite, sesión renovada, CSRF, límites de login, bcrypt y revocación reutilizan SIGER. Lectura y operación SMR son facultades explícitas persistidas como eventos de identidad; TI por sí solo no concede lectura. Se reutiliza `identity_event` y `security_epoch`, sin migraciones adicionales ni reinterpretar cargos. El bootstrap es transaccional y recuperable si cae después del COMMIT y antes de marcar el archivo aplicado; retira el texto claro inicial. No se entrega consola de administración institucional.
 
 La bandeja filtra folio, tipo, canal, fecha de registro (America/Santiago) y estado ACK. El detalle vuelve a verificar firma, documento, registro y originales; conserva respuestas completas, relaciones, instituciones, fuentes, discrepancias, Unicode, nulls y campos compatibles adicionales. El JSON íntegro puede expandirse. El comprobante se descarga firmado.
 

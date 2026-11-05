@@ -9,7 +9,7 @@ class LocalProducer {
  final JsonMapper json=EntregaCompleta.lector();final Path root;final String token,keyId;final PrivateKey signer;final Map<String,PublicKey> ackTrust;
  final List<EntregaCompleta> queue=new ArrayList<>();final Map<UUID,UUID> leases=new HashMap<>();final Map<UUID,Long> expiry=new HashMap<>();
  LocalProducer(JsonNode p)throws Exception{root=Path.of(p.path("root").asString());Files.createDirectories(root);token=p.path("token").asString();keyId=p.path("keyId").asString();signer=ComprobanteDigital.privatePem(p.path("privatePem").asString());ackTrust=Map.of(p.path("ackKeyId").asString(),ComprobanteDigital.publicPem(p.path("ackPublicPem").asString()));
-  String[] types={"NNA","NNA","ADULTO_DECLARADO","ADULTO_CU","ADULTO_DECLARADO"};for(int i=0;i<types.length;i++){
+  String[] types={"NNA","NNA","ADULTO_DECLARADO","ADULTO_CU","ADULTO_DECLARADO","NNA"};for(int i=0;i<types.length;i++){
    Path file=root.resolve("entrega-"+i+".json");if(Files.notExists(file))Files.writeString(file,json.writeValueAsString(create(i,types[i],i%2==0&&i!=4?"1.0":"1.1")));queue.add(json.readValue(Files.readString(file),EntregaCompleta.class));
   }
  }

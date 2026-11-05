@@ -29,7 +29,7 @@ public final class ArranqueSmr {
             "institucional.notificaciones.correo.modo","SIMULADO","institucional.notificaciones.correo.automatico","false",
             "institucional.formulario-completo.automatico",input.getOrDefault("institucional.formulario-completo.habilitado","false"),
             "server.ssl.enabled","true","server.ssl.key-store-type","PKCS12","server.servlet.session.cookie.secure","true",
-            "server.servlet.session.cookie.name","SMRSESSION","server.forward-headers-strategy","none"));
+            "server.servlet.session.cookie.name","SMR"+input.getOrDefault("institucional.smr.instalacion-id","").replace("-",""),"server.forward-headers-strategy","none"));
         p.putIfAbsent("server.address","127.0.0.1");p.putIfAbsent("server.port","8443");
         p.put("institucional.db.pool","4");p.put("server.tomcat.threads.max","24");p.put("server.tomcat.threads.min-spare","2");
         return p;
