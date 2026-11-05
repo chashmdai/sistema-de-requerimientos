@@ -20,7 +20,7 @@ if($platform.scope -eq 'SOLO_SMR'){
 New-Service -Name $name -BinaryPathName "`"$NssmPath`"" -Credential $ServiceCredential -StartupType Manual -DisplayName 'SMR recepción independiente'|Out-Null
 & $NssmPath set $name Application $PowerShellPath;if($LASTEXITCODE){throw 'Configurar servicio pendiente'}
 & $NssmPath set $name AppDirectory $Root
-& $NssmPath set $name AppParameters "-NoProfile -NonInteractive -File `"$($c.release)\scripts\Run-Smr.ps1`" -Root `"$Root`" -Instance recepcion"
+& $NssmPath set $name AppParameters "-NoProfile -NonInteractive -File `"$($c.release)\scripts\Service-Smr.ps1`" -Root `"$Root`""
 & $NssmPath set $name AppExit Default Restart
 & $NssmPath set $name AppRestartDelay 10000
 if($platform.scope -eq 'SOLO_SMR'){& $NssmPath set $name DependOnService SMRMySQL}
