@@ -3,8 +3,10 @@ export interface Actor { id: string; nombre: string; rol: 'DISTRIBUCION' | 'JEFA
 export interface Acceso {materia?:string|null;rol:string;alcance:string;unidad:string|null;sede:string|null;area?:string|null}
 export function has(a:Actor,role:string){return a.accesos?a.accesos.some(x=>x.rol===role):a.rol===role;}
 const scope=(x:Acceso,unit?:string,site?:string,area?:string|null)=>area?x.alcance==='AREA'&&x.area===area&&x.unidad===unit&&x.sede===site:!x.area&&['INSTITUCION','SEDE','UNIDAD_SEDE'].includes(x.alcance)&&(x.alcance==='INSTITUCION'||x.sede===site&&(!x.unidad||x.unidad===unit));
-export function head(a:Actor,unit?:string,site?:string,area?:string|null){return a.accesos?a.accesos.some(x=>['JEFATURA','DIRECTOR','COORDINADOR','COORDINADOR_REGIONAL'].includes(x.rol)&&(unit===undefined||scope(x,unit,site,area))):!area&&a.rol==='JEFATURA'&&(unit===undefined||a.unidad===unit&&a.sede===site);}
+export function head(a:Actor,unit?:string,site?:string,area?:string|null){return a.accesos?a.accesos.some(x=>['JEFATURA','DIRECTOR','COORDINADOR','COORDINADOR_REGIONAL'].includes(x.rol)&&['INSTITUCION','SEDE','UNIDAD_SEDE','AREA'].includes(x.alcance)&&(unit===undefined||scope(x,unit,site,area))):!area&&a.rol==='JEFATURA'&&(unit===undefined||a.unidad===unit&&a.sede===site);}
 export function professional(a:Actor,unit?:string,site?:string,area?:string|null){return a.accesos?a.accesos.some(x=>x.rol==='PROFESIONAL'&&(unit===undefined||scope(x,unit,site,area))):!area&&a.rol==='PROFESIONAL'&&(unit===undefined||a.unidad===unit&&a.sede===site);}
+export function matterConsultation(a:Actor){return !!a.accesos?.some(x=>x.rol==='DIRECTOR'&&x.alcance==='MATERIA'&&!!x.materia);}
+export function canReadCases(a:Actor){return head(a)||professional(a)||matterConsultation(a);}
 export function distribute(a:Actor,site?:string|null){return has(a,'DISTRIBUCION')||!!site&&!!a.accesos?.some(x=>x.rol==='COORDINADOR_REGIONAL'&&x.sede===site);}
 export interface Session { autenticado: boolean; operador: Actor | null; modo: string; notificacionesHabilitadas?:boolean; solicitudesHabilitadas?:boolean; cambioClaveObligatorio?:boolean }
 export interface Area {id:string;unidad:string;sede:string;nombre:string;jefatura:string;desde:string;hasta:string}
