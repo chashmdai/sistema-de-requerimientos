@@ -9,7 +9,8 @@ class VerifyRestore {
    String schema=db.sql.queryForObject("SELECT DATABASE()",String.class),user=p.path("user").asString();boolean excluded=false;
    try(var first=new ExclusionConsumidorFormulario(db,schema,user,p.path("origin").asString())){first.verificar();ExclusionConsumidorFormulario second=null;try{second=new ExclusionConsumidorFormulario(db,schema,user,p.path("origin").asString());}catch(IllegalStateException expected){excluded=true;}finally{if(second!=null)second.close();}}
    if(!excluded)throw new IllegalStateException();
-   System.out.println(json.writeValueAsString(Map.of("records",records,"originals",originals,"signaturesAndHashesVerified",true,"exclusiveConsumerVerified",true,"pendingAck",db.sql.queryForObject("SELECT COUNT(*) FROM institutional_inbox WHERE ack_pending=TRUE",Long.class),"flywayValidated",true,"publicPullPerformed",false)));
+   var identity=new cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional(db,Clock.systemUTC());var account=identity.autenticar(p.path("accessUser").asString());boolean credential=org.springframework.security.crypto.factory.PasswordEncoderFactories.createDelegatingPasswordEncoder().matches(p.path("accessPassword").asString(),account.getPassword());if(!credential)throw new IllegalStateException("Cuenta restaurada no autentica");
+   System.out.println(json.writeValueAsString(Map.of("records",records,"originals",originals,"signaturesAndHashesVerified",true,"exclusiveConsumerVerified",true,"pendingAck",db.sql.queryForObject("SELECT COUNT(*) FROM institutional_inbox WHERE ack_pending=TRUE",Long.class),"flywayValidated",true,"publicPullPerformed",false,"accountCredentialVerified",credential)));
   }
  }
 }

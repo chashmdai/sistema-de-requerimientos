@@ -20,6 +20,7 @@ $p=@{'institucional.db.url'=$c.dbUrl;'institucional.db.user'=$db.username;'insti
 if($c.consumerEnabled){$conn=Read-SmrJson "$private\producer-token.dpapi";$p['institucional.formulario-completo.token']=$conn.token;$p['institucional.formulario-completo.ca-certificado']=if($c.synthetic){"$Root\secrets\tls\ca.pem"}else{"$Root\config\public-edge-root-ca.crt"}}
 if(-not $c.synthetic){$p['institucional.smr.autorizacion.archivo']="$base\autorizacion-publica.json"}
 if($c.PSObject.Properties.Name -contains 'dbPrincipal'){$p['institucional.db.principal']=$c.dbPrincipal}
+foreach($mapping in @(@('bindAddress','server.address'),@('storeDirectory','institucional.documentos.directorio'),@('tlsKeyStore','server.ssl.key-store'))){if($c.PSObject.Properties.Name -contains $mapping[0]){$p[$mapping[1]]=[string]$c.($mapping[0])}}
 $si=[Diagnostics.ProcessStartInfo]::new((Join-Path $c.javaHome 'bin\java.exe'));$si.UseShellExecute=$false;$si.CreateNoWindow=$true;$si.RedirectStandardInput=$true;$si.RedirectStandardOutput=$true;$si.RedirectStandardError=$true
 foreach($a in @('--enable-native-access=ALL-UNNAMED','-XX:-UsePerfData','-Xmx256m','-jar',$jar,'--smr')){$si.ArgumentList.Add($a)}
 $process=[Diagnostics.Process]::Start($si);$stamp=[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ');$out=[IO.File]::Open("$base\logs\app-$stamp.log",'Create','Write','Read');$err=[IO.File]::Open("$base\logs\app-$stamp.err.log",'Create','Write','Read')

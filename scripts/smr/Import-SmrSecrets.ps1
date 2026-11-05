@@ -15,6 +15,8 @@ try{
  $data.ack.ownerSid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;Protect-SmrJson $data.ack "$Root\secrets\ack-identity.dpapi"
  [IO.File]::WriteAllText("$Root\public\ack\ack-trust.json",($data.ownTrust|ConvertTo-Json));[IO.File]::WriteAllText("$Root\public\ack\ack-public.pem",$data.ack.publicPem)
  if($data.bearer){Protect-SmrJson $data.bearer "$Root\instances\recepcion\private\producer-token.dpapi"}
+ foreach($name in @('access','bootstrap')){if($data.ContainsKey($name)){Protect-SmrJson $data[$name] "$Root\instances\recepcion\private\$name.dpapi"}}
+ @{keyId=$data.ack.keyId;algorithm='Ed25519';publicPemSha256=(Get-FileHash "$Root\public\ack\ack-public.pem").Hash.ToLowerInvariant();trustJsonSha256=(Get-FileHash "$Root\public\ack\ack-trust.json").Hash.ToLowerInvariant();privateMaterialIncluded=$false;productionPullAuthorized=$false}|ConvertTo-Json|Set-Content "$Root\public\ack\manifest.json"
  foreach($name in @('backup-key','ack-recovery-key')){if($data.ContainsKey($name)){Protect-SmrJson $data[$name] "$Root\recovery\$name.dpapi"}}
  @{installationId=$data.source.installationId;origin=$data.source.origin;sourceSchema=$data.source.schema;pullEnabled=$false;importedUtc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath "$Root\migration.json"
  Write-Output 'Secretos reprotegidos por DPAPI bajo cuenta/destino actual. TLS y MySQL requieren provisión propia; PULL no habilitado.'

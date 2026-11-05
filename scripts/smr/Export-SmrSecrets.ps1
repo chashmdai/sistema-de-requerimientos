@@ -9,6 +9,7 @@ $temp=Join-Path $Root ('secrets\export-'+[guid]::NewGuid().ToString('N')+'.json'
 try{
  $pass=[Text.Encoding]::UTF8.GetBytes([Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr));$key=[Security.Cryptography.Rfc2898DeriveBytes]::Pbkdf2($pass,$salt,200000,[Security.Cryptography.HashAlgorithmName]::SHA256,64)
  $data=@{version=1;ack=(Read-SmrJson "$Root\secrets\ack-identity.dpapi");ownTrust=(Get-Content -Raw "$Root\public\ack\ack-trust.json"|ConvertFrom-Json -AsHashtable);source=(Get-Content -Raw "$Root\instances\recepcion\instance.json"|ConvertFrom-Json -AsHashtable)}
+ foreach($name in @('access','bootstrap')){if(Test-Path "$Root\instances\recepcion\private\$name.dpapi"){$data[$name]=Read-SmrJson "$Root\instances\recepcion\private\$name.dpapi"}}
  if(Test-Path "$Root\instances\recepcion\private\producer-token.dpapi"){$data.bearer=Read-SmrJson "$Root\instances\recepcion\private\producer-token.dpapi"}
  foreach($name in @('backup-key','ack-recovery-key')){if(Test-Path "$Root\recovery\$name.dpapi"){$data[$name]=Read-SmrJson "$Root\recovery\$name.dpapi"}}
  [IO.File]::WriteAllText($temp,($data|ConvertTo-Json -Depth 15 -Compress));Set-SmrPrivate $temp

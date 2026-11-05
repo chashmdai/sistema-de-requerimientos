@@ -1,7 +1,7 @@
 . "$PSScriptRoot\Common.ps1"
 function New-SmrSession([string]$Root,[string]$Instance){
  $base=Join-Path $Root "instances\$Instance";$config=Get-Content -Raw "$base\instance.json"|ConvertFrom-Json;$credential=Read-SmrJson "$base\private\access.dpapi"
- $url="https://localhost:$($config.port)";$web=[Microsoft.PowerShell.Commands.WebRequestSession]::new();$csrf=Invoke-RestMethod "$url/nucleo/csrf" -WebSession $web
+ $url=if($config.PSObject.Properties.Name -contains 'uiUrl'){$config.uiUrl}else{"https://localhost:$($config.port)"};$web=[Microsoft.PowerShell.Commands.WebRequestSession]::new();$csrf=Invoke-RestMethod "$url/nucleo/csrf" -WebSession $web
  try{Invoke-WebRequest "$url/nucleo/login" -Method Post -WebSession $web -Headers @{$csrf.headerName=$csrf.token} -Body @{username=$credential.username;password=$credential.password}|Out-Null}finally{$credential.Clear()}
  return @{url=$url;web=$web}
 }
