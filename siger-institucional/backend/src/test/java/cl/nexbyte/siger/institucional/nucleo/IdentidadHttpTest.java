@@ -8,21 +8,83 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest(classes=IdentidadHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.identidad.habilitada=true"})
 @AutoConfigureMockMvc @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_CLASS)
 class IdentidadHttpTest {
- @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,IdentidadController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
+ @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,IdentidadController.class,ConcesionesController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
  @Configuration static class Fixture{
   @Bean Clock relojLimitesLogin(){return Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"),ZoneOffset.UTC);}
   static String tiPassword=UUID.randomUUID()+"AZ",tiId;
   @Bean(destroyMethod="close") DatosNucleoTest datos()throws Exception{return new DatosNucleoTest(Files.createTempDirectory("identidad-http-"));}
-  @Bean IdentidadInstitucional identidad(DatosNucleoTest d){for(var t:List.of("staff_profile_history","identity_event","staff_assignment","staff_account","org_coverage"))d.db.sql.update("DELETE FROM "+t);var i=new IdentidadInstitucional(d.db,Clock.systemUTC());tiId=i.bootstrap(new IdentidadInstitucional.Crear("ti.http","TI HTTP sintético","ti.http@example.invalid","TI",null,null,tiPassword)).id();return i;}
+  @Bean IdentidadInstitucional identidad(DatosNucleoTest d){for(var t:List.of("staff_profile_history","identity_event","staff_assignment","staff_account","org_coverage"))d.db.sql.update("DELETE FROM "+t);var i=new IdentidadInstitucional(d.db,Clock.systemUTC());tiId=i.bootstrap(new IdentidadInstitucional.Crear("ti.http","TI HTTP sintético","ti.http@example.invalid","TI",null,null,tiPassword)).id();String anterior=tiPassword;tiPassword=UUID.randomUUID()+"AZ";i.cambiarClavePersonal((IdentidadInstitucional.Principal)i.autenticar("ti.http"),new IdentidadInstitucional.CambioClave(anterior,tiPassword));return i;}
   @Bean CatalogoLaboratorio catalogo(IdentidadInstitucional i){return new CatalogoLaboratorio(i);}
   @Bean OrganizacionInstitucional org(DatosNucleoTest d,IdentidadInstitucional i){return new OrganizacionInstitucional(d.db,i,Clock.systemUTC());}
+  @Bean AutoridadesInstitucionales autoridades(DatosNucleoTest d,IdentidadInstitucional i){return ConcesionFixture.contexto(d.db,i,tiId,Clock.systemUTC()).autoridades;}
+  @Bean ConcesionesInstitucionales concesiones(DatosNucleoTest d,IdentidadInstitucional i){return ConcesionFixture.contexto(d.db,i,tiId,Clock.systemUTC()).concesiones;}
   @Bean HabilitacionNucleo gate(){return new HabilitacionNucleo(HabilitacionNucleoTest.valid());}
   @Bean NucleoInstitucional core(DatosNucleoTest d,CatalogoLaboratorio c){return new NucleoInstitucional(d.db,c,d.recepcion,d.mapper,Clock.systemUTC());}
  }
  @Autowired MockMvc http;@Autowired DatosNucleoTest data;@Autowired IdentidadInstitucional ids;@Autowired CatalogoLaboratorio cat;@Autowired NucleoInstitucional core;
- MockHttpSession login(String user,String password)throws Exception{var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",user).param("password",password)).andExpect(status().isNoContent());return s;}
+ Map<String,String> clavesHabilitadas=new HashMap<>();
+ MockHttpSession login(String user,String password)throws Exception{
+  String actual=clavesHabilitadas.getOrDefault(user,password);var p=(IdentidadInstitucional.Principal)ids.autenticar(user);
+  // Estas regresiones requieren cuenta habilitada; el flujo temporal se prueba sin atajos en CredencialTemporalHttpTest.
+  if(p.cambioClavePendiente()){String nueva=UUID.randomUUID()+"AZ";ids.cambiarClavePersonal(p,new IdentidadInstitucional.CambioClave(actual,nueva));actual=nueva;clavesHabilitadas.put(user,nueva);}
+  var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",user).param("password",actual)).andExpect(status().isNoContent());return s;
+ }
  IdentidadInstitucional.Cuenta user(String pass){String name="u."+UUID.randomUUID();return ids.crear(Fixture.tiId,new IdentidadInstitucional.Crear(name,"Funcionario sintético",name+"@example.invalid","Cargo no concede permisos","UPR","DEMO_SEDE_A",pass));}
- void grant(String id){ids.otorgar(Fixture.tiId,id,new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null));}
+ void grant(String id){ConcesionFixture.otorgar(data.db,ids,Fixture.tiId,id,new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null),Clock.systemUTC());}
+ @Test void acc01ApiTiNoPermiteOtorgarseUnRolOperativo()throws Exception{
+  var s=login("ti.http",Fixture.tiPassword);long epoch=cat.operador(Fixture.tiId).versionAcceso();
+  String body=data.mapper.writeValueAsString(new IdentidadInstitucional.Otorgar("DIRECTOR","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now(),null));
+  http.perform(post("/nucleo/ti/funcionarios/"+Fixture.tiId+"/roles").secure(true).session(s).with(csrf()).contentType("application/json").content(body)).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("AUTOASIGNACION_NO_PERMITIDA"));
+  assertEquals(epoch,cat.operador(Fixture.tiId).versionAcceso());assertFalse(cat.operador(Fixture.tiId).jefatura());
+  http.perform(get("/nucleo/ti/funcionarios").secure(true).session(s)).andExpect(status().isOk());
+ }
+ @Test void circuitoHttpCompletoConIdentidadesIndependientesCsrfYLecturaRestringida()throws Exception{
+  String pass=UUID.randomUUID()+"AZ",outsidePass=UUID.randomUUID()+"AZ";var target=user(pass);var outsider=user(outsidePass);var staff=login(target.usuario(),pass);var outside=login(outsider.usuario(),outsidePass);var ti=login("ti.http",Fixture.tiPassword);
+  http.perform(get("/nucleo/concesiones/contexto").secure(true).session(staff)).andExpect(status().isOk()).andExpect(jsonPath("$.identidad").value("NO_ACREDITADA"));
+  var f=ConcesionFixture.contexto(data.db,ids,Fixture.tiId,Clock.systemUTC());var g=new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),Instant.now().plusSeconds(3600));f.sincronizar(Fixture.tiId,g);
+  String body=data.mapper.writeValueAsString(new ConcesionesInstitucionales.Solicitud(target.id(),g.rol(),g.alcance(),g.unidad(),g.sede(),g.desde(),g.hasta(),"Necesidad sintética HTTP"));
+  http.perform(post("/nucleo/concesiones").secure(true).session(ti).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  http.perform(post("/nucleo/concesiones").secure(true).session(ti).with(csrf()).contentType("application/json").content(body)).andExpect(status().isBadRequest());
+  var response=http.perform(post("/nucleo/concesiones").secure(true).session(ti).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(0)).andReturn().getResponse().getContentAsString();String id=data.mapper.readTree(response).get("id").asString(),route="/nucleo/concesiones/"+id;
+  http.perform(get(route).secure(true).session(outside)).andExpect(status().isNotFound());
+  http.perform(post(route+"/aprobar").secure(true).session(ti).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":0,\"fundamento\":\"TI no aprueba\"}")).andExpect(status().isForbidden());
+  var authority=login("zz.autoridad.fixture",f.claveRevisor);
+  http.perform(post(route+"/aprobar").secure(true).session(authority).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":0,\"fundamento\":\"Respaldo revisado\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(1));
+  assertFalse(cat.operador(target.id()).profesionalEn("UPR","DEMO_SEDE_A"));
+  http.perform(post(route+"/ejecutar").secure(true).session(authority).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":1}")).andExpect(status().isForbidden());
+  http.perform(post(route+"/ejecutar").secure(true).session(ti).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":1}")).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(2));
+  assertTrue(cat.operador(target.id()).profesionalEn("UPR","DEMO_SEDE_A"));http.perform(get("/nucleo/session").secure(true).session(staff)).andExpect(status().isUnauthorized());
+  http.perform(post(route+"/revocar").secure(true).session(authority).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":2,\"fundamento\":\"Retiro institucional HTTP\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(3));assertFalse(cat.operador(target.id()).profesionalEn("UPR","DEMO_SEDE_A"));
+  http.perform(get(route+"/historial").secure(true).session(ti)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(6));
+ }
+ @Test void org02ApiAplicaExclusividadCentralYNoExponeIdentidadEnElConflicto()throws Exception{
+  var a=user(UUID.randomUUID()+"aZ");var b=user(UUID.randomUUID()+"aZ");var ti=login("ti.http",Fixture.tiPassword);
+  var body=new IdentidadInstitucional.Otorgar("DISTRIBUCION","INSTITUCION",null,null,Instant.now(),Instant.now().plusSeconds(600));String json=data.mapper.writeValueAsString(body),route="/nucleo/ti/funcionarios/"+a.id()+"/roles";
+  http.perform(post(route).secure(true).session(ti).contentType("application/json").content(json)).andExpect(status().isForbidden());
+  http.perform(post(route).secure(true).session(ti).with(csrf()).contentType("application/json").content(json)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("APROBACION_INSTITUCIONAL_REQUERIDA"));
+  var first=ConcesionFixture.preparar(data.db,ids,Fixture.tiId,a.id(),body,Clock.systemUTC());String execute="/nucleo/concesiones/"+first+"/ejecutar";
+  http.perform(post(execute).secure(true).session(ti).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":1}")).andExpect(status().isOk());
+  String grant=data.db.sql.queryForObject("SELECT assignment_id FROM access_instruction WHERE id=?",String.class,first.toString());
+  try{
+   var second=ConcesionFixture.preparar(data.db,ids,Fixture.tiId,b.id(),body,Clock.systemUTC());
+   var conflict=http.perform(post("/nucleo/concesiones/"+second+"/ejecutar").secure(true).session(ti).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":1}")).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DISTRIBUIDOR_CENTRAL_SOLAPADO")).andReturn().getResponse().getContentAsString();
+   assertFalse(conflict.contains(a.id()));assertFalse(conflict.contains(a.correo()));assertTrue(ids.cuentas(Fixture.tiId).stream().filter(x->x.id().equals(b.id())).findFirst().orElseThrow().asignaciones().isEmpty());
+  }finally{ConcesionFixture.revocar(data.db,ids,Fixture.tiId,a.id(),grant,Clock.systemUTC());}
+ }
+ @Test void regDis01ApiRechazaDestinoAjenoSinEscrituraYPermiteLocalConCsrf()throws Exception{
+  String pass=UUID.randomUUID()+"aZ";var u=user(pass);ConcesionFixture.otorgar(data.db,ids,Fixture.tiId,u.id(),new IdentidadInstitucional.Otorgar("COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A",Instant.now().minusSeconds(1),null),Clock.systemUTC());
+  var com=core.registrarManual(cat.operador(u.id()),UUID.randomUUID(),new ContratosNucleo.Manual("Atención sintética local","TELÉFONO",Instant.now().minusSeconds(1),"DEMO_SEDE_A",null)).id();
+  var s=login(u.usuario(),pass);String route="/nucleo/comunicaciones/"+com+"/distribuir";var key=UUID.randomUUID();
+  var body=new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UEP","DEMO_SEDE_B",u.id())));
+  http.perform(post(route).secure(true).session(s).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(data.mapper.writeValueAsString(body))).andExpect(status().isForbidden());
+  assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,com.toString()));
+  assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_command WHERE id=?",Integer.class,key.toString()));
+  body=new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",u.id())));
+  String json=data.mapper.writeValueAsString(body);
+  http.perform(post(route).secure(true).session(s).header("Idempotency-Key",key).contentType("application/json").content(json)).andExpect(status().isForbidden());
+  for(int n=0;n<2;n++)http.perform(post(route).secure(true).session(s).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(json)).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(1));
+  assertEquals(1,data.db.sql.queryForObject("SELECT COUNT(*) FROM distribution_event WHERE communication_id=?",Integer.class,com.toString()));
+ }
  @Test void tiCreaPorHttpNoDevuelveHashYFuncionarioNoAdministra()throws Exception{
   var ti=login("ti.http",Fixture.tiPassword);String pass=UUID.randomUUID()+"aZ",name="nuevo."+UUID.randomUUID();var json=data.mapper.writeValueAsString(new IdentidadInstitucional.Crear(name,"Nombre sintético",name+"@example.invalid","Administrativo","UPR","DEMO_SEDE_A",pass));
   var response=http.perform(post("/nucleo/ti/funcionarios").secure(true).session(ti).with(csrf()).contentType("application/json").content(json)).andExpect(status().isOk()).andExpect(jsonPath("$.activo").value(true)).andExpect(jsonPath("$.password").doesNotExist()).andExpect(jsonPath("$.password_hash").doesNotExist()).andReturn().getResponse().getContentAsString();assertFalse(response.contains(pass));
@@ -32,12 +94,13 @@ class IdentidadHttpTest {
  @Test void revocarRolPorHttpInvalidaSesionExistenteYLaNuevaNoConservaAcceso()throws Exception{
   String pass=UUID.randomUUID()+"aZ";var u=user(pass);grant(u.id());var staff=login(u.usuario(),pass);http.perform(get("/nucleo/session").secure(true).session(staff)).andExpect(status().isOk());
   var g=ids.cuentas(Fixture.tiId).stream().filter(x->x.id().equals(u.id())).findFirst().orElseThrow().asignaciones().getFirst().get("id");var ti=login("ti.http",Fixture.tiPassword);
-  http.perform(delete("/nucleo/ti/funcionarios/"+u.id()+"/roles/"+g).secure(true).session(ti).with(csrf())).andExpect(status().isOk());
+  http.perform(delete("/nucleo/ti/funcionarios/"+u.id()+"/roles/"+g).secure(true).session(ti).with(csrf())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("REVOCACION_INSTITUCIONAL_REQUERIDA"));
+  ConcesionFixture.revocar(data.db,ids,Fixture.tiId,u.id(),g.toString(),Clock.systemUTC());
   http.perform(get("/nucleo/session").secure(true).session(staff)).andExpect(status().isUnauthorized());assertTrue(staff.isInvalid());
   var fresh=login(u.usuario(),pass);http.perform(get("/nucleo/session").secure(true).session(fresh)).andExpect(jsonPath("$.operador.accesos").isEmpty());
  }
  @Test void desactivarInvalidaSesionYCredencialYNoSeAdmitePrincipalInyectado()throws Exception{
-  String pass=UUID.randomUUID()+"aZ";var u=user(pass);var s=login(u.usuario(),pass);ids.actualizar(Fixture.tiId,u.id(),new IdentidadInstitucional.Perfil(u.nombre(),u.correo(),u.cargo(),u.unidad(),u.sede(),false,u.revision()));
+  String pass=UUID.randomUUID()+"aZ";var u=user(pass);var s=login(u.usuario(),pass);ids.actualizar(Fixture.tiId,u.id(),new IdentidadInstitucional.Perfil(u.nombre(),u.correo(),u.cargo(),u.unidad(),u.sede(),false,cat.operador(u.id()).versionAcceso()));
   http.perform(get("/nucleo/comunicaciones").secure(true).session(s)).andExpect(status().isUnauthorized());assertTrue(s.isInvalid());
   http.perform(post("/nucleo/login").secure(true).with(csrf()).param("username",u.usuario()).param("password",pass)).andExpect(status().isUnauthorized());
   http.perform(get("/nucleo/ti/funcionarios").secure(true).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(Fixture.tiId).roles("FUNCIONARIO_LAB"))).andExpect(status().isUnauthorized());

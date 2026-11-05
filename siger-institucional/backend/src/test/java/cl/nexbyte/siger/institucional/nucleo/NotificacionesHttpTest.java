@@ -9,7 +9,12 @@ class NotificacionesHttpTest {
  @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NotificacionesController.class,NucleoController.class,cl.nexbyte.siger.institucional.solicitudes.SolicitudesController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
  @Configuration static class Fixture{
   @Bean cl.nexbyte.siger.institucional.solicitudes.SolicitudesInstitucionales solicitudes(DatosAvisosTest d){return new cl.nexbyte.siger.institucional.solicitudes.SolicitudesInstitucionales(d.d.db,d.recursos,d.cat,d.d.mapper,d.tiempo);}
-  @Bean(destroyMethod="close") DatosAvisosTest data()throws Exception{return new DatosAvisosTest(Files.createTempDirectory("avisos-http-"));}
+  @Bean(destroyMethod="close") DatosAvisosTest data()throws Exception{
+   var d=new DatosAvisosTest(Files.createTempDirectory("avisos-http-"));
+   // Precondición explícita de cuenta habilitada para regresión de avisos, usando reset y cambio reales del servicio.
+   for(var a:d.ids.cuentas(d.ti)){String temporal=UUID.randomUUID()+"AZ";d.ids.clave(d.ti,a.id(),new IdentidadInstitucional.Clave(temporal,a.revision()));d.ids.cambiarClavePersonal((IdentidadInstitucional.Principal)d.ids.autenticar(a.usuario()),new IdentidadInstitucional.CambioClave(temporal,UUID.randomUUID()+"AZ"));}
+   return d;
+  }
   @Bean IdentidadInstitucional ids(DatosAvisosTest d){return d.ids;}@Bean CatalogoLaboratorio cat(DatosAvisosTest d){return d.cat;}@Bean NucleoInstitucional core(DatosAvisosTest d){return d.core;}@Bean TareasPersonales tareas(DatosAvisosTest d){return d.tareas;}@Bean NotificacionesInstitucionales notices(DatosAvisosTest d){return d.notices;}
   @Bean HabilitacionNucleo gate(){return new HabilitacionNucleo(HabilitacionNucleoTest.valid());}
   @Bean CorreosInstitucionales correos(DatosAvisosTest d){return new CorreosInstitucionales(d.d.db,d.cat,d.notices,new TransporteCorreo(){public Resultado enviar(Mensaje m){return new Resultado("SIMULADO","SIMULADO",null,0,null);}public boolean real(){return false;}},Set.of("prof.avisos@example.invalid"),d.tiempo,"http_simulado");}

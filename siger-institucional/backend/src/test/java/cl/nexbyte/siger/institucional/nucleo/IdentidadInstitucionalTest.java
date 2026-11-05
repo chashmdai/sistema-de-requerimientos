@@ -13,7 +13,7 @@ class IdentidadInstitucionalTest {
  void clean(){for(var t:List.of("staff_profile_history","identity_event","staff_assignment","staff_account","org_coverage"))d.db.sql.update("DELETE FROM "+t);d.db.sql.update("DELETE FROM core_unit_site WHERE site_id='LAB_NUEVA'");d.db.sql.update("DELETE FROM org_site_validity WHERE site_id='LAB_NUEVA'");d.db.sql.update("DELETE FROM core_site WHERE id='LAB_NUEVA'");}
  @AfterEach void finish(){clean();d.close();}
  Cuenta user(String name,String unit,String site){return ids.crear(ti,new Crear(name,"Persona "+name,name+"@example.invalid","Cargo declarado",unit,site,password()));}
- String grant(String id,String role,String scope,String unit,String site){return ids.otorgar(ti,id,new Otorgar(role,scope,unit,site,Instant.now().minusSeconds(2),null));}
+ String grant(String id,String role,String scope,String unit,String site){return ConcesionFixture.otorgar(d.db,ids,ti,id,new Otorgar(role,scope,unit,site,Instant.now().minusSeconds(2),null),Clock.systemUTC());}
  CatalogoLaboratorio.Operador a(String id){return cat.operador(id);}
  UUID manual(String actor,String site){return core.registrarManual(a(actor),UUID.randomUUID(),new Manual("Relato sintético individual","TELÉFONO",Instant.now().minusSeconds(10),site,null,"REG_LAB_1")).id();}
  Resultado distribute(String actor,UUID c,String head,String unit,String site){return core.distribuir(a(actor),UUID.randomUUID(),c,new Distribucion(core.detalle(a(actor),c).comunicacion().revision(),List.of(new NuevoDestino(unit,site,head))));}
@@ -30,15 +30,32 @@ class IdentidadInstitucionalTest {
   denied(403,()->manual(u.id(),"DEMO_SEDE_B"));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_case",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement",Integer.class));
   var central=manual(ti,null);assertNull(core.detalle(a(ti),central).comunicacion().sedeOrigen());
  }
- @Test void coordinadorSoloDistribuyeOrigenPropioYPrincipalGlobalSinAutoCaso(){
+ // REG-DIS-01 sustituye la expectativa histórica de distribución regional intersede.
+ @Test void coordinadorSoloDistribuyeOrigenYDestinoPropiosYPrincipalGlobalSinAutoCaso(){
   var regional=user("regional","UPR","DEMO_SEDE_A");grant(regional.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A");
   var otro=user("otro","UEP","DEMO_SEDE_B");var head=user("jefe","UEP","DEMO_SEDE_B");grant(head.id(),"DIRECTOR","UNIDAD_SEDE","UEP","DEMO_SEDE_B");
   var dist=user("principal",null,null);grant(dist.id(),"DISTRIBUCION","INSTITUCION",null,null);
-  var propio=manual(regional.id(),"DEMO_SEDE_A");distribute(regional.id(),propio,head.id(),"UEP","DEMO_SEDE_B");
+  var propio=manual(regional.id(),"DEMO_SEDE_A");
+  denied(403,()->distribute(regional.id(),propio,head.id(),"UEP","DEMO_SEDE_B"));
+  distribute(regional.id(),propio,regional.id(),"UPR","DEMO_SEDE_A");
   var ajeno=manual(otro.id(),"DEMO_SEDE_B");denied(403,()->core.distribuir(a(regional.id()),UUID.randomUUID(),ajeno,new Distribucion(0,List.of(new NuevoDestino("UEP","DEMO_SEDE_B",head.id())))));
   var web=d.nuevaWeb();denied(403,()->core.distribuir(a(regional.id()),UUID.randomUUID(),web,new Distribucion(0,List.of(new NuevoDestino("UEP","DEMO_SEDE_B",head.id())))));
   distribute(dist.id(),ajeno,head.id(),"UEP","DEMO_SEDE_B");distribute(dist.id(),web,head.id(),"UEP","DEMO_SEDE_B");
   assertEquals(3,d.db.sql.queryForObject("SELECT COUNT(*) FROM distribution_event",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_case",Integer.class));assertNull(core.detalle(a(dist.id()),web).comunicacion().sedeOrigen());
+ }
+ @Test void regDis01NoMezclaSedesDeDosConcesionesYRechazoDeLoteEsAtomico(){
+  var regional=user("regional","UPR","DEMO_SEDE_A");grant(regional.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A");grant(regional.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_B");
+  var com=manual(regional.id(),"DEMO_SEDE_A");var key=UUID.randomUUID();
+  var local=new NuevoDestino("UPR","DEMO_SEDE_A",regional.id());var ajeno=new NuevoDestino("UEP","DEMO_SEDE_B",regional.id());
+  denied(403,()->core.distribuir(a(regional.id()),key,com,new Distribucion(0,List.of(local,ajeno))));
+  assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination",Integer.class));assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM distribution_event",Integer.class));
+  assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_command WHERE id=?",Integer.class,key.toString()));assertEquals(0,core.detalle(a(regional.id()),com).comunicacion().revision());
+  var old=a(regional.id());String g=grant(regional.id(),"DISTRIBUCION","INSTITUCION",null,null);
+  // La facultad central independiente sí permite otro destino; revocarla invalida al actor anterior.
+  var result=core.distribuir(a(regional.id()),key,com,new Distribucion(0,List.of(ajeno)));ConcesionFixture.revocar(d.db,ids,ti,regional.id(),g,Clock.systemUTC());
+  denied(403,()->core.distribuir(old,UUID.randomUUID(),com,new Distribucion(1,List.of(local))));
+  denied(403,()->core.distribuir(a(regional.id()),key,com,new Distribucion(0,List.of(ajeno))));
+  assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination",Integer.class));assertEquals(com,result.id());
  }
  @Test void reintentoDistribucionConservaComDestinoYRevisionYRechazaOtraOperacionDuplicada(){
   var u=user("regional","UPR","DEMO_SEDE_A");grant(u.id(),"COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A");UUID c=manual(u.id(),"DEMO_SEDE_A"),key=UUID.randomUUID();var body=new Distribucion(0,List.of(new NuevoDestino("UPR","DEMO_SEDE_A",u.id())));
@@ -54,11 +71,11 @@ class IdentidadInstitucionalTest {
   var other=user("otra.unidad","UPD","DEMO_SEDE_A");grant(other.id(),"COORDINADOR","UNIDAD_SEDE","UPD","DEMO_SEDE_A");denied(404,()->core.caso(a(other.id()),caso));
  }
  @Test void revocacionYDesactivacionInvalidanPrincipalYActorPrevio(){
-  var u=user("persona","UPR","DEMO_SEDE_A");var grant=grant(u.id(),"PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A");var p=(Principal)ids.autenticar(u.usuario());var old=a(u.id());ids.revocar(ti,u.id(),grant);assertFalse(ids.vigente(p));denied(403,()->core.buscar(old,"",false,0,20));assertFalse(a(u.id()).profesionalEn("UPR","DEMO_SEDE_A"));
+  var u=user("persona","UPR","DEMO_SEDE_A");var grant=grant(u.id(),"PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A");var p=(Principal)ids.autenticar(u.usuario());var old=a(u.id());ConcesionFixture.revocar(d.db,ids,ti,u.id(),grant,Clock.systemUTC());assertFalse(ids.vigente(p));denied(403,()->core.buscar(old,"",false,0,20));assertFalse(a(u.id()).profesionalEn("UPR","DEMO_SEDE_A"));
   var current=ids.cuentas(ti).stream().filter(x->x.id().equals(u.id())).findFirst().orElseThrow();p=(Principal)ids.autenticar(u.usuario());ids.actualizar(ti,u.id(),new Perfil(u.nombre(),u.correo(),u.cargo(),u.unidad(),u.sede(),false,current.revision()));assertFalse(ids.vigente(p));denied(401,()->a(u.id()));assertThrows(org.springframework.security.core.userdetails.UsernameNotFoundException.class,()->ids.autenticar(u.usuario()));
  }
  @Test void vigenciaNoRequiereNuevoLoginYCargoGenericoNoDistribuye(){
-  var u=user("persona","UPR","DEMO_SEDE_A");ids.otorgar(ti,u.id(),new Otorgar("DIRECTOR","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().plusSeconds(600),null));assertFalse(a(u.id()).jefatura());assertFalse(a(u.id()).distribuidor());
+  var u=user("persona","UPR","DEMO_SEDE_A");ConcesionFixture.otorgar(d.db,ids,ti,u.id(),new Otorgar("DIRECTOR","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().plusSeconds(600),null),Clock.systemUTC());assertFalse(a(u.id()).jefatura());assertFalse(a(u.id()).distribuidor());
   denied(400,()->grant(u.id(),"TI","SEDE",null,"DEMO_SEDE_A"));denied(400,()->grant(u.id(),"PROFESIONAL","INSTITUCION",null,null));
  }
  @Test void dosRegionesCoberturaHistoricaYNuevaOficinaSonDatos(){
@@ -73,6 +90,13 @@ class IdentidadInstitucionalTest {
   var account=ids.cuentas(ti).getFirst();var g=account.asignaciones().getFirst().get("id").toString();denied(409,()->ids.revocar(ti,ti,g));assertTrue(a(ti).ti());
   denied(409,()->ids.actualizar(ti,ti,new Perfil(account.nombre(),account.correo(),account.cargo(),null,null,false,account.revision())));
   var u=user("persona",null,null);denied(403,()->ids.otorgar(u.id(),u.id(),new Otorgar("TI","INSTITUCION",null,null,Instant.now(),null)));
+ }
+ @Test void acc01TiNoSeConcedeRolesNiConsumeRevisionYAuditaCadaDenegacion(){
+  var before=ids.cuentas(ti).stream().filter(c->c.id().equals(ti)).findFirst().orElseThrow();
+  int events=d.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event",Integer.class);
+  var requested=new Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",Instant.now().minusSeconds(1),null);
+  for(int i=0;i<2;i++){var error=assertThrows(FalloTecnico.class,()->ids.otorgar(ti,ti,requested));assertEquals(403,error.status);assertEquals("AUTOASIGNACION_NO_PERMITIDA",error.code);}
+  var after=ids.cuentas(ti).stream().filter(c->c.id().equals(ti)).findFirst().orElseThrow();assertEquals(before,after);assertEquals(events+2,d.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event",Integer.class));assertEquals(2,d.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event WHERE event_code='AUTOASIGNACION_DENEGADA' AND actor_id=? AND subject_id=?",Integer.class,ti,ti));assertFalse(a(ti).profesionalEn("UPR","DEMO_SEDE_A"));assertTrue(a(ti).ti());
  }
  @Test void falloPersistenciaNoDejaCuentaNiPerfilParcial(){
   d.ddl(sql->sql.execute("ALTER TABLE staff_account ADD CONSTRAINT test_block_account CHECK (username<>'bloqueado')"));

@@ -30,6 +30,17 @@ test('desactivar incluye revision sin ocultar el efecto sobre sesiones vigentes'
 test('revocacion usa asignacion persistente y no borra cuenta ni documento',async()=>{
  render(<AdministracionTI catalog={catalog}/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));fireEvent.click(screen.getByText('Revocar PROFESIONAL'));await waitFor(()=>expect(api.identidadPeticion).toHaveBeenCalledWith('/nucleo/ti/funcionarios/id1/roles/g1','DELETE',undefined));
 });
-test('rol TI exige ámbito institucional y no inventa alcance territorial',async()=>{
- render(<AdministracionTI catalog={catalog}/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));fireEvent.change(screen.getByLabelText('Rol a otorgar'),{target:{value:'TI'}});fireEvent.click(screen.getByText('Otorgar rol y alcance'));await waitFor(()=>expect(api.identidadPeticion).toHaveBeenCalledWith('/nucleo/ti/funcionarios/id1/roles','POST',expect.objectContaining({rol:'TI',alcance:'INSTITUCION',unidad:null,sede:null,hasta:null})));
+test('la administración deriva nuevas concesiones al circuito institucional sin otorgamiento directo',async()=>{
+ render(<AdministracionTI catalog={catalog}/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));
+ expect(screen.queryByLabelText('Rol a otorgar')).toBeNull();expect(screen.getByText('Abrir autorizaciones de acceso').getAttribute('href')).toBe('#concesiones');expect(api.identidadPeticion).not.toHaveBeenCalled();
+});
+test('asignación respaldada conserva historia y deriva revocación al circuito institucional',async()=>{
+ vi.mocked(api.cuentas).mockResolvedValue([{...cuenta,asignaciones:[{...cuenta.asignaciones[0],instruction_id:'instruccion-1'}]}]);
+ render(<AdministracionTI catalog={catalog}/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));
+ expect(screen.queryByText('Revocar PROFESIONAL')).toBeNull();expect(screen.getByText('Gestionar instrucción institucional').getAttribute('href')).toBe('#concesiones');expect(api.identidadPeticion).not.toHaveBeenCalled();
+});
+
+test('ACC-01 propia cuenta conserva historial y revocación pero no ofrece concesión de roles',async()=>{
+ render(<AdministracionTI catalog={catalog} actorId="id1"/>);fireEvent.click(await screen.findByText('Administrar persona.lab'));
+ expect(screen.getByText(/No puedes concederte roles/)).toBeTruthy();expect(screen.queryByLabelText('Rol a otorgar')).toBeNull();expect(screen.getByText('Revocar PROFESIONAL')).toBeTruthy();expect(api.identidadPeticion).not.toHaveBeenCalled();
 });
