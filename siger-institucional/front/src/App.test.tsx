@@ -1,11 +1,11 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, afterEach, expect, test, vi } from 'vitest';
 import App from './App';
 import { Caso } from './Caso';
 import { Antecedentes, Reaperturas } from './Antecedentes';
 import * as api from './api';
 import type { Actor, Catalog, Case, Detail, Evidence, Reopening, Summary } from './api';
-vi.mock('./api', async original => ({ ...await original<typeof import('./api')>(), session: vi.fn(), catalog: vi.fn(), dashboard: vi.fn(), search: vi.fn(), cases: vi.fn(), notices: vi.fn(), evidenceList: vi.fn(), evidence: vi.fn(), reopenings: vi.fn(), periods: vi.fn().mockResolvedValue([]), caseDetail: vi.fn(), outgoingTransfers: vi.fn().mockResolvedValue([]), incomingTransfers: vi.fn().mockResolvedValue([]), detail: vi.fn(), command: vi.fn(), login: vi.fn() }));
+vi.mock('./api', async original => ({ ...await original<typeof import('./api')>(), session: vi.fn(), historialAreas: vi.fn(), cambiosAreaDisponibles: vi.fn(), contextoMateria: vi.fn(), catalog: vi.fn(), dashboard: vi.fn(), search: vi.fn(), cases: vi.fn(), notices: vi.fn(), evidenceList: vi.fn(), evidence: vi.fn(), reopenings: vi.fn(), periods: vi.fn().mockResolvedValue([]), caseDetail: vi.fn(), outgoingTransfers: vi.fn().mockResolvedValue([]), incomingTransfers: vi.fn().mockResolvedValue([]), detail: vi.fn(), command: vi.fn(), login: vi.fn() }));
 const dist: Actor = { id: 'demo.distribucion', nombre: 'Operador sintético', rol: 'DISTRIBUCION', unidad: null, sede: null };
 const prof: Actor = { id: 'demo.profesional.upr.a', nombre: 'Profesional sintético', rol: 'PROFESIONAL', unidad: 'UPR', sede: 'DEMO_SEDE_A' };
 const head: Actor = { ...prof, id: 'demo.jefatura.upr.a', rol: 'JEFATURA' };
@@ -16,8 +16,10 @@ const c: Case = { id: 'case-low', comunicacionId: row.id, requerimientoId: 'req'
 const evidence: Evidence = { hija: 'child', folio: 'COM-000002', padre: row.id, requerimientoId: 'req', casoId: c.id, estado: 'PENDIENTE', revision: 0, motivo: 'Motivo documental', vinculadoPor: dist.id, fecha: row.registradaEn, evaluador: prof.id, decisionFundamento: null, decididoPor: null, decididoEn: null, contenido: detail.contenido };
 const reopen: Reopening = { id: 'r1', casoId: c.id, requerimientoId: 'req', unidad: 'UPR', sede: 'DEMO_SEDE_A', solicitante: prof.id, fechaSolicitud: row.registradaEn, revisionCaso: 2, revisionCasoActual: 2, responsableActual: prof.id, cierreAnterior: row.registradaEn, modalidadCierreAnterior: 'PROFESIONAL_BAJA', fundamento: 'Fundamento profesional', antecedentes: ['child'], estado: 'PENDIENTE', revision: 0, decididoPor: null, fechaDecision: null, fundamentoDecision: null, sustituye: null };
 const paged = <T,>(items: T[], total = items.length) => ({ items, total, pagina: 0, limite: 20 });
+const unexpectedFetch=vi.fn(async()=>{throw new Error('Solicitud HTTP sin doble en el fixture de App');});
+afterEach(()=>{try{expect(unexpectedFetch).not.toHaveBeenCalled();}finally{vi.unstubAllGlobals();}});
 beforeEach(() => {
- vi.clearAllMocks(); window.location.hash = ''; HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); }; HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+ vi.clearAllMocks();vi.stubGlobal('fetch',unexpectedFetch);vi.mocked(api.historialAreas).mockResolvedValue([]);vi.mocked(api.cambiosAreaDisponibles).mockResolvedValue([]);vi.mocked(api.contextoMateria).mockResolvedValue({materia:null,consultaOrdinaria:false,puedeRectificar:false,historial:[]}); window.location.hash = ''; HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); }; HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
  vi.mocked(api.session).mockResolvedValue({ autenticado: true, operador: dist, modo: 'LABORATORIO' }); vi.mocked(api.catalog).mockResolvedValue(catalog); vi.mocked(api.dashboard).mockResolvedValue({ comunicaciones: 345, casosAsignados: 1, antecedentesPendientes: 1, sinEncaminar: 0, reaperturasPendientes: 1, derivacionesPendientes: 0, revisionesPendientes: 0 }); vi.mocked(api.search).mockResolvedValue(paged([row], 345)); vi.mocked(api.cases).mockResolvedValue(paged([])); vi.mocked(api.notices).mockResolvedValue([]); vi.mocked(api.detail).mockResolvedValue(detail); vi.mocked(api.caseDetail).mockResolvedValue(c); vi.mocked(api.evidenceList).mockResolvedValue(paged([evidence])); vi.mocked(api.evidence).mockResolvedValue(evidence); vi.mocked(api.reopenings).mockResolvedValue(paged([])); vi.mocked(api.command).mockResolvedValue({ id: row.id, revision: 1 });
 });
 test('acceso sintético no pide token técnico ni identidad ciudadana', async () => { vi.mocked(api.session).mockResolvedValue({ autenticado: false, operador: null, modo: 'LAB' }); render(<App />); expect(await screen.findByText('Acceso funcionario de laboratorio')).toBeTruthy(); expect(screen.getByLabelText('Usuario individual')).toBeTruthy(); expect(screen.queryByLabelText('Token')).toBeNull(); });
