@@ -7,6 +7,7 @@ import java.security.*;import java.time.*;import java.util.*;
 final class AreasFixture {
  final DatosNucleoTest d;final IdentidadInstitucional ids;final Clock clock;final String ti,headA,headB,profA,profB,legacy,dist;
  final ConcesionFixture.Contexto f;final CatalogoLaboratorio cat;final NucleoInstitucional core;
+ final UUID legacyCom,legacyCase,legacyDestination,emptyDestination,legacyDistributionKey,legacyCaseKey;
  final Map<String,String> passwords=new HashMap<>();
  final Instant start=Instant.parse("2000-01-01T00:00:00Z"),end=Instant.parse("2099-01-01T00:00:00Z");
  AreasFixture(DatosNucleoTest d,Clock clock)throws Exception{
@@ -16,6 +17,8 @@ final class AreasFixture {
   f=ConcesionFixture.contexto(d.db,ids,ti,clock);core=new NucleoInstitucional(d.db,cat,d.recepcion,d.mapper,clock,"COM",6,f.autoridades);
   ConcesionFixture.otorgar(d.db,ids,ti,legacy,new IdentidadInstitucional.Otorgar("DIRECTOR","UNIDAD_SEDE","UPR","DEMO_SEDE_A",clock.instant().minusSeconds(1),clock.instant().plusSeconds(3600)),clock);
   ConcesionFixture.otorgar(d.db,ids,ti,dist,new IdentidadInstitucional.Otorgar("DISTRIBUCION","INSTITUCION",null,null,clock.instant().minusSeconds(1),clock.instant().plusSeconds(3600)),clock);
+  legacyCom=d.nuevaWeb();legacyDistributionKey=UUID.randomUUID();core.distribuir(a(dist),legacyDistributionKey,legacyCom,new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",legacy))));legacyDestination=core.detalle(a(legacy),legacyCom).destinos().getFirst().id();legacyCaseKey=UUID.randomUUID();legacyCase=core.abrirCaso(a(legacy),legacyCaseKey,legacyDestination,new ContratosNucleo.Asignacion(0,legacy,null)).id();
+  var emptyCom=d.nuevaWeb();core.distribuir(a(dist),UUID.randomUUID(),emptyCom,new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",legacy))));emptyDestination=core.detalle(a(legacy),emptyCom).destinos().getFirst().id();
   publicar(end);
   otorgar(headA,"COORDINADOR","AREA_A");otorgar(headB,"COORDINADOR","AREA_B");otorgar(profA,"PROFESIONAL","AREA_A");otorgar(profB,"PROFESIONAL","AREA_B");
  }

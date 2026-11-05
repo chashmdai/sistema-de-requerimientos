@@ -69,6 +69,7 @@ public final class NucleoInstitucional {
     private void todosCasosDelDestino(Operador a,UUID destination){for(var c:db.sql.queryForList("SELECT c.*,d.unit_code,d.site_id FROM core_case c JOIN core_destination d ON d.id=c.destination_id WHERE c.destination_id=?",id(destination)))head(a,c);}
     public void autorizarJefaturaDestino(Operador a,UUID id){actor(a);head(a,destination(id));}
     public List<cl.nexbyte.siger.institucional.identidad.CatalogoAreas.Area> areas(Operador a){actor(a);return new cl.nexbyte.siger.institucional.identidad.CatalogoAreas(db,clock).listar();}
+    public List<CatalogoLaboratorio.Presencia> ambitosConAreas(Operador a){actor(a);return new cl.nexbyte.siger.institucional.identidad.CatalogoAreas(db,clock).ambitos();}
     public List<String> cambiosAreaDisponibles(Operador a,UUID caso){
         actor(a);var c=caseRow(caso);if(!areas.jefe(a,c)||autoridad==null)return List.of();
         try{return autoridad.cambiosArea(a.id()).stream().filter(x->x.unidad().equals(str(c,"unit_code"))&&x.sede().equals(str(c,"site_id"))&&Objects.equals(x.origen(),areas.area(c))&&a.jefeEn(x.unidad(),x.sede(),x.destino())).map(x->x.destino()).distinct().toList();}catch(FalloTecnico e){if(e.status==409)return List.of();throw e;}
@@ -194,6 +195,7 @@ public final class NucleoInstitucional {
         Object payload=request.destinos().stream().allMatch(d->d.area()==null)?new Distribucion10(request.revision(),request.destinos().stream().map(d->new Destino10(d.unidad(),d.sede(),d.evaluador())).toList()):request;
         return execute(key,a,"DISTRIBUIR",List.of(communication,payload),()->{
             var row=lock(communication);distributionTargetsAllowed(a,communication,request);revision(row,request.revision());openCommunication(communication,row);
+            for(var d:request.destinos())areas.exigirAreaParaAlta(d.area(),d.unidad(),d.sede());
             var pairs=new HashSet<String>();for(var d:request.destinos())if(catalogo.individual()&&(!pairs.add(d.unidad()+"|"+d.sede())||db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND unit_code=? AND site_id=?",Integer.class,id(communication),d.unidad(),d.sede())>0))throw new FalloTecnico(409);
             for(var d:request.destinos()){var did=UUID.randomUUID();db.sql.update("INSERT INTO core_destination(id,communication_id,unit_code,site_id,evaluator_id,state,revision,created_ms,created_by) VALUES(?,?,?,?,?,'EVALUANDO',0,?,?)",id(did),id(communication),d.unidad(),d.sede(),d.evaluador(),now(),a.id());db.sql.update("INSERT INTO distribution_event VALUES(?,?,?,?,?,?,?)",id(did),id(communication),a.id(),row.get("site_id"),d.unidad(),d.sede(),now());if(d.area()!=null)db.sql.update("INSERT INTO destination_area VALUES(?,?)",id(did),d.area());event(communication,"DESTINO",did,a,"DESTINO_DISTRIBUIDO");}
             bump(communication);return result(communication,communication);
@@ -205,6 +207,7 @@ public final class NucleoInstitucional {
         actor(a);var initial=destination(destination);head(a,initial);var communication=uuid(initial.get("communication_id"));validarResponsable(initial,request.responsable());DeclaracionNna.texto(request.complejidadProvisional(),300,false);
         return execute(key,a,"ABRIR_CASO",List.of(destination,request),()->{
             var root=lock(communication);openCommunication(communication,root);var d=destination(destination);head(a,d);validarResponsable(d,request.responsable());revision(d,request.revision());
+            areas.exigirAreaParaAlta(areas.area(d),str(d,"unit_code"),str(d,"site_id"));
             if(!"EVALUANDO".equals(d.get("state")))throw new FalloTecnico(409);
             var reqs=db.sql.queryForList("SELECT id FROM core_requirement WHERE communication_id=?",id(communication));UUID requirement;
             if(reqs.isEmpty()){requirement=UUID.randomUUID();db.sql.update("INSERT INTO core_requirement(id,communication_id,state,revision,created_ms,created_by) VALUES(?,?,'ACTIVO',0,?,?)",id(requirement),id(communication),now(),a.id());event(communication,"REQUERIMIENTO",requirement,a,"PRIMER_REQUERIMIENTO_CREADO");}else requirement=uuid(reqs.getFirst().get("id"));
@@ -330,6 +333,7 @@ public final class NucleoInstitucional {
         if(catalogo.presencias().stream().noneMatch(p->p.unidad().equals(request.unidad())&&p.sede().equals(request.sede()))||(Objects.equals(initial.get("unit_code"),request.unidad())&&Objects.equals(initial.get("site_id"),request.sede())))throw new FalloTecnico(400);
         var communication=uuid(initial.get("communication_id"));return execute(key,a,"SOLICITAR_DERIVACION",List.of(caseId,request),()->{
             lock(communication);var c=caseRow(caseId);head(a,c);if(areas.area(c)!=null)throw new FalloTecnico(409,"DERIVACION_AREA_PENDIENTE");revision(c,request.revision());if(!"EN_GESTION".equals(c.get("state"))||pendiente(caseId))throw new FalloTecnico(409);
+            if(areas.tieneAreas(request.unidad(),request.sede()))throw new FalloTecnico(409,"DERIVACION_AREA_PENDIENTE");
             var rid=UUID.randomUUID();db.sql.update("INSERT INTO core_transfer(id,origin_case_id,target_unit,target_site,requested_by,requested_ms,origin_revision_at_request,reason_text,evaluation_text,state,revision) VALUES(?,?,?,?,?,?,?,?,?,'PENDIENTE',0)",id(rid),id(caseId),request.unidad(),request.sede(),a.id(),now(),request.revision(),request.motivo(),request.antecedentesEvaluacion());
             db.sql.update("UPDATE core_case SET revision=revision+1 WHERE id=?",id(caseId));bump(communication);event(communication,"CASO",caseId,a,"DERIVACION_SOLICITADA_ORIGEN_ABIERTO");return new Resultado(rid,0);
         });
@@ -341,6 +345,7 @@ public final class NucleoInstitucional {
             if(!a.jefeEn(str(t,"target_unit"),str(t,"target_site")))throw new FalloTecnico(404);
             revision(t,request.revision());if(!"PENDIENTE".equals(t.get("state")))throw new FalloTecnico(409);
             var origin=uuid(t.get("origin_case_id"));var c=caseRow(origin);revision(c,request.revisionOrigen());if(!"EN_GESTION".equals(c.get("state")))throw new FalloTecnico(409);
+            if(areas.tieneAreas(str(t,"target_unit"),str(t,"target_site")))throw new FalloTecnico(409,"DERIVACION_AREA_PENDIENTE");
             var target=request.destinoId();
             if(target==null){
                 if(request.revisionDestino()!=null)throw new FalloTecnico(400);target=UUID.randomUUID();

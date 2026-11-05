@@ -12,7 +12,7 @@ public class NucleoController {
     private CatalogoLaboratorio.Operador actor(Authentication auth){return SesionFuncionario.actual(auth,catalogo);}
     public record Sesion(boolean autenticado,CatalogoLaboratorio.Operador operador,String modo,boolean notificacionesHabilitadas,boolean solicitudesHabilitadas,boolean cambioClaveObligatorio){}
     public record Csrf(String token,String headerName,String parameterName){}
-    public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores,List<CatalogoLaboratorio.Region> regiones,List<cl.nexbyte.siger.institucional.identidad.CatalogoAreas.Area> areas){}
+    public record Catalogo(List<CatalogoLaboratorio.Unidad> unidades,List<CatalogoLaboratorio.Sede> sedes,List<CatalogoLaboratorio.Presencia> presencias,List<CatalogoLaboratorio.Operador> operadores,List<CatalogoLaboratorio.Region> regiones,List<cl.nexbyte.siger.institucional.identidad.CatalogoAreas.Area> areas,List<CatalogoLaboratorio.Presencia> ambitosConAreas){}
     @GetMapping("/session") Sesion session(Authentication auth){
         boolean valid=auth!=null&&auth.isAuthenticated()&&auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails;
         boolean cambio=valid&&auth.getPrincipal() instanceof cl.nexbyte.siger.institucional.identidad.IdentidadInstitucional.Principal p&&p.cambioClavePendiente();
@@ -21,7 +21,7 @@ public class NucleoController {
     @GetMapping("/csrf") Csrf csrf(CsrfToken token){return new Csrf(token.getToken(),token.getHeaderName(),token.getParameterName());}
     @GetMapping("/catalogo") Catalogo catalogo(Authentication auth){
         var a=actor(auth);return new Catalogo(catalogo.unidades(),catalogo.sedes(),catalogo.presencias(),
-            catalogo.operadores(),catalogo.regiones(),core.areas(a));
+            catalogo.operadores(),catalogo.regiones(),core.areas(a),core.ambitosConAreas(a));
     }
     @GetMapping("/comunicaciones") List<Resumen> buzon(Authentication auth,@RequestParam(defaultValue="0")long despues,@RequestParam(defaultValue="100")int limite){return core.buzon(actor(auth),despues,limite);}
     @GetMapping("/comunicaciones/{id}") Detalle detalle(Authentication auth,@PathVariable UUID id){return core.detalle(actor(auth),id);}

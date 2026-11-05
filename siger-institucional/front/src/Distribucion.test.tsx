@@ -20,3 +20,18 @@ test('designación central independiente permite destinos institucionales',async
  render(<Comunicacion id="com" actor={actor} catalog={catalog} run={vi.fn()} busy={false} version={0} navigate={vi.fn()}/>);
  fireEvent.click(await screen.findByText('Distribuir Comunicación'));expect(screen.getByRole('option',{name:'UEP · B'})).toBeTruthy();
 });
+
+test('un ámbito con áreas exige seleccionar una y envía su identificador real',async()=>{
+ const area={id:'AREA_A',unidad:'UPR',sede:'A',nombre:'Área sintética',jefatura:'COORDINACION',desde:'2000-01-01T00:00:00Z',hasta:'2099-01-01T00:00:00Z'};
+ const jefe:api.Actor={...regional,id:'jefe.area',accesos:[{rol:'COORDINADOR',alcance:'AREA',unidad:'UPR',sede:'A',area:'AREA_A'}]};const run=vi.fn().mockResolvedValue(undefined);
+ render(<Comunicacion id="com" actor={regional} catalog={{...catalog,areas:[area],ambitosConAreas:[{unidad:'UPR',sede:'A'}],operadores:[regional,jefe]}} run={run} busy={false} version={0} navigate={vi.fn()}/>);
+ fireEvent.click(await screen.findByText('Distribuir Comunicación'));fireEvent.change(screen.getByLabelText('Unidad y sede'),{target:{value:'UPR|A'}});expect((screen.getByText('Añadir destino') as HTMLButtonElement).disabled).toBe(true);
+ fireEvent.change(screen.getByLabelText('Área acreditada del destino'),{target:{value:'AREA_A'}});fireEvent.click(screen.getByText('Añadir destino'));fireEvent.click(screen.getByText('Confirmar distribución'));
+ await waitFor(()=>expect(run).toHaveBeenCalledWith('/nucleo/comunicaciones/com/distribuir',{revision:0,destinos:[{unidad:'UPR',sede:'A',evaluador:'jefe.area',area:'AREA_A'}]}));
+});
+test('áreas vencidas no ofrecen volver al alta sin área',async()=>{
+ const run=vi.fn();render(<Comunicacion id="com" actor={regional} catalog={{...catalog,areas:[],ambitosConAreas:[{unidad:'UPR',sede:'A'}]}} run={run} busy={false} version={0} navigate={vi.fn()}/>);fireEvent.click(await screen.findByText('Distribuir Comunicación'));fireEvent.change(screen.getByLabelText('Unidad y sede'),{target:{value:'UPR|A'}});expect((screen.getByText('Añadir destino') as HTMLButtonElement).disabled).toBe(true);expect((screen.getByLabelText('Área acreditada del destino') as HTMLSelectElement).required).toBe(true);expect(run).not.toHaveBeenCalled();
+});
+test('un destino histórico sin área no ofrece abrir otro Caso cuando su ámbito ya exige área',async()=>{
+ vi.mocked(api.detail).mockResolvedValue({...detail,destinos:[{id:'dest',unidad:'UPR',sede:'A',evaluador:'regional',estado:'EVALUANDO',revision:0,decision:null,textoDecision:null,decididoPor:null,decididoEn:null,casos:0}]});render(<Comunicacion id="com" actor={regional} catalog={{...catalog,ambitosConAreas:[{unidad:'UPR',sede:'A'}]}} run={vi.fn()} busy={false} version={0} navigate={vi.fn()}/>);fireEvent.click(await screen.findByText('Destinos y Casos'));fireEvent.click(screen.getByText('Evaluar destino'));expect((screen.getByRole('option',{name:'Abrir un Caso independiente'}) as HTMLOptionElement).disabled).toBe(true);expect((screen.getByLabelText('Acción de jefatura') as HTMLSelectElement).value).toBe('responder');
+});

@@ -15,6 +15,12 @@ class AreasHttpTest {
  }
  @Autowired MockMvc http;@Autowired AreasFixture f;
  MockHttpSession login(String name)throws Exception{var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",name).param("password",name.equals("zz.autoridad.fixture")?f.f.claveRevisor:f.passwords.get(name))).andExpect(status().isNoContent());return s;}
+ @Test void apiNoAdmiteAreaOmitidaNiLaCreaPorPerfil()throws Exception{
+  var dist=login("distribuidor");var legacy=login("jefe.historico");var com=f.d.nuevaWeb();String body=f.d.mapper.writeValueAsString(new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",f.legacy))));
+  http.perform(get("/nucleo/catalogo").secure(true).session(dist)).andExpect(status().isOk()).andExpect(jsonPath("$.ambitosConAreas[0].unidad").value("UPR"));
+  http.perform(post("/nucleo/comunicaciones/"+com+"/distribuir").secure(true).session(dist).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AREA_REQUERIDA"));
+  http.perform(post("/nucleo/destinos/"+f.emptyDestination+"/abrir-caso").secure(true).session(legacy).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(f.d.mapper.writeValueAsString(new ContratosNucleo.Asignacion(0,f.legacy,null)))).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AREA_REQUERIDA"));
+ }
  @Test void circuitoPorAreaConSesionesRealesCsrfListadosYCambioControlado()throws Exception{
   var ca=f.caso("AREA_A",f.headA,f.profA);var cb=f.caso("AREA_B",f.headB,f.profB);MockHttpSession a=login("jefe.a"),b=login("jefe.b"),ti=login("ti.areas"),old=login("jefe.historico");
   http.perform(get("/nucleo/casos/"+ca).secure(true).session(a)).andExpect(status().isOk()).andExpect(jsonPath("$.area").value("AREA_A"));

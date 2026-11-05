@@ -9,6 +9,8 @@ import java.time.*;import java.util.*;
 final class PoliticaAreas {
  private final BaseJdbc db;private final Clock clock;
  PoliticaAreas(BaseJdbc db,Clock clock){this.db=db;this.clock=clock;}
+ boolean tieneAreas(String unidad,String sede){return db.sql.queryForObject("SELECT COUNT(*) FROM institution_area WHERE unit_code=? AND site_id=?",Long.class,unidad,sede)>0;}
+ void exigirAreaParaAlta(String area,String unidad,String sede){if(area==null&&tieneAreas(unidad,sede))throw new FalloTecnico(409,"AREA_REQUERIDA");}
  static String literal(String v){if(v==null)return "NULL";if(!v.matches("[A-Za-z0-9_.-]{1,64}"))throw new FalloTecnico(403);return "'"+v+"'";}
  String area(Map<String,Object> row){if(row.containsKey("area_id"))return (String)row.get("area_id");String kind=row.containsKey("responsible_id")?"case":"destination";var list=db.sql.queryForList("SELECT area_id FROM "+kind+"_area WHERE "+kind+"_id=?",row.get("id"));return list.isEmpty()?null:list.getFirst().get("area_id").toString();}
  boolean vigente(String ar,String unit,String site){try{new CatalogoAreas(db,clock).exigir(ar,unit,site);return true;}catch(FalloTecnico e){if(e.status==409)return false;throw e;}}
