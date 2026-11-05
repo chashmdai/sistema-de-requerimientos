@@ -36,7 +36,7 @@ class SmrReceptionTest {
    var env=new org.springframework.mock.env.MockEnvironment().withProperty("institucional.configuracion-privada.directorio",root.toString()).withProperty("institucional.smr.bootstrap.archivo",file.toString());
    var runner=new cl.nexbyte.siger.institucional.smr.SmrConfiguration().bootstrapSmr(identity,access,d.db,env);runner.run(new org.springframework.boot.DefaultApplicationArguments());
    // Reproduce caída después de COMMIT y antes de retirar el archivo privado inicial.
-   Files.delete(root.resolve("bootstrap.json.aplicado"));Files.writeString(file,json);runner.run(new org.springframework.boot.DefaultApplicationArguments());
+   Files.delete(root.resolve("bootstrap.json.aplicado"));Files.writeString(file,json);cl.nexbyte.siger.institucional.archivos.ArchivoPrivado.proteger(file);runner.run(new org.springframework.boot.DefaultApplicationArguments());
    assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM staff_account",Integer.class));assertEquals(1,d.db.sql.queryForObject("SELECT COUNT(*) FROM identity_event WHERE event_code='SMR_BOOTSTRAP_APLICADO'",Integer.class));assertEquals("{\"applied\":true}",Files.readString(root.resolve("bootstrap.json.aplicado")));
   }
  }
