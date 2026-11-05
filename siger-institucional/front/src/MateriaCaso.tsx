@@ -1,3 +1,6 @@
+import {DocumentosGestion} from './DocumentosGestion';
+import {DocumentosIngreso} from './FormularioRecibido';
+import {AntecedentesPertinentes} from './ContenidoInstitucional';
 import {useEffect,useState} from 'react';
 import * as api from './api';import type {Run} from './ui';
 export function MateriaCaso({c,catalog,run,busy,changed}:{c:api.Case;catalog:api.Catalog;run:Run;busy:boolean;changed:()=>void}){
@@ -8,5 +11,6 @@ export function MateriaCaso({c,catalog,run,busy,changed}:{c:api.Case;catalog:api
  {context?.historial.map((h,i)=><p key={i}>{h.previous_matter??'Sin materia'} → {h.matter_id} · {h.actor_id}<br/>{h.reason_text}</p>)}</section>;
 }
 export function ConsultaMateria({c,catalog}:{c:api.Case;catalog:api.Catalog}){
- return <><h1>Consulta ordinaria por materia · solo lectura</h1><section className="card"><h2>Caso {c.id}</h2><p>{catalog.materias?.find(m=>m.id===c.materia)?.nombre??c.materia} · {c.sede} · {c.estado}</p><p>Responsable: {c.responsable}</p><p>La consulta no concede gestión, acceso a Casos hermanos ni a originales o documentos sin pertinencia acreditada.</p><h3>Actuaciones ordinarias</h3>{c.actuaciones.map(a=><article key={a.id}><p>{a.texto}</p><small>{a.autor} · {a.fecha}</small></article>)}<h3>Decisiones conservadas</h3>{c.revisiones.map(r=><article key={r.id}><p>{r.decision} · {r.texto}</p><small>{r.autor}</small></article>)}<h3>Historial de responsabilidad</h3>{c.asignaciones.map((a,i)=><p key={i}>{a.responsable} · {a.autor} · {a.fecha}</p>)}</section></>;
+ const [tab,T]=useState('ficha');
+ return <><h1>Consulta ordinaria por materia · solo lectura</h1><nav aria-label="Consulta del Caso"><button onClick={()=>T('ficha')}>Ficha</button><button onClick={()=>T('documentos')}>Documentos autorizados</button><button onClick={()=>T('antecedentes')}>Antecedentes pertinentes</button></nav>{tab==='documentos'&&<><DocumentosGestion caso={c} editable={false}/><DocumentosIngreso comunicacion={c.comunicacionId} contextoCaso={c.id} tieneArchivos/></>}{tab==='antecedentes'&&<AntecedentesPertinentes caso={c}/>}<section className="card"><h2>Caso {c.id}</h2><p>{catalog.materias?.find(m=>m.id===c.materia)?.nombre??c.materia} · {c.sede} · {c.estado}</p><p>Responsable: {c.responsable}</p><p>La consulta no concede gestión, acceso a Casos hermanos ni a originales o documentos sin pertinencia acreditada.</p><h3>Actuaciones ordinarias</h3>{c.actuaciones.map(a=><article key={a.id}><p>{a.texto}</p><small>{a.autor} · {a.fecha}</small></article>)}<h3>Decisiones conservadas</h3>{c.revisiones.map(r=><article key={r.id}><p>{r.decision} · {r.texto}</p><small>{r.autor}</small></article>)}<h3>Historial de responsabilidad</h3>{c.asignaciones.map((a,i)=><p key={i}>{a.responsable} · {a.autor} · {a.fecha}</p>)}</section></>;
 }

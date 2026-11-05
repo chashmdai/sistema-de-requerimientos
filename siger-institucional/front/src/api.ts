@@ -1,4 +1,11 @@
 import type {FormularioCompleto} from './FormularioRecibido';
+export interface ControlDocumento {revision:number;clasificacion:string;contextos:{id:string;unit_code:string;site_id:string;matter_id:string|null}[];publicaciones:{case_id:string;revision:number;content_allowed:boolean;download_allowed:boolean;status:string;valid_from:number;valid_until:number}[];historial:{revision:number;actor_id:string;at_ms:number;action_code:string;reason_text:string}[]}
+export interface ContextoPertinencia {requerimiento:string;comunicacion:string;unidad:string;sede:string;casos:{id:string;state:string;unit_code:string;site_id:string;matter_id:string|null}[];hijas:{child_id:string;revision:number}[]}
+export interface AntecedentePertinente {comunicacion:string;revision:number;contenido:Detail['contenido']|null;valoraciones:{seq:number;pertinence_revision:number;actor_id:string;at_ms:number;decision:string;reason_text:string;supersedes_seq:number|null}[]}
+export const controlDocumento=(caso:string,doc:string)=>request<ControlDocumento>(`/nucleo/casos/${encodeURIComponent(caso)}/proteccion-documental/${encodeURIComponent(doc)}`);
+export const contextoPertinencia=(req:string)=>request<ContextoPertinencia>(`/nucleo/requerimientos/${encodeURIComponent(req)}/pertinencia`);
+export const propuestaPertinencia=(req:string,com:string)=>request<{contenido:Detail['contenido']}>(`/nucleo/requerimientos/${encodeURIComponent(req)}/pertinencia/${encodeURIComponent(com)}`);
+export const antecedentesPertinentes=(caso:string)=>request<AntecedentePertinente[]>(`/nucleo/casos/${encodeURIComponent(caso)}/antecedentes-pertinentes`);
 export interface Actor { id: string; nombre: string; rol: 'DISTRIBUCION' | 'JEFATURA' | 'PROFESIONAL' | 'TI' | 'ADMINISTRATIVO'; accesos?: Acceso[]; correo?: string; cargo?: string; versionAcceso?: number; unidad: string | null; sede: string | null }
 export interface Acceso {materia?:string|null;rol:string;alcance:string;unidad:string|null;sede:string|null;area?:string|null}
 export function has(a:Actor,role:string){return a.accesos?a.accesos.some(x=>x.rol===role):a.rol===role;}
@@ -54,14 +61,14 @@ export const reopenings = (caso = '', pendientes = false, pagina = 0) => request
 export const periods = (id: string) => request<{ id: string; autorizacion: string; inicio: string; autorizadoPor: string }[]>(`/nucleo/casos/${id}/periodos`);
 export const reopening = (id: string) => request<Reopening>(`/nucleo/reaperturas/${id}`);
 
-export interface DocumentoIngreso {id:string;origen:'INGRESO_CIUDADANO';original:{id:string;nombre:string;tamanio:number;sha256:string;tipo:string;estado:string};representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS';descargable:boolean}
+export interface DocumentoIngreso {consultable?:boolean;administrable?:boolean;proteccion?:string;id:string;origen:'INGRESO_CIUDADANO';original:{id:string;nombre:string;tamanio:number;sha256:string;tipo:string;estado:string};representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS';descargable:boolean}
 export const documentosIngreso=(id:string,caso?:string)=>request<DocumentoIngreso[]>(`/nucleo/comunicaciones/${encodeURIComponent(id)}/documentos${caso?`?caso=${encodeURIComponent(caso)}`:''}`);
 export const documentoUrl=(com:string,doc:string,preview:boolean,caso?:string)=>`/nucleo/comunicaciones/${encodeURIComponent(com)}/documentos/${encodeURIComponent(doc)}/${preview?'representacion':'original'}${caso?`?caso=${encodeURIComponent(caso)}`:''}`;
 
 export interface VistaDocumento {representacion:'PAGINAS'|'DESCARGA';paginas:number;perfil:string;originalInline:false;descargable:boolean}
 export const documentoAccionUrl=(base:string,accion:string,caso?:string)=>`${base}/${accion}${caso?`?caso=${encodeURIComponent(caso)}`:''}`;
 export const vistaDocumento=(base:string,caso?:string,signal?:AbortSignal)=>request<VistaDocumento>(documentoAccionUrl(base,'vista',caso),{signal});
-export interface DocumentoGestion {id:string;origen:'GESTION_INSTITUCIONAL';nombre:string;tamanio:number;sha256:string;tipo:string;autor:string;fecha:string;contextos:{caso:string;actuacion:string|null}[];representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS'}
+export interface DocumentoGestion {consultable?:boolean;descargable?:boolean;administrable?:boolean;proteccion?:string;id:string;origen:'GESTION_INSTITUCIONAL';nombre:string;tamanio:number;sha256:string;tipo:string;autor:string;fecha:string;contextos:{caso:string;actuacion:string|null}[];representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS'}
 export const baseDocumentosGestion=(caso:string)=>`/nucleo/casos/${encodeURIComponent(caso)}/documentos-gestion`;
 export const documentosGestion=(caso:string)=>request<DocumentoGestion[]>(baseDocumentosGestion(caso));
 export async function cargarDocumentoGestion(caso:string,archivo:File,actuacion:string,key:string){const token=await csrf();const body=new FormData();body.append('archivo',archivo);if(actuacion)body.append('actuacion',actuacion);return request<DocumentoGestion>(baseDocumentosGestion(caso),{method:'POST',headers:{[token.headerName]:token.token,'Idempotency-Key':key},body});}
