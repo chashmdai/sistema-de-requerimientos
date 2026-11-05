@@ -41,6 +41,7 @@ public final class ContenidoInstitucional {
         var rows=db.sql.queryForList("SELECT * FROM core_requirement WHERE id=?",id(req));if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();
     }
     private Map<String,Object> principal(UUID req){
+        var dynamic=db.sql.queryForList("SELECT i.unit_code,i.site_id,i.area_id,i.authority_revision AS batch_revision,i.origin_code FROM institution_req i WHERE i.requirement_id=?",id(req));if(!dynamic.isEmpty())return dynamic.getFirst();
         var rows=db.sql.queryForList("SELECT * FROM authority_requirement_principal WHERE requirement_id=? ORDER BY batch_revision DESC LIMIT 1",id(req));
         if(rows.isEmpty())throw new FalloTecnico(409,"PRINCIPAL_REQ_NO_ACREDITADO");
         var p=rows.getFirst();if(!"ACTIVA".equals(p.get("status"))||n(p,"valid_from")>clock.millis()||n(p,"valid_until")<=clock.millis())throw new FalloTecnico(409,"PRINCIPAL_REQ_NO_ACREDITADO");return p;
@@ -83,7 +84,7 @@ public final class ContenidoInstitucional {
             else db.sql.update("UPDATE communication_pertinence SET revision=?,content_allowed=?,actor_id=?,at_ms=?,reason_text=? WHERE child_id=?",next,request.contenido(),a.id(),clock.millis(),request.fundamento(),id(child));
             db.sql.update("DELETE FROM communication_pertinence_target WHERE child_id=?",id(child));
             for(var t:targets)db.sql.update("INSERT INTO communication_pertinence_target VALUES(?,?,?,?,?)",id(child),t.get("caso").toString(),t.get("materia"),t.get("areaSeq"),t.get("materiaSeq"));
-            db.sql.update("INSERT INTO communication_pertinence_history(child_id,revision,actor_id,at_ms,reason_text,snapshot_doc,principal_batch) VALUES(?,?,?,?,?,?,?)",id(child),next,a.id(),clock.millis(),request.fundamento(),json.writeValueAsString(Map.of("decision",request,"alcances",targets)),p.get("batch_revision"));
+            db.sql.update("INSERT INTO communication_pertinence_history(child_id,revision,actor_id,at_ms,reason_text,snapshot_doc,principal_batch,principal_origin) VALUES(?,?,?,?,?,?,?,?)",id(child),next,a.id(),clock.millis(),request.fundamento(),json.writeValueAsString(Map.of("decision",request,"alcances",targets)),p.get("batch_revision"),p.getOrDefault("origin_code","REGISTRO_1_3"));
             core.event(uuid(r.get("communication_id")),"PERTINENCIA",child,a,"PERTINENCIA_COM_DETERMINADA");
             for(UUID cid:request.casos())core.event(uuid(r.get("communication_id")),"CASO",cid,a,"ANTECEDENTE_PERTINENTE");
             return new Resultado(child,next);
@@ -149,7 +150,7 @@ public final class ContenidoInstitucional {
         if(managed&&caso!=null&&"INGRESO_CIUDADANO".equals(d.get("origin"))&&!core.caseRow(caso).get("communication_id").equals(d.get("communication_id"))&&gestionada(uuid(d.get("communication_id")))){
             try{core.autorizarLectura(a,uuid(d.get("communication_id")));}catch(FalloTecnico e){if(e.status==404)managed=false;else throw e;}
         }
-            if(p.isEmpty()){if(!managed)throw new FalloTecnico(404);boolean admin=administrableHistorico(a,caso,doc);return new Permisos(true,true,admin,"HISTORICO_SIN_ACREDITAR",admin||propietarioHistorico(a,caso,doc));}
+            if(p.isEmpty()){if(caso!=null&&core.casoU2(caso)&&"INGRESO_CIUDADANO".equals(d.get("origin"))&&Objects.equals(d.get("communication_id"),core.caseRow(caso).get("communication_id")))core.autorizarLectura(a,uuid(d.get("communication_id")));if(!managed)throw new FalloTecnico(404);boolean admin=administrableHistorico(a,caso,doc);return new Permisos(true,true,admin,"HISTORICO_SIN_ACREDITAR",admin||propietarioHistorico(a,caso,doc));}
             UUID owner=uuid(p.get("owner_case"));boolean propio=propietario(a,owner);boolean head=areas.jefe(a,core.caseRow(owner));String kind=p.get("classification").toString();
             boolean restringir=propio&&Objects.equals(caso,owner);
             if(kind.equals("BLOQUEADO")){if(!propio)throw new FalloTecnico(404);return new Permisos(false,false,head&&Objects.equals(caso,owner),kind,restringir);}
@@ -176,6 +177,7 @@ public final class ContenidoInstitucional {
     }
     /** Proyección de consulta: nunca cambia los bytes firmados ni expone descriptores de adjuntos excluidos. */
     Contenido originalAutorizado(Operador a,UUID com,UUID caso){
+        if(caso!=null&&core.casoU2(caso)&&id(com).equals(core.caseRow(caso).get("communication_id")))core.autorizarLectura(a,com);
         var c=core.contenidoOriginal(com);if(c.formularioCompleto()==null)return c;
         var copy=(tools.jackson.databind.node.ObjectNode)c.formularioCompleto().deepCopy();var visible=copy.arrayNode();var referencias=copy.arrayNode();
         for(var attachment:c.formularioCompleto().path("adjuntos")){

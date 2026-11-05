@@ -14,7 +14,7 @@ final class DatosNucleoTest implements AutoCloseable {
     DatosNucleoTest(Path dir,String isolatedUrl)throws Exception{
         String supplied=System.getenv("ROBUST_DB_URL");
         String url=supplied==null?"jdbc:h2:file:"+dir.resolve("nucleo").toAbsolutePath().toString().replace('\\','/')+";DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0":supplied;
-        if(isolatedUrl!=null){if(supplied!=null||!isolatedUrl.matches("jdbc:mysql://127\\.0\\.0\\.1:[5-6][0-9]{4}/siger_u15_test_[a-f0-9]{32}_(?:area|materia|contenido|compartir)\\?.*"))throw new IllegalStateException("Destino aislado U16 requerido");url=isolatedUrl;}
+        if(isolatedUrl!=null){if(supplied!=null||!isolatedUrl.matches("jdbc:mysql://127\\.0\\.0\\.1:[5-6][0-9]{4}/siger_u15_test_[a-f0-9]{32}_(?:area|materia|contenido|compartir|u2)\\?.*"))throw new IllegalStateException("Destino aislado U16 requerido");url=isolatedUrl;}
         if(supplied!=null)cl.nexbyte.siger.institucional.robustez.DestinoJdbcPruebas.validar(url);
         try(var migration=new BaseJdbc(url,isolatedUrl!=null?"root":supplied==null?"sa":System.getenv("ROBUST_DB_MIGRATION_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):supplied==null?"":System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){migration.migrate("institucional");}
         db=new BaseJdbc(url,isolatedUrl!=null?"root":supplied==null?"sa":System.getenv("ROBUST_DB_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):supplied==null?"":System.getenv("ROBUST_DB_PASSWORD"),12);
