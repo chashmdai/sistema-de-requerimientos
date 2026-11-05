@@ -67,6 +67,23 @@ class ContenidoHttpTest {
   http.perform(post(route).secure(true).session(jefe).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":0,\"fundamento\":\"Falta clasificación\"}")).andExpect(status().isBadRequest());
   Assertions.assertEquals(0L,x.c().control(x.f.a(x.f.headA),c,doc).get("revision"));
  }
+ @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.CsvSource({"mp3,audio/mpeg","mp4,video/mp4"})
+ void representacionMultimediaNoEludePermisoDeOriginal(String ext,String tipo)throws Exception{
+  UUID c=x.m.caso();x.m.clasificar(c,0,"MAT_UPR",true);byte[] bytes="MULTIMEDIA-SINTETICA-CON-DOBLES".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+  UUID doc=x.docs.cargar(x.f.a(x.f.profA),UUID.randomUUID(),c,null,"sintetico."+ext,new ByteArrayInputStream(bytes)).id();x.ordinario(c,doc,0);var reader=login("direccion.upr");
+  x.c().publicar(x.f.a(x.f.headA),UUID.randomUUID(),c,doc,c,x.publicacion(0,true,false,"ACTIVA"));String base="/nucleo/casos/"+c+"/documentos-gestion/"+doc;
+  for(String route:List.of("/original","/representacion")){
+   http.perform(get(base+route).header("Range","bytes=0-3").secure(true).session(reader)).andExpect(status().isNotFound());
+   http.perform(head(base+route).secure(true).session(reader)).andExpect(status().isNotFound());
+  }
+  x.c().publicar(x.f.a(x.f.headA),UUID.randomUUID(),c,doc,c,x.publicacion(1,true,true,"ACTIVA"));var result=http.perform(get(base+"/representacion").header("Range","bytes=0-3").secure(true).session(reader)).andExpect(request().asyncStarted()).andReturn();http.perform(asyncDispatch(result)).andExpect(status().isPartialContent()).andExpect(content().bytes(Arrays.copyOf(bytes,4)));
+  var o=x.original("sintetico."+ext,tipo);x.ordinario(o.caso(),o.documento(),0);x.c().publicar(x.f.a(x.f.headA),UUID.randomUUID(),o.caso(),o.documento(),o.caso(),x.publicacion(0,true,false,"ACTIVA"));String ingreso="/nucleo/comunicaciones/"+o.comunicacion()+"/documentos/"+o.documento();
+  for(String route:List.of("/original","/representacion")){
+   http.perform(get(ingreso+route).param("caso",o.caso().toString()).header("Range","bytes=0-3").secure(true).session(reader)).andExpect(status().isNotFound());
+   http.perform(head(ingreso+route).param("caso",o.caso().toString()).secure(true).session(reader)).andExpect(status().isNotFound());
+  }
+  x.c().publicar(x.f.a(x.f.headA),UUID.randomUUID(),o.caso(),o.documento(),o.caso(),x.publicacion(1,true,true,"ACTIVA"));var citizen=http.perform(get(ingreso+"/representacion").param("caso",o.caso().toString()).header("Range","bytes=0-3").secure(true).session(reader)).andExpect(request().asyncStarted()).andReturn();http.perform(asyncDispatch(citizen)).andExpect(status().isPartialContent()).andExpect(content().bytes(Arrays.copyOf(o.bytes(),4)));
+ }
  @Test void compartirRequiereJefaturaAmbosContextosYNoAmpliaDescargaNiGestion()throws Exception{
   var p=x.par();UUID doc=x.cargar(p[0]).id();x.docs.vincular(x.f.a(x.f.headA),UUID.randomUUID(),doc,p[0],p[1],null);x.ordinario(p[0],doc,0);
   var jefe=login("jefe.a");var otro=login("jefe.b");var prof=login("prof.b");var lector=login("direccion.upd");String target="/nucleo/casos/"+p[1]+"/documentos-gestion";String decision="/nucleo/casos/"+p[0]+"/proteccion-documental/"+doc+"/compartir/"+p[1];String body=x.d.mapper.writeValueAsString(x.publicacion(0,true,false,"ACTIVA"));UUID key=UUID.randomUUID();

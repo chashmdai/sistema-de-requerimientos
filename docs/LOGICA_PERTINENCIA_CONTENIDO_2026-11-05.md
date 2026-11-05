@@ -67,6 +67,12 @@ Pruebas focalizadas M3: 54/54 H2/MockMvc (API, idempotencia, actualización hast
 
 MySQL M3 **15/15**, cero fallos/errores/omisiones, Windows nativo 8.0.46. Instancia nueva `siger-autoridad-mysql-3056cee3cbfe43d28505e37ad8984c06`, cierre comprobado sin procesos propios restantes. Seis rutas V14/15.1/15.2/15.3/15.4/15.5→15.6, conservación de cuenta/asignación histórica y pruebas funcionales de áreas, materias, pertinencia, FIR, original ciudadano y consentimiento sin materia fabricada. SHA-256 `mysql-m3.log`: `be153a18750b9205bf9e607c85ab98b8b00b6aa609803c0c9a7c31486ae64c7b`. V15.6 H2/MySQL idénticas; hash checkout `4e5b1fde77f5812ad57f87d32f5dc69b348b5dc83b5d7c6b8d8d6f12da816387`. No es prueba sobre MySQL operativo ni batería completa en ese motor. Matriz: 138 reglas, 18 filas revisadas en este bloque al añadir ACC-03; no se declara cierre global.
 
+## M4 · Multimedia y bytes originales
+
+Revisión posterior al primer cierre publicado detectó una vía indirecta real: AUDIO/VIDEO usa el mismo archivo en `/representacion` y `/original`. Usar CONTENIDO para el primero permitía obtener los bytes originales con descarga denegada. Se corrigen ambos controladores (gestión/ciudadano), incluyendo revalidación del streaming, para exigir DESCARGA siempre que se transmiten originales. No se cambian bytes, tablas, políticas otorgadas ni contratos públicos. PDF/imagen por páginas derivadas conserva consulta sin permiso de original.
+
+La UI no crea reproductores cuando falta esa facultad y explica que reproducir este formato transmite el original. No se declara disponible una representación multimedia derivada inexistente. Prueba positiva y negativa por audio/video y origen, GET/HEAD/Range; **20/20 H2/MockMvc**, más **95/95 DOM**, lint/build correctos. MySQL repetido **15/15**, sin omisiones/fallos/errores, instancia nueva `siger-autoridad-mysql-fc07822fe7b64220a640ad1dc39668dc` y procesos propios finales cero. La batería completa se repite antes del nuevo cierre. La CI de `61807eb` corresponde al corte anterior y no acredita esta corrección.
+
 ## Componentes, compatibilidad y corte
 
 | Componente | Resultado |

@@ -30,9 +30,10 @@ final class ContenidoFixture implements AutoCloseable {
  DocumentosGestion.Documento cargar(UUID caso){return docs.cargar(f.a(f.profA),UUID.randomUUID(),caso,null,"sintetico.txt",new ByteArrayInputStream("Antecedente sintético".getBytes(java.nio.charset.StandardCharsets.UTF_8)));}
  ContenidoInstitucional c(){return f.core.contenidos();}
  record Original(UUID comunicacion,UUID documento,UUID caso,EntregaCompleta entrega,byte[] bytes){}
- Original original()throws Exception{
+ Original original()throws Exception{return original("anexo-reservable.pdf","application/pdf");}
+ Original original(String nombre,String tipo)throws Exception{
   Instant received=clock.instant();
-  byte[] bytes="PDF-SINTETICO-CIUDADANO".getBytes(java.nio.charset.StandardCharsets.UTF_8);var attachment=new EntregaCompleta.Adjunto(UUID.randomUUID(),"anexo-reservable.pdf",bytes.length,HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)),"application/pdf","VALIDADO");
+  byte[] bytes="PDF-SINTETICO-CIUDADANO".getBytes(java.nio.charset.StandardCharsets.UTF_8);var attachment=new EntregaCompleta.Adjunto(UUID.randomUUID(),nombre,bytes.length,HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)),tipo,"VALIDADO");
   var c=d.mapper.createObjectNode();c.put("version","1.1");c.put("id",UUID.randomUUID().toString());c.put("recorridoId",UUID.randomUUID().toString());c.put("tipo","NNA");c.put("recibidaEn",received.toString());c.put("avisoVersion","SINTETICO_1");c.put("aceptaCanalDigital",false);
   var data=c.putObject("datos");data.putObject("campos").put("nna-story","Relato ciudadano sintético").put("motivo","consulta");data.putArray("personas");data.putArray("instituciones");data.putArray("adjuntos").add(attachment.id().toString());c.putArray("adjuntos").add(d.mapper.valueToTree(attachment));
   var p=c.putArray("personas").addObject();p.put("id","presentador-nna");p.put("rol","PRESENTADOR");p.put("autenticada",false);p.put("modulo11",false);p.putNull("runNumero");p.putNull("runDv");p.put("estadoConsulta","NO_HABILITADO");p.putNull("consultadaEn");p.putNull("consultaRef");p.putObject("discrepancias");var attrs=p.putObject("atributos");

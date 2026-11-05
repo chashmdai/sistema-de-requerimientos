@@ -19,7 +19,7 @@ public class DocumentosIngresoController {
     @RequestMapping(value={"/{documento}/original","/{documento}/representacion"},method={RequestMethod.GET,RequestMethod.HEAD})
     public ResponseEntity<StreamingResponseBody> bytes(Authentication auth,@PathVariable UUID comunicacion,@PathVariable UUID documento,jakarta.servlet.http.HttpServletRequest request)throws IOException{
         UUID caso=request.getParameter("caso")==null?null:UUID.fromString(request.getParameter("caso"));
-        var a=actor(auth,comunicacion,caso);boolean inline=request.getRequestURI().endsWith("/representacion");String accion=inline?"CONTENIDO":"DESCARGA";
+        var a=actor(auth,comunicacion,caso);boolean inline=request.getRequestURI().endsWith("/representacion");String accion="DESCARGA"; // Ambas rutas transmiten bytes del original; inline no rebaja el permiso.
         policy.documento(a,caso,documento,accion);var ref=referencia(comunicacion,documento);var delivery=receiver.completaRegistrada(comunicacion);
         if(inline&&!Set.of("AUDIO","VIDEO").contains(representacion(delivery,ref.original())))throw new FalloTecnico(404);
         Path path;try{path=files.verificar(ref.clave(),ref.original());}catch(IOException corrupt){throw new FalloTecnico(409);}
