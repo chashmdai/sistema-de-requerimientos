@@ -14,21 +14,35 @@ $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User;$acl=[Security.Acce
 foreach($id in @($sid.Value,'S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($id),'FullControl','ContainerInherit,ObjectInherit','None','Allow'))}
 Set-Acl -LiteralPath $base -AclObject $acl
 $dir=Join-Path $base 'data';[IO.Directory]::CreateDirectory($dir)|Out-Null
-$port=Get-Random -Minimum 55000 -Maximum 61000
-if(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue){throw 'Puerto efímero ocupado; ejecutar nuevamente crea otro destino.'}
 $password=[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 $schema='siger_u15_test_'+[guid]::NewGuid().ToString('N');$init=Join-Path $base 'init.sql';$client=Join-Path $base 'client.cnf'
 Set-Content -LiteralPath $init -Encoding utf8 -Value ("ALTER USER 'root'@'localhost' IDENTIFIED BY '$password';`nCREATE USER 'root'@'127.0.0.1' IDENTIFIED BY '$password';`nGRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1';`nCREATE DATABASE $($schema)_14 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_151 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_152 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_area CHARACTER SET utf8mb4;")
-Set-Content -LiteralPath $client -Encoding utf8 -Value ("[client]`nuser=root`npassword=$password`nhost=127.0.0.1`nprotocol=TCP`nport=$port")
 # --no-defaults debe ser el primer argumento: nunca leer my.ini ni usar MySQL80.
 & (Join-Path $MySqlBin 'mysqld.exe') --no-defaults --initialize-insecure ('--basedir='+[IO.Path]::GetFullPath((Join-Path $MySqlBin '..'))) ('--datadir='+$dir) --innodb-buffer-pool-size=64M ('--log-error='+$base+'\initialize.log')
 if($LASTEXITCODE){throw 'Inicialización aislada no completada; evidencia privada conservada.'}
+# Un puerto sin listener también puede estar reservado por Windows. Verificar bind real,
+# sin cambiar exclusiones/firewall ni conectar a servicios existentes. mysqld vuelve a validar al arrancar.
+$port=$null
+for($attempt=0;$attempt -lt 32;$attempt++){
+ $candidate=Get-Random -Minimum 55000 -Maximum 61000
+ $probe=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$candidate);$probe.ExclusiveAddressUse=$true
+ try{$probe.Start();$port=$candidate;break}catch [Net.Sockets.SocketException]{}finally{$probe.Stop()}
+}
+if($null -eq $port){throw 'No hay un puerto efímero aislado disponible; no se modifican reservas o servicios.'}
+Set-Content -LiteralPath $client -Encoding utf8 -Value ("[client]`nuser=root`npassword=$password`nhost=127.0.0.1`nprotocol=TCP`nport=$port")
+
 $serverArgs=@('--no-defaults',('--datadir='+$dir),('--port='+$port),'--bind-address=127.0.0.1','--mysqlx=OFF','--skip-log-bin','--innodb-buffer-pool-size=64M','--innodb-log-buffer-size=8M','--performance-schema=OFF','--max-connections=20','--skip-name-resolve',('--tmpdir='+$dir),'--secure-file-priv=NULL',('--log-error='+$base+'\server.log'),('--pid-file='+$base+'\server.pid'),('--init-file='+$init))
+function Test-OwnListener {
+ $listeners=@(Get-NetTCPConnection -State Listen -LocalAddress '127.0.0.1' -LocalPort $port -ErrorAction SilentlyContinue)
+ if($listeners.Count -ne 1){return $false}
+ $listenerOwner=Get-CimInstance Win32_Process -Filter ('ProcessId='+[uint32]$listeners[0].OwningProcess)
+ return $listenerOwner -and $listenerOwner.ExecutablePath -eq (Join-Path $MySqlBin 'mysqld.exe') -and $listenerOwner.CommandLine -and $listenerOwner.CommandLine.Contains('--datadir='+$dir)
+}
 $proc=$null;$oldJava=$env:JAVA_HOME;$oldMaven=$env:MAVEN_OPTS
 try{
  $proc=Start-Process -FilePath (Join-Path $MySqlBin 'mysqld.exe') -ArgumentList ($serverArgs|ForEach-Object {'"'+$_+'"'}) -WindowStyle Hidden -PassThru
  $ready=$false
- for($i=0;$i -lt 100;$i++){$proc.Refresh();if($proc.HasExited){throw 'La instancia propia no arrancó; consultar log privado.'};& (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) status *> $null;if($LASTEXITCODE -eq 0){$ready=$true;break};Start-Sleep -Milliseconds 200}
+ for($i=0;$i -lt 100;$i++){$proc.Refresh();if($proc.HasExited){throw 'La instancia propia no arrancó; consultar log privado.'};if(Test-OwnListener){& (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) status *> $null;if($LASTEXITCODE -eq 0){$ready=$true;break}};Start-Sleep -Milliseconds 200}
  if(-not $ready){throw 'La instancia propia no aceptó autenticación dentro del plazo.'}
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$password;$env:JAVA_HOME=$JavaHome;$env:MAVEN_OPTS='-Xmx256m -XX:-UsePerfData'
  Push-Location (Join-Path $PSScriptRoot '../backend')
@@ -37,7 +51,7 @@ try{
 }finally{
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$null;$env:JAVA_HOME=$oldJava;$env:MAVEN_OPTS=$oldMaven
  if($proc){
-  & (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) shutdown *> $null
+  if(Test-OwnListener){& (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) shutdown *> $null}
   $proc.WaitForExit(10000)|Out-Null
   # mysqld en Windows puede lanzar un hijo. Solo detener PIDs con el datadir único que este auxiliar creó.
   $own=@(Get-CimInstance Win32_Process -Filter "Name='mysqld.exe'"|Where-Object {$_.CommandLine -and $_.CommandLine.Contains('--datadir='+$dir) -and $_.ExecutablePath -eq (Join-Path $MySqlBin 'mysqld.exe')})
