@@ -63,21 +63,31 @@ public final class NotificacionesInstitucionales {
  }
  public boolean enviable(Operador a,Map<String,Object> n){return visible(a,n)&&accionVigente(n.get("category").toString(),n.get("resource_type").toString(),uuid(n.get("resource_id")),n.get("event_key").toString());}
  public boolean visible(Operador a,Map<String,Object> n){return a.id().equals(n.get("recipient_id"))&&autorizado(a,n.get("category").toString(),n.get("resource_type").toString(),uuid(n.get("resource_id")),n.get("event_key").toString(),n.get("stream_code").toString());}
- public int proyectar(){return db.transaction(()->{
-  db.sql.queryForObject("SELECT id FROM notification_guard WHERE id=1 FOR UPDATE",Integer.class);int inserted=0;var actors=catalogo.operadores();
-  for(var stream:List.of("CORE","RECEPCION","TAREA")){
+ /** Mantiene el límite de trabajo por llamada, con una transacción atómica por fuente. */
+ public int proyectar(){
+  int inserted=0;var candidatos=new Candidatos();
+  for(var stream:List.of("CORE","RECEPCION","TAREA"))for(int i=0;i<20;i++){
+   Integer count=proyectarSiguiente(stream,candidatos);if(count==null)break;inserted+=count;
+  }
+  return inserted;
+ }
+ // Solo la enumeración del lote: autorizado() revalida cada identidad y recurso, sin cachear permisos.
+ private final class Candidatos {private List<Operador> lista;List<Operador> obtener(){if(lista==null)lista=catalogo.operadores();return lista;}}
+ private Integer proyectarSiguiente(String stream,Candidatos candidatos){return db.transaction(()->{
+  db.sql.queryForObject("SELECT id FROM notification_guard WHERE id=1 FOR UPDATE",Integer.class);int inserted=0;
    String table=switch(stream){case "CORE"->"core_event";case "RECEPCION"->"operational_event";default->"workflow_event";};
-   var rows=db.sql.queryForList("SELECT e.* FROM "+table+" e WHERE NOT EXISTS(SELECT 1 FROM notification_source s WHERE s.stream_code=? AND s.event_key=CONCAT('',e.seq)) ORDER BY e.seq LIMIT 20",stream);
-   for(var e:rows){String event=e.get("seq").toString();int recipients=0;
+   var rows=db.sql.queryForList("SELECT e.* FROM "+table+" e WHERE NOT EXISTS(SELECT 1 FROM notification_source s WHERE s.stream_code=? AND s.event_key=CONCAT('',e.seq)) ORDER BY e.seq LIMIT 1",stream);
+   if(rows.isEmpty())return null;
+   var e=rows.getFirst();String event=e.get("seq").toString();int recipients=0;
     boolean relevant=!stream.equals("RECEPCION")||"COMUNICACION_REGISTRADA".equals(e.get("code"))&&"COMUNICACION".equals(e.get("category"));
-    if(relevant)for(var signal:avisos(stream,e))for(var a:actors)if(autorizado(a,signal.categoria(),signal.tipo(),signal.recurso(),event,stream)&&accionVigente(signal.categoria(),signal.tipo(),signal.recurso(),event)){
+    List<Aviso> signals=relevant?avisos(stream,e):List.of();
+    // No cargar identidades para eventos sin aviso ni para colas vacías; no se omiten autorizaciones.
+    if(!signals.isEmpty())for(var a:candidatos.obtener())for(var signal:signals)if(autorizado(a,signal.categoria(),signal.tipo(),signal.recurso(),event,stream)&&accionVigente(signal.categoria(),signal.tipo(),signal.recurso(),event)){
      if(signal.categoria().equals("COMUNICACION_NUEVA")&&(db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,signal.recurso().toString())>0||db.sql.queryForObject("SELECT COUNT(*) FROM core_communication WHERE id=? AND state<>'ABIERTA'",Integer.class,signal.recurso().toString())>0))continue;
      String id=UUID.randomUUID().toString();db.sql.update("INSERT INTO institution_notification(id,stream_code,event_key,recipient_id,category,resource_type,resource_id,created_ms) VALUES(?,?,?,?,?,?,?,?)",id,stream,event,a.id(),signal.categoria(),signal.tipo(),signal.recurso().toString(),((Number)e.get("at_ms")).longValue());
      db.sql.update("INSERT INTO notification_outbox(notification_id,correlation_id,state,human_state,attempt_count,next_attempt_ms) VALUES(?,?,?,'NO_ENVIADO',0,?)",id,UUID.randomUUID().toString(),CORREO.contains(signal.categoria())?"PENDIENTE":"NO_APLICA",clock.millis());recipients++;inserted++;
     }
     db.sql.update("INSERT INTO notification_source VALUES(?,?,?,?)",stream,event,clock.millis(),recipients==0?"SIN_DESTINATARIO_VIGENTE":"PROYECTADO");
-   }
-  }
   return inserted;
  });}
  public Map<String,Object> propia(Operador a,UUID id){permisos.actor(a);var rows=db.sql.queryForList("SELECT n.*,o.state AS mail_state,o.human_state,o.correlation_id FROM institution_notification n JOIN notification_outbox o ON o.notification_id=n.id WHERE n.id=? AND n.recipient_id=?",id.toString(),a.id());if(rows.isEmpty()||!visible(a,rows.getFirst()))throw new FalloTecnico(404);return rows.getFirst();}

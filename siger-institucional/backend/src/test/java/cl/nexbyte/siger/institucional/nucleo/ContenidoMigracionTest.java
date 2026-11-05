@@ -10,6 +10,12 @@ class ContenidoMigracionTest {
   try(var x=new ContenidoFixture(temp,Clock.systemUTC(),mysql==null?null:url)){
    var p=x.par();x.c().determinar(x.f.a(x.f.headA),UUID.randomUUID(),p[2],p[3],new ContenidoInstitucional.Pertinencia(0,List.of(p[1]),true,"Pertinencia en motor aislado"));
    assertEquals(0,x.c().antecedentes(x.f.a(x.m.upr),p[0]).size());assertEquals(1,x.c().antecedentes(x.f.a(x.m.upd),p[1]).size());
+   var notices=new cl.nexbyte.siger.institucional.notificaciones.NotificacionesInstitucionales(x.d.db,x.f.cat,new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(x.d.db,x.f.cat,x.f.core),x.clock);
+   var start=new java.util.concurrent.CountDownLatch(1);
+   try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){java.util.concurrent.Callable<Integer> project=()->{start.await();int n=0;for(int i=0;i<5;i++)n+=notices.proyectar();return n;};var a=pool.submit(project);var b=pool.submit(project);start.countDown();a.get(15,java.util.concurrent.TimeUnit.SECONDS);b.get(15,java.util.concurrent.TimeUnit.SECONDS);}
+   assertTrue(notices.listar(x.f.a(x.m.upd),0,50).items().stream().anyMatch(n->n.tipo().equals("PERTINENCIA_ACTUALIZADA")&&n.ruta().equals("caso/"+p[1])));
+   assertFalse(notices.listar(x.f.a(x.m.upr),0,50).items().stream().anyMatch(n->n.tipo().equals("PERTINENCIA_ACTUALIZADA")&&n.ruta().equals("caso/"+p[1])));
+   assertEquals(1,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM institution_notification WHERE category='PERTINENCIA_ACTUALIZADA' AND resource_id=? AND recipient_id=?",Long.class,p[1].toString(),x.m.upd));
    var doc=x.cargar(p[0]);var bytes=Files.readAllBytes(x.docs.verificarArchivo(x.docs.referencia(x.f.a(x.f.profA),p[0],doc.id())));
    x.ordinario(p[0],doc.id(),0);x.c().publicar(x.f.a(x.f.headA),UUID.randomUUID(),p[0],doc.id(),p[0],x.publicacion(0,true,false,"ACTIVA"));
    assertNotNull(x.docs.referencia(x.f.a(x.m.upr),p[0],doc.id()));

@@ -58,6 +58,8 @@ La ruta de representación AUDIO/VIDEO actual transmite los bytes originales, po
 
 La pertinencia y valoración generan avisos internos genéricos del Caso autorizado, revalidados por recurso y materia, sin nombres de archivos ni contenido de COM. No activan correo nuevo ni conceden permiso de gestión. Los avisos del circuito de vínculos antiguo no vuelven a proyectar una COM gestionada por pertinencia.
 
+La proyección confirma **cada fuente** junto con todos sus avisos y outbox en una transacción. Conserva el límite de 20 fuentes por canal y llamada, la guarda de exclusión y la selección por fuentes aún no procesadas; no introduce cursor de máximos que pierda commits tardíos. Una fuente fallida revierte completa y se reintenta; las fuentes ya confirmadas no se duplican. La enumeración de candidatos dura solo esa llamada y no sustituye ninguna revalidación de identidad, vigencia o recurso. No se amplían timeouts ni categorías de correo.
+
 UI conecta selección de pertinencia, valoración, protección, publicación y consulta de documentos. Las concesiones de contenido no se convierten en gestión; el visor respeta descarga cerrada. Pruebas con dobles de antivirus/renderer no acreditan workers físicos.
 
 ## Persistencia y límites
