@@ -4,7 +4,7 @@
 
 Rama dependiente `feature/siger-pertinencia-documental`, worktree exclusivo `C:\req\worktrees\siger-logica`, origen limpio `d455b98f1067b3fbe56931b0f01bb7b5406362d8`. Base de integración `feature/siger-logica-negocio`, PR #2 en borrador. No se repiten U0–U1.6b.1. Rector local íntegro SHA-256 `80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4`; no se publica. Contrato: [pertinencia y contenido](../contratos/pertinencia-y-proteccion-contenido-v1.md).
 
-Bloques M1/M2/M3 funcionales: acreditación explícita del principal histórico de REQ; pertinencia de COM por Caso y materia; valoración sucesiva por profesional; protección documental y consulta específica por materia o Caso; listados, descarga, visor e interfaz conectados. No es cierre de U1/U2/U6 ni habilitación nominal. Las evidencias de cada bloque se distinguen de la regresión y CI final; no se atribuye a este desarrollo la CI del padre.
+Bloques M1/M2/M3 y cierre M4 funcionales: acreditación explícita del principal histórico de REQ; pertinencia de COM por Caso y materia; valoración sucesiva por profesional; protección documental y consulta específica por materia o Caso; listados, descarga, visor e interfaz conectados, con original multimedia protegido. No es cierre de U1/U2/U6 ni habilitación nominal. Las evidencias de cada bloque se distinguen de la regresión y CI final; no se atribuye a este desarrollo la CI del padre.
 
 ## Reglas y decisiones
 
@@ -89,13 +89,13 @@ Transporte Formulario 1.0/1.1 y V3 histórico, huellas, originales, recibos, Ed2
 
 La integración con U4.5 requiere revisar cambios no publicados y reservar V15.5/V15.6 antes de integrar. Main remoto y referencia local U4.5 permanecen en G0 al consultar; el padre PR #2 sigue en `d455b98`. No se incorporan commits ajenos ni se toca otro worktree. Las nuevas políticas exigen desplegar conjuntamente backend/esquema/UI compatibles en un futuro autorizado; un binario anterior puede ignorarlas y no es una reversión segura acreditada.
 
-Este es un corte sustancial de pertinencia y documentos, con tres incrementos funcionales. El siguiente bloque recomendado es **U2 separado**, primero nacimiento SOL/REQ sin Caso, destinatario único y unidad principal con aceptación/trazabilidad; debe convivir con REQ históricos acreditados y no reutilizar semántica del U5 histórico. La derivación/reapertura con nuevas valoraciones y transferencia de principal necesita su circuito completo, no conversiones automáticas. No se inicia aquí una migración amplia de esos procesos.
+Este es un corte sustancial de pertinencia y documentos, con tres incrementos funcionales y el cierre adicional multimedia M4. El siguiente bloque recomendado es **U2 separado**, primero nacimiento SOL/REQ sin Caso, destinatario único y unidad principal con aceptación/trazabilidad; debe convivir con REQ históricos acreditados y no reutilizar semántica del U5 histórico. La derivación/reapertura con nuevas valoraciones y transferencia de principal necesita su circuito completo, no conversiones automáticas. No se inicia aquí una migración amplia de esos procesos.
 
 ## Dependencias pendientes
 
 FIR de actuaciones/bitácora completa, reservas adicionales y excepción conjunta ACC-10 requieren el procedimiento institucional pendiente PE-03, además de autoridades y habilitaciones; no se habilitan con concesión ordinaria. Colaboradores, reapertura con valoración nueva, transferencia con aceptación, SOL institucional/nacimiento U2 de REQ, fuente maestra/SSO/MFA y datos nominales continúan pendientes. No se inicia una etapa amplia U2 dentro de este PR.
 
-## Cierre local, publicación y verificación remota
+## Cierre local M1–M3 y primera publicación
 
 `Build-Siger.ps1` Windows nativo sobre backend funcional **685557080e09eaef5c3b2cd93f0fdff143ff37d1**: **399 pruebas backend, 390 aprobadas, nueve workers opt-in omitidos, cero fallos/errores**. Frontend **93/93**, lint/build y empaquetado correctos. Terminó 05/11/2026 08:45 CLST, 11:25 min Maven. Temporales privados nuevos `siger-build-52fd2b0aa7834623b0543463b4ad5ea6`; resultados Surefire preservados fuera de Git. El método de limpieza del Formulario pasó sin modificarlo en esta segunda regresión completa. Las tres pruebas históricas stress siguen excluidas por configuración preexistente; no son tres nuevas omisiones.
 
@@ -106,6 +106,16 @@ Commits funcionales confirmados y publicados mediante push normal: **a266693** (
 **[PR #3 en borrador](https://github.com/chashmdai/sistema-de-requerimientos/pull/3)**, base `feature/siger-logica-negocio`; depende de [PR #2](https://github.com/chashmdai/sistema-de-requerimientos/pull/2), que permanece en borrador sobre `main`. Este corte añade 39 archivos de cambio, sin acumular U2–U9 ni fusionar ramas. La matriz conserva 138 filas/IDs únicos, con 18 actualizadas; las demás mantienen el diagnóstico/evidencia de su corte anterior.
 
 La CI del HEAD definitivo se comprueba **después del push de este cierre** en [los checks del PR #3](https://github.com/chashmdai/sistema-de-requerimientos/pull/3/checks). Sus SHA, ejecuciones, resultados Windows/Ubuntu y conteos efectivos se consignan en el PR y la entrega final una vez terminados; este documento no atribuye resultados remotos futuros. El corte no se entrega como aprobado sin esa comprobación. No hay merge, auto-merge, despliegue, workers/proveedores reales ni E2E físicos nuevos.
+
+## Cierre final M4
+
+Código funcional **12a19a1411fdad085c4296fb69602812267eb31d**. Nueva regresión completa oficial `Build-Siger.ps1` Windows, terminada 05/11/2026 09:08:56 CLST: **401 backend, 392 aprobadas, nueve opt-in omitidas, cero fallos/errores**; **frontend 95/95, lint/build y empaquetado correctos**, sobre el mismo código íntegro. No se modifica código después de esta batería; el commit de cierre actualiza únicamente informe y matriz. La prueba del Formulario inicialmente transitoria vuelve a pasar sin alterar sus expectativas.
+
+Log `build-final-12a19a1.log`, SHA-256 `51ddc26706429802ddc98ec2dd1fc20de851781e983844d7ddaf54e18e8f6168`; XML Surefire conservados en evidencia privada `regresion-12a19a1`. Temporales nuevos `siger-build-74e0e238ec7944f9a76f49e0de8de716`. MySQL M4 **15/15**, sin omisiones, hash de log `0bfd25af7bde386297eb4ff6b14793d19500a15822425ac40649b4413802d07d`; cierre propio comprobado. La nueva comprobación multimedia es HTTP/H2 con bytes sintéticos y dobles, no reproducción física ni E2E. MySQL acredita las rutas de persistencia/compatibilidad de su selección; no se presenta como la batería HTTP completa sobre ese motor.
+
+Commits de este PR dependiente: `a266693`, `fcb8715`, `6855570`, `61807eb` (primer cierre), `12a19a1` (seguridad multimedia) y el commit documental que incorpora este apartado. Push normal de M4 y cierre; upstream de la misma rama. La entrega final registra SHA exacto, estado Git y CI del último HEAD publicado; [PR #3/checks](https://github.com/chashmdai/sistema-de-requerimientos/pull/3/checks) conserva el cierre remoto por plataforma. **La CI anterior de 61807eb no sustituye la del último HEAD.** Esa comprobación posterior queda registrada en el cuerpo del PR y manifiesto final privado, con enlaces a ejecución y jobs, evitando autorreferencia de SHA y resultados futuros en el propio commit de informe.
+
+Matriz final: 138 filas/IDs en el mismo orden, 18 revisadas; límites institucionales permanecen explícitos. FIR de bitácora, PE-03, documentos históricos sin propietario/lectura acreditables y los circuitos U2 pendientes no se habilitan como efecto de este cierre. No se hace merge ni despliegue.
 
 ## Preguntas institucionales
 
