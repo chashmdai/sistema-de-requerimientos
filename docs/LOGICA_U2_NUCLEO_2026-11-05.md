@@ -78,7 +78,17 @@ Código funcional confirmado: `1ddcc20d3d28b5d6ac2c9a99c7e6b7c64c14c1a1`.
 
 Las pruebas no se excluyen para conseguir verde. Los tres stress históricos y omisiones de workers/plataforma se mantienen. AV/renderer e inspecciones con dobles se distinguen de workers reales. La CI del padre no se atribuye al nuevo HEAD.
 
-Fallos de desarrollo conservados: invocación local inicial con temporales heredados rechazados por ACL; repetida por el mecanismo privado de build, sin debilitar custodia. Se corrigieron normalización JDBC/JSON H2, contexto documental sin Caso, alcance de documentos de gestión propios, expectativas antiguas de rutas sustituidas y fixtures DOM de navegación. Un ensayo focalizado utilizó límite 100 no admitido por la API paginada y se corrigió a 20. No se cambiaron timeouts, exclusiones, POM, dependencias, workflow ni controles de custodia.
+Fallos de desarrollo conservados: invocación local inicial con temporales heredados rechazados por ACL; repetida por el mecanismo privado de build, sin debilitar custodia. Se corrigieron normalización JDBC/JSON H2, contexto documental sin Caso, alcance de documentos de gestión propios, expectativas antiguas de rutas sustituidas y fixtures DOM de navegación. Un ensayo focalizado utilizó límite 100 no admitido por la API paginada y se corrigió a 20. No se cambiaron límites de consulta/transacción, exclusiones, POM, dependencias ni controles de custodia. El ajuste del presupuesto global CI se documenta separadamente.
+
+## Incidencia CI y presupuesto global del job
+
+El intento [42118954127](https://github.com/chashmdai/sistema-de-requerimientos/actions/runs/42118954127), HEAD `98fd45a`, se conserva íntegro:
+- Ubuntu aprobado: **428 pruebas, cero fallos/errores, 24 omitidas; frontend 99**, lint/build y empaquetado correctos.
+- Windows interrumpido por el **límite global de 20 minutos** mientras avanzaba en `TareasNotificacionesTest`. Los grupos completados no registraban fallos; el bloque nuevo U2 ya había aprobado **17/17**. No hubo BUILD SUCCESS ni resultado global Windows, y no se presenta como aprobado.
+- Log Windows íntegro conservado privadamente, SHA-256 `25c57346f59c4001baabd5685b0d9c83ffc409c57b563f7eaad9994e0c57063e`. La evidencia y el intento remoto no se borran.
+- Comparación con el padre aprobado: IdentidadHttpTest 11,81→17,30 s; MateriasInstitucionalesTest 101,8→140,7 s; SolicitudesTareasIndependientesTest 45,61→69,33 s. Son tiempos de clases completas con fixtures, no una medición de latencia de operaciones institucionales.
+- Se amplía **únicamente el presupuesto global del job de CI de 20 a 30 minutos** para permitir la regresión íntegra. No se alteran límites de consulta/transacción, memoria, aserciones, selección ni exclusiones. No se reejecutan pruebas locales H2/MySQL por este cambio de orquestación, porque el código funcional/DDL sigue siendo `1ddcc20`.
+- Ambos jobs deberán aprobar nuevamente sobre el nuevo HEAD; el cierre remoto definitivo se registra en PR #4 y evidencia privada. El resultado Ubuntu del intento anterior no sustituye esa comprobación.
 
 ## Cambios y trazabilidad Git
 
