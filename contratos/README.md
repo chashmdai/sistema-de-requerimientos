@@ -1,3 +1,7 @@
+# Pertinencia y protección institucional — 05-11-2026
+
+[Pertinencia por Caso y protección de contenido](pertinencia-y-proteccion-contenido-v1.md): principal de REQ acreditado, decisiones por materia/contexto, valoración sucesiva, FIR documental y permisos independientes de metadatos, contenido y descarga. Evolución de autoridad 1.3; transporte público y originales conservados. El contrato documental anterior conserva custodia/visor y se complementa con esta política.
+
 # Unidad documental institucional — 24-10-2026
 
 [Documentos de gestión y visor](documental-institucional-v1.md): autorización por recurso, originales privados, referencias sin copia, páginas PNG e historial contextual. Esta extensión institucional no modifica la recepción pública ni sus firmas/COM/ACK.

@@ -11,17 +11,18 @@ public final class NotificacionesInstitucionales {
  private record Aviso(String categoria,String tipo,UUID recurso){}
  private static UUID uuid(Object o){return UUID.fromString(o.toString());}
  private static long num(Map<String,Object> r,String k){return ((Number)r.get(k)).longValue();}
- public static String titulo(String category){return switch(category){case "MATERIA_ACTUALIZADA"->"Materia de Caso actualizada";case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "SOLICITUD_CREADA"->"Preparación de Solicitud registrada";case "SOLICITUD_MODIFICADA"->"Preparación de Solicitud actualizada";case "SOLICITUD_PREPARADA"->"Borrador de gestión preparado";case "SOLICITUD_SEGUIMIENTO"->"Seguimiento de Solicitud registrado";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
+ public static String titulo(String category){return switch(category){case "PERTINENCIA_ACTUALIZADA"->"Antecedentes del Caso actualizados";case "MATERIA_ACTUALIZADA"->"Materia de Caso actualizada";case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "SOLICITUD_CREADA"->"Preparación de Solicitud registrada";case "SOLICITUD_MODIFICADA"->"Preparación de Solicitud actualizada";case "SOLICITUD_PREPARADA"->"Borrador de gestión preparado";case "SOLICITUD_SEGUIMIENTO"->"Seguimiento de Solicitud registrado";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
  private List<Aviso> avisos(String stream,Map<String,Object> e){
   String code=e.get("code").toString();UUID resource=uuid(e.get(stream.equals("RECEPCION")?"aggregate_id":"resource_id"));
   if(stream.equals("RECEPCION"))return code.equals("COMUNICACION_REGISTRADA")?List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource)):List.of();
   if(stream.equals("TAREA"))return List.of(new Aviso(code,"SOLICITUD".equals(e.get("resource_type"))?"SOLICITUD":"TAREA",resource));
   return switch(code){
+   case "ANTECEDENTE_PERTINENTE","COM_VALORADA_EN_CONTEXTO"->List.of(new Aviso("PERTINENCIA_ACTUALIZADA","CASO_CONSULTA",resource));
    case "MATERIA_RECTIFICADA"->List.of(new Aviso("MATERIA_ACTUALIZADA","CASO_CONSULTA",resource));
    case "COMUNICACION_MANUAL_REGISTRADA"->List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource));
    case "DESTINO_DISTRIBUIDO"->List.of(new Aviso("DESTINO_PENDIENTE","DESTINO",resource));
    case "CASO_ABIERTO","RESPONSABLE_Y_COMPLEJIDAD_REGISTRADOS"->List.of(new Aviso("CASO_ASIGNADO","CASO",resource));
-   case "VINCULO_DOCUMENTAL_CREADO"->{var child=uuid(e.get("communication_id"));var links=db.sql.queryForList("SELECT case_reference FROM core_link WHERE child_id=?",child.toString());yield links.isEmpty()?List.of():List.of(new Aviso(links.getFirst().get("case_reference")==null?"VINCULO_PENDIENTE":"ANTECEDENTE_NUEVO","ANTECEDENTE",child));}
+   case "VINCULO_DOCUMENTAL_CREADO"->{var child=uuid(e.get("communication_id"));if(db.sql.queryForObject("SELECT COUNT(*) FROM communication_pertinence WHERE child_id=?",Long.class,child.toString())>0)yield List.of();var links=db.sql.queryForList("SELECT case_reference FROM core_link WHERE child_id=?",child.toString());yield links.isEmpty()?List.of():List.of(new Aviso(links.getFirst().get("case_reference")==null?"VINCULO_PENDIENTE":"ANTECEDENTE_NUEVO","ANTECEDENTE",child));}
    case "TERMINO_SOLICITADO"->List.of(new Aviso("REVISION_TERMINO","CASO",resource));
    case "DERIVACION_SOLICITADA_ORIGEN_ABIERTO"->db.sql.queryForList("SELECT id FROM core_transfer WHERE origin_case_id=? AND state='PENDIENTE'",resource.toString()).stream().map(r->new Aviso("DERIVACION_PENDIENTE","DERIVACION",uuid(r.get("id")))).toList();
    case "REAPERTURA_SOLICITADA_CASO_CERRADO"->db.sql.queryForList("SELECT id FROM core_reopen WHERE case_id=? AND state='PENDIENTE'",resource.toString()).stream().map(r->new Aviso("REAPERTURA_PENDIENTE","REAPERTURA",uuid(r.get("id")))).toList();
@@ -62,21 +63,31 @@ public final class NotificacionesInstitucionales {
  }
  public boolean enviable(Operador a,Map<String,Object> n){return visible(a,n)&&accionVigente(n.get("category").toString(),n.get("resource_type").toString(),uuid(n.get("resource_id")),n.get("event_key").toString());}
  public boolean visible(Operador a,Map<String,Object> n){return a.id().equals(n.get("recipient_id"))&&autorizado(a,n.get("category").toString(),n.get("resource_type").toString(),uuid(n.get("resource_id")),n.get("event_key").toString(),n.get("stream_code").toString());}
- public int proyectar(){return db.transaction(()->{
-  db.sql.queryForObject("SELECT id FROM notification_guard WHERE id=1 FOR UPDATE",Integer.class);int inserted=0;var actors=catalogo.operadores();
-  for(var stream:List.of("CORE","RECEPCION","TAREA")){
+ /** Mantiene el límite de trabajo por llamada, con una transacción atómica por fuente. */
+ public int proyectar(){
+  int inserted=0;var candidatos=new Candidatos();
+  for(var stream:List.of("CORE","RECEPCION","TAREA"))for(int i=0;i<20;i++){
+   Integer count=proyectarSiguiente(stream,candidatos);if(count==null)break;inserted+=count;
+  }
+  return inserted;
+ }
+ // Solo la enumeración del lote: autorizado() revalida cada identidad y recurso, sin cachear permisos.
+ private final class Candidatos {private List<Operador> lista;List<Operador> obtener(){if(lista==null)lista=catalogo.operadores();return lista;}}
+ private Integer proyectarSiguiente(String stream,Candidatos candidatos){return db.transaction(()->{
+  db.sql.queryForObject("SELECT id FROM notification_guard WHERE id=1 FOR UPDATE",Integer.class);int inserted=0;
    String table=switch(stream){case "CORE"->"core_event";case "RECEPCION"->"operational_event";default->"workflow_event";};
-   var rows=db.sql.queryForList("SELECT e.* FROM "+table+" e WHERE NOT EXISTS(SELECT 1 FROM notification_source s WHERE s.stream_code=? AND s.event_key=CONCAT('',e.seq)) ORDER BY e.seq LIMIT 20",stream);
-   for(var e:rows){String event=e.get("seq").toString();int recipients=0;
+   var rows=db.sql.queryForList("SELECT e.* FROM "+table+" e WHERE NOT EXISTS(SELECT 1 FROM notification_source s WHERE s.stream_code=? AND s.event_key=CONCAT('',e.seq)) ORDER BY e.seq LIMIT 1",stream);
+   if(rows.isEmpty())return null;
+   var e=rows.getFirst();String event=e.get("seq").toString();int recipients=0;
     boolean relevant=!stream.equals("RECEPCION")||"COMUNICACION_REGISTRADA".equals(e.get("code"))&&"COMUNICACION".equals(e.get("category"));
-    if(relevant)for(var signal:avisos(stream,e))for(var a:actors)if(autorizado(a,signal.categoria(),signal.tipo(),signal.recurso(),event,stream)&&accionVigente(signal.categoria(),signal.tipo(),signal.recurso(),event)){
+    List<Aviso> signals=relevant?avisos(stream,e):List.of();
+    // No cargar identidades para eventos sin aviso ni para colas vacías; no se omiten autorizaciones.
+    if(!signals.isEmpty())for(var a:candidatos.obtener())for(var signal:signals)if(autorizado(a,signal.categoria(),signal.tipo(),signal.recurso(),event,stream)&&accionVigente(signal.categoria(),signal.tipo(),signal.recurso(),event)){
      if(signal.categoria().equals("COMUNICACION_NUEVA")&&(db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,signal.recurso().toString())>0||db.sql.queryForObject("SELECT COUNT(*) FROM core_communication WHERE id=? AND state<>'ABIERTA'",Integer.class,signal.recurso().toString())>0))continue;
      String id=UUID.randomUUID().toString();db.sql.update("INSERT INTO institution_notification(id,stream_code,event_key,recipient_id,category,resource_type,resource_id,created_ms) VALUES(?,?,?,?,?,?,?,?)",id,stream,event,a.id(),signal.categoria(),signal.tipo(),signal.recurso().toString(),((Number)e.get("at_ms")).longValue());
      db.sql.update("INSERT INTO notification_outbox(notification_id,correlation_id,state,human_state,attempt_count,next_attempt_ms) VALUES(?,?,?,'NO_ENVIADO',0,?)",id,UUID.randomUUID().toString(),CORREO.contains(signal.categoria())?"PENDIENTE":"NO_APLICA",clock.millis());recipients++;inserted++;
     }
     db.sql.update("INSERT INTO notification_source VALUES(?,?,?,?)",stream,event,clock.millis(),recipients==0?"SIN_DESTINATARIO_VIGENTE":"PROYECTADO");
-   }
-  }
   return inserted;
  });}
  public Map<String,Object> propia(Operador a,UUID id){permisos.actor(a);var rows=db.sql.queryForList("SELECT n.*,o.state AS mail_state,o.human_state,o.correlation_id FROM institution_notification n JOIN notification_outbox o ON o.notification_id=n.id WHERE n.id=? AND n.recipient_id=?",id.toString(),a.id());if(rows.isEmpty()||!visible(a,rows.getFirst()))throw new FalloTecnico(404);return rows.getFirst();}

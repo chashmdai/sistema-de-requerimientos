@@ -1,0 +1,150 @@
+# SIGER · Pertinencia y protección de contenido · 05/11/2026
+
+## Continuidad y alcance
+
+Rama dependiente `feature/siger-pertinencia-documental`, worktree exclusivo `C:\req\worktrees\siger-logica`, origen limpio `d455b98f1067b3fbe56931b0f01bb7b5406362d8`. Base de integración `feature/siger-logica-negocio`, PR #2 en borrador. No se repiten U0–U1.6b.1. Rector local íntegro SHA-256 `80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4`; no se publica. Contrato: [pertinencia y contenido](../contratos/pertinencia-y-proteccion-contenido-v1.md).
+
+Bloques M1/M2/M3 y cierre M4 funcionales: acreditación explícita del principal histórico de REQ; pertinencia de COM por Caso y materia; valoración sucesiva por profesional; protección documental y consulta específica por materia o Caso; listados, descarga, visor e interfaz conectados, con original multimedia protegido. No es cierre de U1/U2/U6 ni habilitación nominal. Las evidencias de cada bloque se distinguen de la regresión y CI final; no se atribuye a este desarrollo la CI del padre.
+
+Cierre vigente de aplicación: `de42ddcada4589a9788a02cc6a519aadcb6b98dd`, incluida proyección atómica de avisos por fuente. Backend completo Windows **403 (394 aprobadas, nueve omitidas), cero fallos/errores**; frontend sin cambios **95/95**, lint/build acreditados; MySQL descartable **15/15**. Las ejecuciones CI fallidas anteriores y la verificación del último HEAD publicado se distinguen al final, con cierre remoto en PR #3 y manifiesto privado.
+
+## Reglas y decisiones
+
+Cobertura parcial de ORG-07/08/12/13, CON-04/05, ACC-05/09/10, ING-02, DOC-01/02/04/07 y AUD-01/02/04. El principal no se infiere del primer Caso/creador. El registro firmado 1.3 es una evolución explícita de 1.2 y acredita contexto y vigencia mediante respaldo; no transfiere titularidad por configuración. Un cambio de ámbito de principal ya acreditado devuelve 409 hasta implementar aceptación de transferencia.
+
+Pertinencia y valoración conservan decisiones separadas: selección de Casos del mismo REQ, contenido sí/no, fundamento e historia de ámbitos; posterior valoración contextual enlazada a su predecesora. No modifica estado de Caso, REQ ni original. Una selección vacía retira pertinencia; los ámbitos anteriores no reviven al volver a su materia/área. Las rutas históricas excluyen recursos gestionados por la decisión nueva y no permiten reutilizar una valoración antigua para una reapertura incompatible.
+
+Documento y referencia son recursos distintos de COM/REQ/Caso. La política se aplica en metadatos, historial, listado, contenido, original, HEAD, Range, representación y páginas. Verifica nuevamente antes del primer byte y después de preparar vistas. La proyección del formulario excluye descriptores de adjuntos no autorizados; no reescribe original, huellas o firma.
+
+FIR documental es decisión fundada de jefatura competente: responsable actual y jefatura del propietario conservan consulta, otra área, materia o TI no la heredan. BLOQUEADO restringe consulta, no elimina ni declara cuarentena técnica. ORDINARIO no publica por sí mismo: la consulta transversal exige decisión por documento/Caso/materia, contexto, vigencia y flags independientes de contenido/descarga. Cambiar protección invalida publicaciones previas; nunca se reactiva una concesión anterior por desclasificar o volver al ámbito previo. La suspensión puede retirarse sin reactivar la materia del catálogo.
+
+La propiedad de un nuevo documento de gestión se registra en su carga autorizada. El histórico necesita evidencia inequívoca de creación; para original ciudadano se exige principal acreditado, jefatura del contexto y lectura legítima del origen. Si faltan esas facultades no se fabrica un propietario para facilitar publicación. La pertinencia de COM no publica sus adjuntos.
+
+Se reutilizan núcleo, identidad, concesiones U1.5, guardas y custodia/AV/visor existentes. No se introduce otro servicio. Comandos guardan proyección, historia y evento juntos; idempotencia ligada a actor, recurso y payload. La guarda de identidad precede bloqueos ordenados de COM también en adaptadores documentales históricos.
+
+## Persistencia y preservación
+
+V15.5 H2/MySQL: ocho tablas nuevas y un índice de valoración contextual. Se conserva el esquema previo V1–V15.4 sin cambios; no hay outOfOrder. Las tablas de historia son acumulativas. Solo la proyección vigente de destinos de pertinencia se sustituye, en la misma transacción que su snapshot histórico. Sin semillas nominales, retroaprobaciones o pérdida de originales.
+
+Main remoto y referencia U4.5 consultados en G0 `95cf2ae8173b4c6cab3eb8a1531659b8459dd898`; no se publicó ref remota U4.5. Esto no acredita cambios locales no publicados de ese otro worktree. Antes de integrar deben coordinarse versiones pendientes; no se tocó su directorio.
+
+QA/históricos/U4/COM-000001, JAR activos, Formulario, WSL/HTTP_503, servicios y proveedores reales quedan fuera de las operaciones. Transporte 1.0/1.1, firmas Ed25519, recibos y COMMIT→ACK conservados.
+
+## Evidencia focalizada M1
+
+- Selección `focal5.log`: 28/28 H2/MockMvc, sin omisiones/fallos/errores: núcleo nuevo, API, migración 15.4→15.5 y regresiones documentales/de autoridad.
+- Selección reforzada `focal6.log`: 20/20 H2/MockMvc, sin omisiones; incluye 11 pruebas de contenido, expiración/suspensión, streaming antes del primer byte, rechazo de transferencia por configuración y auditoría/concurrencia.
+- Frontend completo 91/91; seis tests nuevos de protección/pertinencia/consulta y visor. Lint correcto y build correcto después de corregir un valor temporal nulo del fixture TypeScript (`front-build4.log`). No se cambia el contrato para aceptar un fixture inválido.
+- MySQL 8.0.46 Windows nativo descartable: **12/12**, sin omisiones/fallos/errores. Instancia `siger-autoridad-mysql-58c1640097fb4e0fae872f32b5d26cdc`; nuevas bases UUID, loopback/propiedad de listener y cierre del helper. Actualizaciones V14/15.1/15.2/15.3/15.4; circuito de concesión y consulta, pertinencia mixta, separación contenido/descarga y FIR con bytes conservados. No es batería H2 completa sobre MySQL ni MySQL operativo.
+- Primeras pruebas detectaron rollback marcado al filtrar denegaciones y una redistribución incorrecta del fixture mixto. Se corrigió código y fixture sin retirar controles. Las corridas fallidas se conservan; no se presentan como aprobadas.
+- Dobles de AV/inspección/renderer identificados en fixtures. H2, MockMvc y DOM no son E2E físicos ni calificación de workers nativos.
+
+Evidencia privada bajo LOCALAPPDATA `siger-pertinencia-49b422b77ecc46259590b3c58d7cda1f`; no se publican sobres, configuración o logs completos. El cierre de validación y publicación se registra al final de este informe.
+
+## Ampliación M2 y revisión conjunta
+
+Responsable actual puede restringir consulta de su documento sin obtener publicación o desclasificación. La jefatura conserva la facultad de revisar la condición. Se conectan controles limitados en UI y servidor. Un histórico necesita evidencia inequívoca; el modelo no inventa asociaciones ni propietarios para mostrar un botón.
+
+Original ciudadano protegido se prueba con entrega 1.1 y recibo Ed25519 sintéticos, custodia NTFS real en directorio descartable y HTTP simulado. La proyección excluye tanto descriptores como IDs de adjuntos; GET/HEAD/Range aplican la política independiente. Se conserva exactamente la entrega firmada. Los dobles documentales están identificados, sin ensayo físico de proveedores/recorrido público.
+
+Se prueban revocación de concesión y sesión vigente, retirada durante streaming, valoración concurrente, rollback de pertinencia si falla historia y cuerpos incompletos sin efectos. Las revalidaciones por bloque no se cuentan como aperturas/descargas nuevas. La auditoría registra solicitudes y rechazos técnicos, no comprensión. Los avisos nuevos son internos, genéricos por Caso y revalidados; no activan Graph ni publican nombres/documentos.
+
+Selección final de desarrollo M2: **30/30 H2/MockMvc**, sin omisiones/fallos/errores (`focal-validacion.log`). Frontend **92/92**, lint/build correctos (`front-m2.log`, `lint-m2.log`, `front-build-m2.log`); una aclaración de representación autorizada posterior se verifica también en el build completo. MySQL M2: **12/12**, sin omisiones/fallos/errores, instancia nueva `siger-autoridad-mysql-52955c13a0dc4b67907b033f60e94afe`; incluye original ciudadano firmado, restricción por responsable y comparación del original conservado.
+
+El auxiliar descarta MYSQL_PWD heredado, redirige MYSQL_TEST_LOGIN_FILE a una ruta privada del ensayo y fija protocolo/host/puerto/usuario del cliente. El mecanismo de login-path está documentado por [MySQL 8.0](https://dev.mysql.com/doc/mysql-installation-excerpt/8.0/en/environment-variables.html); no se inspecciona ni modifica el archivo compartido. Se conservan la comprobación de propiedad de listener/datadir y cierre exclusivamente propios. Un comando genérico de edición fue rechazado antes de ejecutarse por revisión automática; se aplicó un diff explícito del script y se validó con el ensayo aislado, sin cambiar infraestructura.
+
+La matriz conserva 138 reglas; este hito revisa 17 filas con evidencia y límites de FIR documental/pertinencia. El bloque no declara completas las reservas de bitácora, exportación, reasociación integral, reaperturas o U2. PR dependiente exclusivamente de PR #2; no se acumulan U2–U9. No se acredita downgrade seguro a un binario que desconozca la política nueva. Falta calificar rendimiento documental en la VM destino; las comprobaciones por bloque priorizan revocación efectiva y no sustituyen esa calificación.
+
+M1 confirmado en `a266693c2b845801aecef9f9ae4176577d075838`. M2 conserva V15.5 sin modificar; H2/MySQL iguales, SHA-256 del checkout `88401f11d316d4b7a36859c13affcaed8be9b79667799943cf7792fc64f3a4a7`. Logs privados: focal `ca137fd56d568053decd0385e49a6230c33e8b216d35d2948b0bf00808bfdaf6`; MySQL M2 `747d3a417ac48b4eae2e08747cf1ee082c6db5958cd7e60bd9556dceef988272`. Procesos y listener propios finales: cero. La regresión completa incorpora además la aserción de que una descarga con varias revalidaciones conserva un solo evento de solicitud y un rechazo al retirarse permiso; no se sustituye esa corrida por los focalizados.
+
+## M3 · Referencia y consentimiento por recurso
+
+La revisión del bloque detectó una vía de ampliación: combinar consulta por materia de un documento con gestión de otro Caso para crear una referencia que concediera consulta ordinaria en destino. Se cierra en backend y UI: referenciar exige lectura de gestión y descarga en origen, y gestión en destino; el vínculo no confiere lectura a terceros. Recursos históricos sin política no admiten vínculos nuevos hasta acreditar propietario; los reintentos históricos y los registros previos se conservan.
+
+V15.6 agrega `document_case_consent`, sin modificar V15.5. Consentimiento de consulta por Caso separado de publicación por materia, con documento ordinario, autorización de jefatura sobre ambos ámbitos, fundamento, revisión optimista, vigencia finita, flags de contenido/descarga e historia transaccional. No concede gestión o consulta por materia, ni crea una excepción entre unidades. La UI conecta ambos contratos y sus revisiones independientes; filtra documentos no referenciables. Puede confirmarse la asociación sin conceder consulta del destino.
+
+Un cambio del contexto propietario incrementa la revisión de protección con historia; retira también salidas a otros Casos, sin tocar bytes/clasificación. Cambios del destino invalidan por sus secuencias. Suspender/vencer área o materia propietaria impide consumo indirecto. Omitir el Caso en el acceso ciudadano no elude su política. La prueba V10 de compartir se adapta mediante una decisión real de jefatura y comprueba primero que el vínculo solo no entrega lectura, sin SQL que otorgue permisos. Esta sustitución del contrato provisional está respaldada por §15.3 del rector.
+
+Pruebas focalizadas M3: 54/54 H2/MockMvc (API, idempotencia, actualización hasta V15.6 y regresión documental/Formulario), luego 22/22 de dominio con cierre adicional por suspensión del contexto propietario. La primera selección de migración detectó una expectativa incorrecta del test: sin facultad de Caso corresponde 404, no lista vacía; se corrigió la expectativa sin abrir acceso. DOM focal 8/8; lint/build correctos. La primera regresión completa previa a M3 ejecutó 389 pruebas, nueve omitidas, un fallo en enumeración de temporales rechazados; el método pasó al repetirse con temporales privados. Otra invocación diagnóstica sin temporal privado falló correctamente por DACL y no se usa como evidencia de aceptación. Se exige repetir la batería completa con el script oficial; no se excluye ni altera esa prueba.
+
+MySQL M3 **15/15**, cero fallos/errores/omisiones, Windows nativo 8.0.46. Instancia nueva `siger-autoridad-mysql-3056cee3cbfe43d28505e37ad8984c06`, cierre comprobado sin procesos propios restantes. Seis rutas V14/15.1/15.2/15.3/15.4/15.5→15.6, conservación de cuenta/asignación histórica y pruebas funcionales de áreas, materias, pertinencia, FIR, original ciudadano y consentimiento sin materia fabricada. SHA-256 `mysql-m3.log`: `be153a18750b9205bf9e607c85ab98b8b00b6aa609803c0c9a7c31486ae64c7b`. V15.6 H2/MySQL idénticas; hash checkout `4e5b1fde77f5812ad57f87d32f5dc69b348b5dc83b5d7c6b8d8d6f12da816387`. No es prueba sobre MySQL operativo ni batería completa en ese motor. Matriz: 138 reglas, 18 filas revisadas en este bloque al añadir ACC-03; no se declara cierre global.
+
+## M4 · Multimedia y bytes originales
+
+Revisión posterior al primer cierre publicado detectó una vía indirecta real: AUDIO/VIDEO usa el mismo archivo en `/representacion` y `/original`. Usar CONTENIDO para el primero permitía obtener los bytes originales con descarga denegada. Se corrigen ambos controladores (gestión/ciudadano), incluyendo revalidación del streaming, para exigir DESCARGA siempre que se transmiten originales. No se cambian bytes, tablas, políticas otorgadas ni contratos públicos. PDF/imagen por páginas derivadas conserva consulta sin permiso de original.
+
+La UI no crea reproductores cuando falta esa facultad y explica que reproducir este formato transmite el original. No se declara disponible una representación multimedia derivada inexistente. Prueba positiva y negativa por audio/video y origen, GET/HEAD/Range; **20/20 H2/MockMvc**, más **95/95 DOM**, lint/build correctos. MySQL repetido **15/15**, sin omisiones/fallos/errores, instancia nueva `siger-autoridad-mysql-fc07822fe7b64220a640ad1dc39668dc` y procesos propios finales cero. La batería completa se repite antes del nuevo cierre. La CI de `61807eb` corresponde al corte anterior y no acredita esta corrección.
+
+## Componentes, compatibilidad y corte
+
+| Componente | Resultado |
+|---|---|
+| `AutoridadesInstitucionales` | Registro firmado 1.3 y acreditación histórica del principal; versiones previas sin reinterpretación. |
+| `ContenidoInstitucional`, `NucleoInstitucional`, `ContenidoController` | Pertinencia, valoración sucesiva, protección, consulta por materia/Caso, control transaccional y API efectiva. |
+| Adaptadores y controladores documentales, `TransferenciaDocumento` | Misma política en rutas directas/indirectas y revalidación durante streaming. |
+| `NotificacionesInstitucionales` | Avisos internos genéricos, revalidados; ninguna habilitación de Graph. |
+| `ContenidoInstitucional.tsx`, Caso, materia, documentos, formulario y visor | Interfaz conectada; derechos separados, proyección autorizada y mensajes de bloqueos institucionales. |
+| Fixtures/pruebas de contenido, compartición, HTTP y migración | Circuito U1.5 real con identidades sintéticas; custodia real de archivos sintéticos y dobles documentales declarados. |
+| `Test-AutoridadMySql.ps1` | Instancia UUID descartable, aislamiento de cliente/servidor y seis rutas de actualización; sin servicio persistente. |
+
+Transporte Formulario 1.0/1.1 y V3 histórico, huellas, originales, recibos, Ed25519 y orden COMMIT→ACK conservados por regresión. Sin cambios al repositorio del Formulario, POM, dependencias npm, workflow o exclusiones de tests. `npm ci` informa **nueve vulnerabilidades moderadas** en el árbol existente; se documentan sin actualización masiva ni `audit fix --force`. El aviso Flyway/H2 sobre versión del motor ya existía; no se oculta ni se modifica configuración para ignorar controles.
+
+La integración con U4.5 requiere revisar cambios no publicados y reservar V15.5/V15.6 antes de integrar. Main remoto y referencia local U4.5 permanecen en G0 al consultar; el padre PR #2 sigue en `d455b98`. No se incorporan commits ajenos ni se toca otro worktree. Las nuevas políticas exigen desplegar conjuntamente backend/esquema/UI compatibles en un futuro autorizado; un binario anterior puede ignorarlas y no es una reversión segura acreditada.
+
+Este es un corte sustancial de pertinencia y documentos, con tres incrementos funcionales y el cierre adicional multimedia M4. El siguiente bloque recomendado es **U2 separado**, primero nacimiento SOL/REQ sin Caso, destinatario único y unidad principal con aceptación/trazabilidad; debe convivir con REQ históricos acreditados y no reutilizar semántica del U5 histórico. La derivación/reapertura con nuevas valoraciones y transferencia de principal necesita su circuito completo, no conversiones automáticas. No se inicia aquí una migración amplia de esos procesos.
+
+## Dependencias pendientes
+
+FIR de actuaciones/bitácora completa, reservas adicionales y excepción conjunta ACC-10 requieren el procedimiento institucional pendiente PE-03, además de autoridades y habilitaciones; no se habilitan con concesión ordinaria. Colaboradores, reapertura con valoración nueva, transferencia con aceptación, SOL institucional/nacimiento U2 de REQ, fuente maestra/SSO/MFA y datos nominales continúan pendientes. No se inicia una etapa amplia U2 dentro de este PR.
+
+## Cierre local M1–M3 y primera publicación
+
+`Build-Siger.ps1` Windows nativo sobre backend funcional **685557080e09eaef5c3b2cd93f0fdff143ff37d1**: **399 pruebas backend, 390 aprobadas, nueve workers opt-in omitidos, cero fallos/errores**. Frontend **93/93**, lint/build y empaquetado correctos. Terminó 05/11/2026 08:45 CLST, 11:25 min Maven. Temporales privados nuevos `siger-build-52fd2b0aa7834623b0543463b4ad5ea6`; resultados Surefire preservados fuera de Git. El método de limpieza del Formulario pasó sin modificarlo en esta segunda regresión completa. Las tres pruebas históricas stress siguen excluidas por configuración preexistente; no son tres nuevas omisiones.
+
+Después se aclara únicamente texto de permisos y mensajes de bloqueos en frontend (sin cambio de contrato o lógica). Repetición frontend final **93/93**, lint/build correctos; backend/SQL sin cambios respecto del completo y MySQL M3. SHA-256 del log completo `969bc49856963c93cc21a5d505766fa36ed9cab082e138064b2364a142dd23e6`; frontend final `db55c44bbd291441e6ffe5a0a58787e0dcff020a11c33d79f226d311a416ec25`. La composición final backend/frontend se valida nuevamente en CI.
+
+Commits funcionales confirmados y publicados mediante push normal: **a266693** (M1), **fcb8715** (M2), **6855570** (M3). Cierre documental y textos en el commit que incorpora este apartado. Upstream `origin/feature/siger-pertinencia-documental`; resolver el SHA de cierre con `git log -1 --format=%H`. El manifiesto privado final y la entrega registran el HEAD exacto, sin autorreferencia imposible del commit que contiene el informe.
+
+**[PR #3 en borrador](https://github.com/chashmdai/sistema-de-requerimientos/pull/3)**, base `feature/siger-logica-negocio`; depende de [PR #2](https://github.com/chashmdai/sistema-de-requerimientos/pull/2), que permanece en borrador sobre `main`. Este corte comprende 41 archivos de cambio, sin acumular U2–U9 ni fusionar ramas. La matriz conserva 138 filas/IDs únicos, con 18 actualizadas; las demás mantienen el diagnóstico/evidencia de su corte anterior.
+
+La CI del HEAD definitivo se comprueba **después del push de este cierre** en [los checks del PR #3](https://github.com/chashmdai/sistema-de-requerimientos/pull/3/checks). Sus SHA, ejecuciones, resultados Windows/Ubuntu y conteos efectivos se consignan en el PR y la entrega final una vez terminados; este documento no atribuye resultados remotos futuros. El corte no se entrega como aprobado sin esa comprobación. No hay merge, auto-merge, despliegue, workers/proveedores reales ni E2E físicos nuevos.
+
+## Cierre final M4
+
+Código funcional de ese corte **12a19a1411fdad085c4296fb69602812267eb31d**. Nueva regresión completa oficial `Build-Siger.ps1` Windows, terminada 05/11/2026 09:08:56 CLST: **401 backend, 392 aprobadas, nueve opt-in omitidas, cero fallos/errores**; **frontend 95/95, lint/build y empaquetado correctos**, sobre el mismo código íntegro. La aplicación se mantuvo así hasta `dbfd816`; la continuidad posterior corrige la unidad transaccional del proyector, detallada abajo. El primer cierre M4 `dfdc63e` actualiza únicamente informe y matriz; el ajuste del fixture DOM se distingue abajo. La prueba del Formulario inicialmente transitoria vuelve a pasar sin alterar sus expectativas.
+
+Log `build-final-12a19a1.log`, SHA-256 `51ddc26706429802ddc98ec2dd1fc20de851781e983844d7ddaf54e18e8f6168`; XML Surefire conservados en evidencia privada `regresion-12a19a1`. Temporales nuevos `siger-build-74e0e238ec7944f9a76f49e0de8de716`. MySQL M4 **15/15**, sin omisiones, hash de log `0bfd25af7bde386297eb4ff6b14793d19500a15822425ac40649b4413802d07d`; cierre propio comprobado. La nueva comprobación multimedia es HTTP/H2 con bytes sintéticos y dobles, no reproducción física ni E2E. MySQL acredita las rutas de persistencia/compatibilidad de su selección; no se presenta como la batería HTTP completa sobre ese motor.
+
+Commits de este PR dependiente: `a266693`, `fcb8715`, `6855570`, `61807eb` (primer cierre), `12a19a1` (seguridad multimedia) y el commit documental que incorpora este apartado. Push normal de M4 y cierre; upstream de la misma rama. La entrega final registra SHA exacto, estado Git y CI del último HEAD publicado; [PR #3/checks](https://github.com/chashmdai/sistema-de-requerimientos/pull/3/checks) conserva el cierre remoto por plataforma. **La CI anterior de 61807eb no sustituye la del último HEAD.** Esa comprobación posterior queda registrada en el cuerpo del PR y manifiesto final privado, con enlaces a ejecución y jobs, evitando autorreferencia de SHA y resultados futuros en el propio commit de informe.
+
+Matriz final: 138 filas/IDs en el mismo orden, 18 revisadas; límites institucionales permanecen explícitos. FIR de bitácora, PE-03, documentos históricos sin propietario/lectura acreditables y los circuitos U2 pendientes no se habilitan como efecto de este cierre. No se hace merge ni despliegue.
+
+## Corrección de aislamiento DOM detectada por CI
+
+La ejecución `42024832170` sobre `dfdc63e` detectó en Windows un fallo del test histórico `conflicto conserva fundamento y no muestra éxito`: dos alertas en vez de una, porque `App.test.tsx` conservaba llamadas HTTP reales sin doble para historial de áreas, cambios disponibles y contexto de materia. La respuesta rechazada de Node llegaba de manera asíncrona; la velocidad local había ocultado el defecto del fixture. No era una autorización nueva ni un defecto que se resuelva suprimiendo la alerta de negocio.
+
+Se completan esos tres dobles con historia/ámbitos vacíos y materia no acreditada sin facultad de rectificación, coherentes con el Caso histórico sintético del test. Se conserva la aserción de una única alerta y el fundamento; se agrega guardia que falla ante cualquier fetch no simulado. No se excluyen pruebas ni se conceden privilegios para obtener verde. Frontend completo posterior **95/95**, lint/build correctos (`front-ci-fixture.log`, `lint-ci-fixture.log`, `build-ci-fixture.log`). Backend, frontend de aplicación, esquema y contratos permanecen idénticos a `12a19a1`; no se recompila reiteradamente backend local sin cambios. El nuevo HEAD vuelve a ejecutar **toda la CI** Windows/Ubuntu, cuyos resultados exactos se consignan al terminar en PR #3 y manifiesto privado, sin atribuirle el resultado del HEAD fallido.
+
+## Continuidad tras CI de dbfd816 · proyección de avisos
+
+La ejecución [42025643782](https://github.com/chashmdai/sistema-de-requerimientos/actions/runs/42025643782) sobre `dbfd816` aprobó Ubuntu: backend **401, 377 aprobadas, 24 omitidas**, frontend **95/95**, lint/build y empaquetado correctos. Windows aprobó frontend **95/95** y ejecutó **401 backend**, con nueve omitidas y **un error**: `TransactionTimedOutException` en `avisosDePertinenciaNoEntreganComDeOtraMateria`, dentro de `NotificacionesInstitucionales.proyectar`. Se conservan ejecución/job fallidos y resúmenes privados, junto con la evidencia anterior del fixture DOM. No se considera verde ese HEAD.
+
+Causa: el proyector acumulaba hasta 60 fuentes, sus candidatos y autorizaciones dentro de una única transacción de cinco segundos. La corrección usa una transacción por fuente, conservando atómicos todos sus avisos/outbox y la marca `notification_source`; selección y guarda de exclusión permanecen juntas. Un fallo permite recuperar la fuente pendiente sin duplicar las ya confirmadas. No se modifica el timeout de cinco segundos, el límite por consulta ni las comprobaciones de permisos. La enumeración de candidatos conserva duración de una llamada; cada destinatario revalida identidad/recurso. Las colas vacías y fuentes sin aviso no enumeran cuentas.
+
+Se agregan pruebas de rollback de una fuente tras confirmar la anterior, reintento idempotente y dos proyectores concurrentes. Se mantienen las aserciones de segregación por materia. Selección inicial **50/50 H2/MockMvc**, incluidos Tareas/avisos/correo simulado; selección final reforzada **20/20 H2** tras acotar la enumeración, con proyección concurrente incorporada también al ensayo de migración H2/MySQL. **MySQL descartable 15/15**, sin fallos/errores/omisiones, incluida esa proyección concurrente y su segregación: instancia nueva `siger-autoridad-mysql-40b86eb0f3ce4bb68d89ad906dfaa81c`, cierre comprobado con procesos propios finales cero. No se debilitan expectativas ni se amplía infraestructura. La nueva regresión completa backend y la CI del nuevo HEAD se acreditan en el cierre siguiente; frontend de aplicación y sus 95 pruebas ya aprobadas no cambian.
+
+## Cierre de continuidad · de42ddc
+
+Regresión backend completa con el mismo comando `clean verify`, Java 25 y opciones de memoria/native-access del bloque backend de `Build-Siger.ps1`, con raíz temporal nueva, corta y privada: **403 pruebas, 394 aprobadas, nueve omitidas opt-in, cero fallos/errores**; empaquetado correcto. Resumen XML Surefire comprobado, además de `BUILD SUCCESS`. Terminó 05/11/2026 14:53:09 CLST, 11:28 min. Frontend de aplicación no cambia: se conservan las 95 pruebas/lint/build aprobados y la CI vuelve a componer ambos componentes.
+
+Evidencia privada: `backend-final-corto-de42ddc.log`, SHA-256 `114c928fc1f9ba767a8334d8870680929fcec549e47fbe3fa1392d7c5696d2a9`; XML en `regresion-de42ddc`, temporales `siger-build-9987b76251224935acd74e73105c4a32`. Selección final focal SHA-256 `7b591fb80f605deff50644ab25768b4c76c04ed9be7d8e4ffd86e9ef8be60759`. MySQL final 15/15 con proyección concurrente, hash `mysql-avisos.log`: `f59f4c640c1a883d9dc33ab6b4077c9968637ea84b192c31f6dc0b9e190824a2`. Procesos MySQL propios finales cero; no se ejecutaron pruebas sobre bases preservadas.
+
+Una invocación local previa eligió temporales demasiado anidados y produjo rutas de original de **271 caracteres**, rechazadas por la publicación Win32. Se descartó esa corrida (`backend-final-de42ddc.log`) y se interrumpieron exclusivamente sus dos JVM verificadas por exe y ruta UUID propia. Su salida de shell no se considera acreditación. No se alteró custodia, pruebas, registro de Windows o infraestructura; la repetición usó la raíz corta del mecanismo documentado y pasó. Se conservan sus errores como diagnóstico, separados del fallo de timeout de CI.
+
+La continuidad incorpora `de42ddc` y el commit documental de este apartado mediante push normal. V1–V15.6 y la aplicación frontend se conservan; el único cambio productivo posterior a `dbfd816` es la proyección por fuente. Informe, contrato y matriz acreditan el alcance, sin declarar U1/U2 completos. La CI del HEAD exacto de cierre se registra en [PR #3/checks](https://github.com/chashmdai/sistema-de-requerimientos/pull/3/checks), cuerpo del PR y manifiesto final privado al terminar; no se reutiliza el aprobado de Ubuntu ni se oculta Windows fallido de `dbfd816`. PR #2 y `main` no se modifican; no hay merge ni despliegue.
+
+## Preguntas institucionales
+
+1. Para habilitar datos reales: catálogo, principal histórico, autoridades y respaldos por el canal institucional privado.
+2. Para excepciones sensibles: confirmar autoridad y procedimiento PE-03, luego habilitaciones de Gestión y jefatura competente, alcance, vigencia y reservas; mantener cierre hasta acreditarlos.
+
