@@ -17,6 +17,7 @@ $dir=Join-Path $base 'data';[IO.Directory]::CreateDirectory($dir)|Out-Null
 $password=[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 $schema='siger_u15_test_'+[guid]::NewGuid().ToString('N');$init=Join-Path $base 'init.sql';$client=Join-Path $base 'client.cnf'
 Set-Content -LiteralPath $init -Encoding utf8 -Value ("ALTER USER 'root'@'localhost' IDENTIFIED BY '$password';`nCREATE USER 'root'@'127.0.0.1' IDENTIFIED BY '$password';`nGRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1';`nCREATE DATABASE $($schema)_14 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_151 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_152 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_area CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_153 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_materia CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_154 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_contenido CHARACTER SET utf8mb4;")
+Add-Content -LiteralPath $init -Encoding utf8 -Value ("CREATE DATABASE $($schema)_155 CHARACTER SET utf8mb4;`nCREATE DATABASE $($schema)_compartir CHARACTER SET utf8mb4;")
 # --no-defaults debe ser el primer argumento: nunca leer my.ini ni usar MySQL80.
 & (Join-Path $MySqlBin 'mysqld.exe') --no-defaults --initialize-insecure ('--basedir='+[IO.Path]::GetFullPath((Join-Path $MySqlBin '..'))) ('--datadir='+$dir) --innodb-buffer-pool-size=64M ('--log-error='+$base+'\initialize.log')
 if($LASTEXITCODE){throw 'Inicialización aislada no completada; evidencia privada conservada.'}
@@ -49,8 +50,8 @@ try{
  if(-not $ready){throw 'La instancia propia no aceptó autenticación dentro del plazo.'}
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$password;$env:JAVA_HOME=$JavaHome;$env:MAVEN_OPTS='-Xmx256m -XX:-UsePerfData'
  Push-Location (Join-Path $PSScriptRoot '../backend')
- try{& $Maven -B -ntp '-Dtest=AutoridadMigracionTest,AreasMigracionTest,MateriasMigracionTest,ContenidoMigracionTest' ('-Dsiger.test.autoridad.mysql=jdbc:mysql://127.0.0.1:'+$port+'/'+$schema) ('-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir='+$base) test *> (Join-Path $base 'tests.log');if($LASTEXITCODE){throw 'Falló AutoridadMigracionTest; ver tests.log privado.'}}finally{Pop-Location}
- Write-Output 'MySQL descartable: cinco rutas de migración, áreas, materias, pertinencia y protección correctas; doce tests sin omisiones.'
+ try{& $Maven -B -ntp '-Dtest=AutoridadMigracionTest,AreasMigracionTest,MateriasMigracionTest,ContenidoMigracionTest,ComparticionMigracionTest' ('-Dsiger.test.autoridad.mysql=jdbc:mysql://127.0.0.1:'+$port+'/'+$schema) ('-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir='+$base) test *> (Join-Path $base 'tests.log');if($LASTEXITCODE){throw 'Falló la validación MySQL aislada; ver tests.log privado.'}}finally{Pop-Location}
+ Write-Output 'MySQL descartable: seis rutas de migración, áreas, materias, pertinencia, protección y consentimiento por Caso correctos; quince tests sin omisiones.'
 }finally{
  try{
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$null;$env:JAVA_HOME=$oldJava;$env:MAVEN_OPTS=$oldMaven

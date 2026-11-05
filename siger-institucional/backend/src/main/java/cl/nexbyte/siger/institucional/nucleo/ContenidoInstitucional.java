@@ -154,11 +154,14 @@ public final class ContenidoInstitucional {
             boolean restringir=propio&&Objects.equals(caso,owner);
             if(kind.equals("BLOQUEADO")){if(!propio)throw new FalloTecnico(404);return new Permisos(false,false,head&&Objects.equals(caso,owner),kind,restringir);}
             if(kind.equals("FIR")){if(!propio)throw new FalloTecnico(404);return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);}
-            if(managed)return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);
-            var rows=db.sql.queryForList("SELECT * FROM document_disclosure WHERE document_id=? AND case_id=?",id(doc),id(caso));
+            if(managed&&propio)return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);
+            if(caso==null)throw new FalloTecnico(404);
+            var origin=core.caseRow(owner);String originArea=areas.area(origin);String originMatter=new PoliticaMaterias(db,clock).materia(owner);
+            if(originArea!=null&&!areas.vigente(originArea,origin.get("unit_code").toString(),origin.get("site_id").toString())||originMatter!=null&&db.sql.queryForObject("SELECT COUNT(*) FROM institution_matter WHERE id=? AND status='ACTIVA' AND valid_from<=? AND valid_until>?",Long.class,originMatter,clock.millis(),clock.millis())!=1)throw new FalloTecnico(404);
+            var rows=db.sql.queryForList("SELECT * FROM "+(managed?"document_case_consent":"document_disclosure")+" WHERE document_id=? AND case_id=?",id(doc),id(caso));
             if(!kind.equals("ORDINARIO")||rows.isEmpty())throw new FalloTecnico(404);
             var v=rows.getFirst();
-            if(!"ACTIVA".equals(v.get("status"))||n(v,"policy_revision")!=n(p,"revision")||n(v,"valid_from")>clock.millis()||n(v,"valid_until")<=clock.millis()||!contextoVigente(v,caso)||!Objects.equals(v.get("matter_id"),new PoliticaMaterias(db,clock).materia(caso)))throw new FalloTecnico(404);
+            if(!"ACTIVA".equals(v.get("status"))||n(v,"policy_revision")!=n(p,"revision")||n(v,"valid_from")>clock.millis()||n(v,"valid_until")<=clock.millis()||!contextoVigente(v,caso)||!managed&&!Objects.equals(v.get("matter_id"),new PoliticaMaterias(db,clock).materia(caso)))throw new FalloTecnico(404);
             return new Permisos(Boolean.TRUE.equals(v.get("content_allowed")),Boolean.TRUE.equals(v.get("download_allowed")),false,kind);
     }
     private boolean administrableHistorico(Operador a,UUID caso,UUID doc){
@@ -193,7 +196,7 @@ public final class ContenidoInstitucional {
     private void comprobarAccion(Operador a,UUID caso,UUID doc,String accion){
         var p=permisos(a,caso,doc);
         if(!Set.of("METADATOS","CONTENIDO","DESCARGA","HISTORIAL").contains(accion))throw new FalloTecnico(400);
-        if(accion.equals("CONTENIDO")&&!p.contenido()||accion.equals("DESCARGA")&&!p.descarga()||accion.equals("HISTORIAL")&&(caso==null||!gestor(a,caso)))throw new FalloTecnico(404);
+        if(accion.equals("CONTENIDO")&&!p.contenido()||accion.equals("DESCARGA")&&!p.descarga()||accion.equals("HISTORIAL")&&(!p.contenido()||caso==null||!gestor(a,caso)))throw new FalloTecnico(404);
     }
     private UUID ownerAcreditable(Operador a,UUID caso,UUID doc){
         var p=politica(doc);if(!p.isEmpty()){var owner=uuid(p.get("owner_case"));core.head(a,core.caseRow(owner));if(!owner.equals(caso))throw new FalloTecnico(404);return owner;}
@@ -213,10 +216,37 @@ public final class ContenidoInstitucional {
     public Map<String,Object> control(Operador a,UUID caso,UUID doc){
         return db.transaction(()->{guard(a);var p=politica(doc);if(!areas.jefe(a,core.caseRow(caso))){restringirPropio(a,caso,doc);return Map.of("revision",n(p,"revision"),"clasificacion",p.isEmpty()?"HISTORICO_SIN_ACREDITAR":p.get("classification"),"contextos",List.of(),"publicaciones",List.of(),"historial",List.of());}ownerAcreditable(a,caso,doc);
             var d=documento(doc);var targets=db.sql.queryForList("SELECT c.id,d.unit_code,d.site_id,m.matter_id FROM core_case c JOIN core_destination d ON d.id=c.destination_id LEFT JOIN case_matter m ON m.case_id=c.id WHERE EXISTS(SELECT 1 FROM management_document_link l WHERE l.case_id=c.id AND l.document_id=?) OR (?='INGRESO_CIUDADANO' AND (c.communication_id=? OR EXISTS(SELECT 1 FROM communication_pertinence_target t WHERE t.case_id=c.id AND t.child_id=?))) ORDER BY c.id",id(doc),d.get("origin"),d.get("communication_id"),d.get("communication_id")).stream().filter(t->areas.jefe(a,core.caseRow(uuid(t.get("id"))))).toList();
-            return Map.of("revision",n(p,"revision"),"clasificacion",p.isEmpty()?"HISTORICO_SIN_ACREDITAR":p.get("classification"),"contextos",normalizar(targets),"publicaciones",normalizar(db.sql.queryForList("SELECT case_id,revision,content_allowed,download_allowed,status,valid_from,valid_until FROM document_disclosure WHERE document_id=? ORDER BY case_id",id(doc))),"historial",normalizar(db.sql.queryForList("SELECT revision,actor_id,at_ms,action_code,reason_text FROM document_content_history WHERE document_id=? ORDER BY seq DESC LIMIT 100",id(doc))));});
+            return Map.of("revision",n(p,"revision"),"clasificacion",p.isEmpty()?"HISTORICO_SIN_ACREDITAR":p.get("classification"),"contextos",normalizar(targets),"comparticiones",normalizar(db.sql.queryForList("SELECT case_id,revision,content_allowed,download_allowed,status,valid_from,valid_until FROM document_case_consent WHERE document_id=? ORDER BY case_id",id(doc))),"publicaciones",normalizar(db.sql.queryForList("SELECT case_id,revision,content_allowed,download_allowed,status,valid_from,valid_until FROM document_disclosure WHERE document_id=? ORDER BY case_id",id(doc))),"historial",normalizar(db.sql.queryForList("SELECT revision,actor_id,at_ms,action_code,reason_text FROM document_content_history WHERE document_id=? ORDER BY seq DESC LIMIT 100",id(doc))));});
     }
     private void historia(Operador a,UUID caso,UUID doc,long revision,String op,String motivo,Object payload){
         db.sql.update("INSERT INTO document_content_history(document_id,case_id,revision,actor_id,at_ms,action_code,reason_text,snapshot_doc) VALUES(?,?,?,?,?,?,?,?)",id(doc),id(caso),revision,a.id(),clock.millis(),op,motivo,json.writeValueAsString(payload));
+    }
+    /** El cambio del contexto propietario invalida también autorizaciones hacia otros Casos. */
+    void invalidarContexto(Operador a,UUID caso,String fundamento){
+        for(var p:db.sql.queryForList("SELECT document_id,revision FROM document_content_policy WHERE owner_case=? ORDER BY document_id",id(caso))){
+            UUID doc=uuid(p.get("document_id"));long revision=n(p,"revision")+1;
+            db.sql.update("UPDATE document_content_policy SET revision=? WHERE document_id=?",revision,id(doc));
+            historia(a,caso,doc,revision,"CONTEXTO_CAMBIADO",fundamento,Map.of("caso",caso));
+        }
+    }
+    public Resultado compartir(Operador a,UUID key,UUID owner,UUID doc,UUID caso,Publicacion r){
+        if(r==null||r.desde()==null||r.hasta()==null||!r.hasta().isAfter(r.desde())||r.descarga()&&!r.contenido()||r.estado()==null||!Set.of("ACTIVA","SUSPENDIDA").contains(r.estado()))throw new FalloTecnico(400);motivo(r.fundamento(),1000);
+        db.transaction(()->{guard(a);ownerAcreditable(a,owner,doc);if(r.estado().equals("ACTIVA"))core.head(a,core.caseRow(caso));return null;});
+        return core.execute(key,a,"COMPARTIR_DOCUMENTO_CASO",List.of(owner,doc,caso,r),()->{guard(a);
+            locks(uuid(core.caseRow(owner).get("communication_id")),uuid(core.caseRow(caso).get("communication_id")));ownerAcreditable(a,owner,doc);
+            var old=db.sql.queryForList("SELECT revision FROM document_case_consent WHERE document_id=? AND case_id=?",id(doc),id(caso));long rev=old.isEmpty()?0:n(old.getFirst(),"revision");if(rev!=r.revision())throw new FalloTecnico(409,"VERSION_OBSOLETA");
+            if(r.estado().equals("SUSPENDIDA")){
+                if(old.isEmpty())throw new FalloTecnico(409);
+                db.sql.update("UPDATE document_case_consent SET status='SUSPENDIDA',revision=revision+1 WHERE document_id=? AND case_id=?",id(doc),id(caso));
+            }else{
+                var destino=core.caseRow(caso);core.head(a,destino);asociado(a,caso,documento(doc));
+                if(!Objects.equals(core.caseRow(owner).get("unit_code"),destino.get("unit_code")))throw new FalloTecnico(409,"EXCEPCION_INTERUNIDAD_NO_HABILITADA");
+                var p=politica(doc);if(!"ORDINARIO".equals(p.get("classification")))throw new FalloTecnico(409,"DOCUMENTO_NO_ORDINARIO");
+                if(old.isEmpty())db.sql.update("INSERT INTO document_case_consent VALUES(?,?,?,?,?,?,?,?,?,?,?)",id(doc),id(caso),rev+1,n(p,"revision"),secuencia("case_area_history",caso),secuencia("case_matter_history",caso),r.desde().toEpochMilli(),r.hasta().toEpochMilli(),r.contenido(),r.descarga(),r.estado());
+                else db.sql.update("UPDATE document_case_consent SET revision=?,policy_revision=?,area_seq=?,matter_seq=?,valid_from=?,valid_until=?,content_allowed=?,download_allowed=?,status=? WHERE document_id=? AND case_id=?",rev+1,n(p,"revision"),secuencia("case_area_history",caso),secuencia("case_matter_history",caso),r.desde().toEpochMilli(),r.hasta().toEpochMilli(),r.contenido(),r.descarga(),r.estado(),id(doc),id(caso));
+            }
+            historia(a,owner,doc,rev+1,"CONSULTA_CASO",r.fundamento(),Map.of("destino",caso,"decision",r,"alcance",db.sql.queryForMap("SELECT * FROM document_case_consent WHERE document_id=? AND case_id=?",id(doc),id(caso))));return new Resultado(doc,rev+1);
+        });
     }
     public Resultado proteger(Operador a,UUID key,UUID caso,UUID doc,Proteccion r){
         if(r==null||r.clasificacion()==null||!Set.of("ORDINARIO","FIR","BLOQUEADO").contains(r.clasificacion()))throw new FalloTecnico(400);motivo(r.fundamento(),1000);
@@ -242,6 +272,7 @@ public final class ContenidoInstitucional {
                 historia(a,owner,doc,rev+1,"SUSPENDER_CONSULTA",r.fundamento(),Map.of("destino",caso,"decision",r));return new Resultado(doc,rev+1);
             }
             core.head(a,core.caseRow(caso));asociado(a,caso,documento(doc));var p=politica(doc);if(!"ORDINARIO".equals(p.get("classification")))throw new FalloTecnico(409,"DOCUMENTO_NO_ORDINARIO");
+            if(!Objects.equals(core.caseRow(owner).get("unit_code"),core.caseRow(caso).get("unit_code")))throw new FalloTecnico(409,"EXCEPCION_INTERUNIDAD_NO_HABILITADA");
             String materia=new PoliticaMaterias(db,clock).materia(caso);var m=new CatalogoMaterias(db,clock).exigir(materia);
             if(r.desde().isBefore(m.desde())||r.hasta().isAfter(m.hasta()))throw new FalloTecnico(400);
             long next=rev+1;if(old.isEmpty())db.sql.update("INSERT INTO document_disclosure VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",id(doc),id(caso),next,n(p,"revision"),materia,secuencia("case_area_history",caso),secuencia("case_matter_history",caso),r.desde().toEpochMilli(),r.hasta().toEpochMilli(),r.contenido(),r.descarga(),r.estado());

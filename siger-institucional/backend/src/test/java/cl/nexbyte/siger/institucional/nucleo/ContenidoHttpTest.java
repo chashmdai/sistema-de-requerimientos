@@ -50,6 +50,8 @@ class ContenidoHttpTest {
   http.perform(head(base+"/"+o.documento()+"/original").secure(true).session(dist)).andExpect(status().isNotFound());
   x.c().proteger(x.f.a(x.f.headA),UUID.randomUUID(),o.caso(),o.documento(),new ContenidoInstitucional.Proteccion(1,"ORDINARIO","Clasificación del original conservado"));
   x.c().publicar(x.f.a(x.f.headA),UUID.randomUUID(),o.caso(),o.documento(),o.caso(),x.publicacion(0,true,true,"ACTIVA"));
+  http.perform(get(base).secure(true).session(dist)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+  http.perform(head(base+"/"+o.documento()+"/original").secure(true).session(dist)).andExpect(status().isNotFound());
   var result=http.perform(get(base+"/"+o.documento()+"/original").param("caso",o.caso().toString()).header("Range","bytes=0-3").secure(true).session(reader)).andExpect(request().asyncStarted()).andReturn();http.perform(asyncDispatch(result)).andExpect(status().isPartialContent()).andExpect(content().bytes(Arrays.copyOf(o.bytes(),4)));
   Assertions.assertEquals(x.d.mapper.writeValueAsString(o.entrega()),x.d.mapper.writeValueAsString(x.d.recepcion.completaRegistrada(o.comunicacion())));
  }
@@ -64,6 +66,18 @@ class ContenidoHttpTest {
   UUID c=x.m.caso(),doc=x.cargar(c).id();var jefe=login("jefe.a");String route="/nucleo/casos/"+c+"/proteccion-documental/"+doc;
   http.perform(post(route).secure(true).session(jefe).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":0,\"fundamento\":\"Falta clasificación\"}")).andExpect(status().isBadRequest());
   Assertions.assertEquals(0L,x.c().control(x.f.a(x.f.headA),c,doc).get("revision"));
+ }
+ @Test void compartirRequiereJefaturaAmbosContextosYNoAmpliaDescargaNiGestion()throws Exception{
+  var p=x.par();UUID doc=x.cargar(p[0]).id();x.docs.vincular(x.f.a(x.f.headA),UUID.randomUUID(),doc,p[0],p[1],null);x.ordinario(p[0],doc,0);
+  var jefe=login("jefe.a");var otro=login("jefe.b");var prof=login("prof.b");var lector=login("direccion.upd");String target="/nucleo/casos/"+p[1]+"/documentos-gestion";String decision="/nucleo/casos/"+p[0]+"/proteccion-documental/"+doc+"/compartir/"+p[1];String body=x.d.mapper.writeValueAsString(x.publicacion(0,true,false,"ACTIVA"));UUID key=UUID.randomUUID();
+  http.perform(get(target).secure(true).session(prof)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+  http.perform(post(decision).secure(true).session(jefe).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  http.perform(post(decision).secure(true).session(otro).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isNotFound());
+  for(int retry=0;retry<2;retry++)http.perform(post(decision).secure(true).session(jefe).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isOk());
+  http.perform(get(target).secure(true).session(prof)).andExpect(status().isOk()).andExpect(jsonPath("$[0].consultable").value(true)).andExpect(jsonPath("$[0].descargable").value(false)).andExpect(jsonPath("$[0].administrable").value(false)).andExpect(jsonPath("$[0].referenciable").value(false));
+  http.perform(head(target+"/"+doc+"/original").secure(true).session(prof)).andExpect(status().isNotFound());
+  http.perform(get(target).secure(true).session(lector)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+  http.perform(get("/nucleo/casos/"+p[0]+"/proteccion-documental/"+doc).secure(true).session(prof)).andExpect(status().isNotFound());
  }
 }
 

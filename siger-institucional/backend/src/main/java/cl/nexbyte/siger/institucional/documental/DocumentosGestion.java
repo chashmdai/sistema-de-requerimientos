@@ -9,7 +9,7 @@ import org.springframework.dao.DuplicateKeyException;
 /** Originales de gestión inmutables; los vínculos y su autorización son independientes de la custodia ciudadana. */
 public final class DocumentosGestion {
     public record Contexto(UUID caso,UUID actuacion){}
-    public record Documento(UUID id,String origen,String nombre,long tamanio,String sha256,String tipo,String autor,Instant fecha,List<Contexto> contextos,String representacion,boolean consultable,boolean descargable,boolean administrable,String proteccion,boolean restringible){}
+    public record Documento(UUID id,String origen,String nombre,long tamanio,String sha256,String tipo,String autor,Instant fecha,List<Contexto> contextos,String representacion,boolean consultable,boolean descargable,boolean administrable,String proteccion,boolean restringible,boolean referenciable){}
     private final BaseJdbc db;private final ArchivoInstitucional files;private final AutorizacionDocumental policy;
     private final ProcesamientoDocumental.Antivirus antivirus;private final ProcesamientoDocumental.Inspector inspector;private final Clock clock;
     public DocumentosGestion(BaseJdbc db,ArchivoInstitucional files,AutorizacionDocumental policy,ProcesamientoDocumental.Antivirus antivirus,ProcesamientoDocumental.Inspector inspector,Clock clock){this.db=db;this.files=files;this.policy=policy;this.antivirus=antivirus;this.inspector=inspector;this.clock=clock;}
@@ -48,17 +48,23 @@ public final class DocumentosGestion {
             db.sql.update("INSERT INTO management_document_link VALUES(?,?,?,?,?,?)",sid(document),sid(caso),action==null?null:sid(action),action==null?"CASO":sid(action),actor.id(),clock.millis());
     }
     public Documento vincular(Operador actor,UUID key,UUID documento,UUID origen,UUID destino,UUID action){
-        referencia(actor,origen,documento);policy.leerCaso(actor,destino);String digest=hash(List.of("GESTION_VINCULO_1",documento,origen,destino,Objects.toString(action,"")));
+        policy.leerCaso(actor,origen);referencia(actor,origen,documento,"DESCARGA");policy.leerCaso(actor,destino);String digest=hash(List.of("GESTION_VINCULO_1",documento,origen,destino,Objects.toString(action,"")));
         return db.transaction(()->{
             policy.bloquearMutacion(actor);
             var roots=db.sql.queryForList("SELECT communication_id FROM core_case WHERE id=? OR id=? ORDER BY communication_id",String.class,sid(origen),sid(destino));
             for(var root:new LinkedHashSet<>(roots))db.sql.queryForList("SELECT comunicacion_id FROM communication_registry WHERE comunicacion_id=? FOR UPDATE",root);
-            referencia(actor,origen,documento);var previous=anterior(key,actor,destino,"VINCULAR",digest);if(previous!=null)return documento(actor,destino,previous);
-            policy.gestionarCaso(actor,destino);actuacion(destino,action);vinculo(documento,destino,action,actor);comando(key,actor,destino,"VINCULAR",digest,documento);evento(actor,documento,destino,action,"VINCULO_CREADO");return documento(actor,destino,documento);
+            policy.leerCaso(actor,origen);referencia(actor,origen,documento,"DESCARGA");var previous=anterior(key,actor,destino,"VINCULAR",digest);if(previous!=null)return resultadoVinculo(actor,origen,destino,action,previous);
+            if(policy.permisos(actor,origen,documento).clasificacion().equals("HISTORICO_SIN_ACREDITAR"))throw new FalloTecnico(409,"DOCUMENTO_REQUIERE_ACREDITACION");
+            policy.gestionarCaso(actor,destino);actuacion(destino,action);vinculo(documento,destino,action,actor);comando(key,actor,destino,"VINCULAR",digest,documento);evento(actor,documento,destino,action,"VINCULO_CREADO");return resultadoVinculo(actor,origen,destino,action,documento);
         });
     }
+    private Documento resultadoVinculo(Operador actor,UUID origen,UUID destino,UUID action,UUID id){
+        try{return documento(actor,destino,id);}catch(FalloTecnico e){if(e.status!=404)throw e;}
+        var d=documento(actor,origen,id);return new Documento(d.id(),d.origen(),d.nombre(),d.tamanio(),d.sha256(),d.tipo(),d.autor(),d.fecha(),List.of(new Contexto(destino,action)),d.representacion(),false,false,false,d.proteccion(),false,false);
+    }
+    private boolean referenciable(Operador actor,UUID caso,boolean descarga){if(!descarga)return false;try{policy.leerCaso(actor,caso);return true;}catch(FalloTecnico e){if(e.status==404)return false;throw e;}}
     public List<Documento> listar(Operador actor,UUID caso){return db.transaction(()->{policy.contextoDocumento(actor,caso);var result=new ArrayList<Documento>();for(var r:db.sql.queryForList("SELECT DISTINCT d.id,d.created_ms FROM institution_document d JOIN management_document_link l ON l.document_id=d.id WHERE l.case_id=? AND d.origin='GESTION_INSTITUCIONAL' ORDER BY d.created_ms,d.id",sid(caso))){try{result.add(documento(actor,caso,UUID.fromString(r.get("id").toString())));}catch(FalloTecnico e){if(e.status!=404)throw e;}}return result;});}
-    public Documento documento(Operador actor,UUID caso,UUID id){var d=referencia(actor,caso,id,"METADATOS");var permisos=policy.permisos(actor,caso,id);var links=db.sql.queryForList("SELECT action_id FROM management_document_link WHERE document_id=? AND case_id=? ORDER BY context_id",sid(id),sid(caso)).stream().map(r->new Contexto(caso,r.get("action_id")==null?null:UUID.fromString(r.get("action_id").toString()))).toList();String view=FormatosDocumento.paginable(d.original().tipo())?"PAGINAS":d.original().tipo().startsWith("audio/")?"AUDIO":d.original().tipo().startsWith("video/")?"VIDEO":"DESCARGA";var a=d.original();return new Documento(id,d.origen(),a.nombre(),a.tamanio(),a.sha256(),a.tipo(),d.autor(),d.fecha(),links,view,permisos.contenido(),permisos.descarga(),permisos.administrar(),permisos.clasificacion(),permisos.restringir());}
+    public Documento documento(Operador actor,UUID caso,UUID id){var d=referencia(actor,caso,id,"METADATOS");var permisos=policy.permisos(actor,caso,id);var links=db.sql.queryForList("SELECT action_id FROM management_document_link WHERE document_id=? AND case_id=? ORDER BY context_id",sid(id),sid(caso)).stream().map(r->new Contexto(caso,r.get("action_id")==null?null:UUID.fromString(r.get("action_id").toString()))).toList();String view=FormatosDocumento.paginable(d.original().tipo())?"PAGINAS":d.original().tipo().startsWith("audio/")?"AUDIO":d.original().tipo().startsWith("video/")?"VIDEO":"DESCARGA";var a=d.original();return new Documento(id,d.origen(),a.nombre(),a.tamanio(),a.sha256(),a.tipo(),d.autor(),d.fecha(),links,view,permisos.contenido(),permisos.descarga(),permisos.administrar(),permisos.clasificacion(),permisos.restringir(),referenciable(actor,caso,permisos.descarga()));}
     public DocumentoPrivado referencia(Operador actor,UUID caso,UUID id){
         return referencia(actor,caso,id,"CONTENIDO");
     }

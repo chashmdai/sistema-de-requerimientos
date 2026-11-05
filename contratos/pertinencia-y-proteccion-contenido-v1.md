@@ -22,7 +22,7 @@ Las rutas antiguas de antecedentes, conteos y avisos excluyen las COM gestionada
 
 ## Protección y consulta documental
 
-Una carga de gestión conserva un único original y registra su Caso propietario, inicialmente SIN_CLASIFICAR para consulta transversal. Las lecturas de gestión previamente autorizadas y referencias explícitas V10 mantienen su contrato ordinario; no se publican a Direcciones por defecto. Un histórico sin propietario acreditable no se inventa: requiere evidencia de creación inequívoca o queda cerrado para reclasificación.
+Una carga de gestión conserva un único original y registra su Caso propietario, inicialmente SIN_CLASIFICAR para consulta transversal. Responsable y jefatura competente del propietario conservan consulta ordinaria. Una referencia nueva no concede lectura al gestor de otro Caso. Se sustituye expresamente la interpretación provisional V10 que otorgaba consulta por el solo vínculo: prevalece §15.3 del rector. Recursos históricos todavía sin política mantienen únicamente su consulta histórica; no admiten referencias nuevas hasta acreditar propietario y protección. Los vínculos/reintentos históricos se conservan sin reescritura ni publicación a Direcciones. Un histórico sin propietario acreditable no se inventa: requiere evidencia de creación inequívoca o queda cerrado para reclasificación.
 
 La jefatura competente del contexto propietario determina:
 - ORDINARIO: no publica por sí solo a otras funciones.
@@ -35,7 +35,9 @@ Para original ciudadano, la acreditación de contexto exige principal vigente, j
 
 La publicación por materia es otra decisión fundada, nominativa por **documento y Caso**, materia y contexto actuales, con vigencia finita y estado. Metadatos, contenido y descarga son derechos distintos. El otorgamiento requiere jefatura de origen y destino; retirar una publicación del propio recurso no requiere reabrir catálogo suspendido. Ni compartir REQ/Caso/materia ni acreditar pertinencia de COM publica sus adjuntos. La consulta documental de una COM hija gestionada por pertinencia requiere habilitación documental propia o derecho independiente sobre el original.
 
-Cambio de protección invalida las publicaciones anteriores por revisión. Cambio de área/materia invalida por secuencia. Volver a ORDINARIO o al área/materia previa no revive una publicación. Suspender o expirar publicación/concesión retira esa vía. FIR no admite publicación ordinaria; ACC-10 y otros tipos de reserva PE permanecen cerrados, sin aprobaciones ficticias.
+Para gestores de otro Caso existe una decisión separada de consulta por Caso, con vigencia, contenido y descarga independientes; no se hereda por materia ni concede gestión. Exige documento ORDINARIO, asociación explícita y jefatura efectiva sobre ambos contextos. No requiere inventar materia en un Caso que aún no la tenga. Las habilitaciones entre unidades permanecen cerradas hasta resolver PE-03. Un lector por materia no puede crear referencias; referenciar exige lectura de gestión del origen y descarga, además de gestión del destino. La respuesta del vínculo puede confirmar la asociación sin habilitar contenido en el destino.
+
+Cambio de protección invalida las publicaciones y consentimientos anteriores por revisión. Cambio de área/materia del destino invalida por secuencia; en el propietario incrementa la revisión de protección con historia, invalidando también todas las salidas a otros Casos. Suspensión/vencimiento del catálogo del contexto propietario impide consulta indirecta por terceros. Omitir el Caso en la ruta ciudadana no evita la autorización del documento. Volver a ORDINARIO o al área/materia previa no revive una publicación. Suspender o expirar publicación/concesión retira esa vía. FIR no admite publicación ordinaria; ACC-10 y otros tipos de reserva PE permanecen cerrados, sin aprobaciones ficticias.
 
 ## Rutas y transacciones
 
@@ -45,7 +47,8 @@ Todas bajo sesión HTTPS. Mutaciones con CSRF e Idempotency-Key:
 - GET `/nucleo/casos/{caso}/antecedentes-pertinentes`: únicamente contexto vigente; contenido solo cuando fue autorizado.
 - POST `.../{com}/valoraciones`: `{revision,anterior,decision,fundamento}`, con predecesora vigente.
 - GET/POST `/nucleo/casos/{caso}/proteccion-documental/{doc}`: control/historia y `{revision,clasificacion,fundamento}`.
-- POST `.../{doc}/consulta/{destino}`: `{revision,desde,hasta,contenido,descarga,estado,fundamento}`.
+- POST `.../{doc}/consulta/{destino}`: `{revision,desde,hasta,contenido,descarga,estado,fundamento}`, lectores por materia.
+- POST `.../{doc}/compartir/{destino}`: mismo cuerpo, únicamente gestores ya autorizados del Caso; no concede facultades sobre el Caso ni materias. Control devuelve `publicaciones` y `comparticiones` con revisiones separadas.
 
 Se reutilizan núcleo, comandos idempotentes, guarda de identidad y bloqueos ordenados de COM; decisión/proyección/historia/evento confirman juntos. Carrera obsoleta devuelve 409, auditoría fallida revierte. La auditoría de consultas es técnica y no una actuación ni evidencia de lectura humana.
 
@@ -57,7 +60,7 @@ UI conecta selección de pertinencia, valoración, protección, publicación y c
 
 ## Persistencia y límites
 
-V15.5 H2/MySQL aditiva: principal acreditado, pertinencia actual/ámbitos/historia, valoraciones sucesivas, protección/historia y publicaciones documentales. V1–V15.4 intactas; sin outOfOrder, retroaprobaciones, semillas nominales ni borrado de originales.
+V15.5 H2/MySQL aditiva: principal acreditado, pertinencia actual/ámbitos/historia, valoraciones sucesivas, protección/historia y publicaciones documentales. V15.6 agrega consentimiento documental por Caso e historia en la tabla de decisiones existente. V1–V15.5 se preservan; sin outOfOrder, retroaprobaciones, semillas nominales ni borrado de originales.
 
 No se acredita downgrade a un JAR anterior que ignore estas políticas. Deben mantenerse juntos código, esquema y UI compatibles al planificar una futura integración/despliegue autorizado.
 

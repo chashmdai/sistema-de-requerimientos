@@ -19,5 +19,6 @@ public final class ContenidoController {
  @GetMapping("/casos/{caso}/proteccion-documental/{doc}") public Map<String,Object> control(Authentication a,@PathVariable UUID caso,@PathVariable UUID doc){return core.contenidos().control(actor(a),caso,doc);}
  @PostMapping("/casos/{caso}/proteccion-documental/{doc}") public ContratosNucleo.Resultado proteger(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID caso,@PathVariable UUID doc,@RequestBody Proteccion body){return core.contenidos().proteger(actor(a),key,caso,doc,body);}
  @PostMapping("/casos/{caso}/proteccion-documental/{doc}/consulta/{destino}") public ContratosNucleo.Resultado publicar(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID caso,@PathVariable UUID doc,@PathVariable UUID destino,@RequestBody Publicacion body){return core.contenidos().publicar(actor(a),key,caso,doc,destino,body);}
+ @PostMapping("/casos/{caso}/proteccion-documental/{doc}/compartir/{destino}") public ContratosNucleo.Resultado compartir(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID caso,@PathVariable UUID doc,@PathVariable UUID destino,@RequestBody Publicacion body){return core.contenidos().compartir(actor(a),key,caso,doc,destino,body);}
 }
 

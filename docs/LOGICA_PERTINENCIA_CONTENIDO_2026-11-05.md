@@ -4,7 +4,7 @@
 
 Rama dependiente `feature/siger-pertinencia-documental`, worktree exclusivo `C:\req\worktrees\siger-logica`, origen limpio `d455b98f1067b3fbe56931b0f01bb7b5406362d8`. Base de integración `feature/siger-logica-negocio`, PR #2 en borrador. No se repiten U0–U1.6b.1. Rector local íntegro SHA-256 `80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4`; no se publica. Contrato: [pertinencia y contenido](../contratos/pertinencia-y-proteccion-contenido-v1.md).
 
-Bloque M1 funcional: acreditación explícita del principal histórico de REQ; pertinencia de COM por Caso y materia; valoración sucesiva por profesional; protección documental y publicación específica de consulta por materia; listados, descarga, visor e interfaz conectados. No es cierre de U1/U2/U6 ni habilitación nominal. Falta aún la regresión completa y publicación de este nuevo bloque; se registrarán al cerrar el hito, sin atribuirle la CI del padre.
+Bloques M1/M2 funcionales: acreditación explícita del principal histórico de REQ; pertinencia de COM por Caso y materia; valoración sucesiva por profesional; protección documental y publicación específica de consulta por materia; listados, descarga, visor e interfaz conectados. No es cierre de U1/U2/U6 ni habilitación nominal. Las evidencias de cada bloque se distinguen de la regresión y CI final; no se atribuye a este desarrollo la CI del padre.
 
 ## Reglas y decisiones
 
@@ -37,7 +37,7 @@ QA/históricos/U4/COM-000001, JAR activos, Formulario, WSL/HTTP_503, servicios y
 - Primeras pruebas detectaron rollback marcado al filtrar denegaciones y una redistribución incorrecta del fixture mixto. Se corrigió código y fixture sin retirar controles. Las corridas fallidas se conservan; no se presentan como aprobadas.
 - Dobles de AV/inspección/renderer identificados en fixtures. H2, MockMvc y DOM no son E2E físicos ni calificación de workers nativos.
 
-Evidencia privada bajo LOCALAPPDATA `siger-pertinencia-49b422b77ecc46259590b3c58d7cda1f`; no se publican sobres, configuración o logs completos. La regresión completa backend/frontend y CI del HEAD final se registrarán al cierre del bloque.
+Evidencia privada bajo LOCALAPPDATA `siger-pertinencia-49b422b77ecc46259590b3c58d7cda1f`; no se publican sobres, configuración o logs completos. El cierre de validación y publicación se registra al final de este informe.
 
 ## Ampliación M2 y revisión conjunta
 
@@ -55,12 +55,24 @@ La matriz conserva 138 reglas; este hito revisa 17 filas con evidencia y límite
 
 M1 confirmado en `a266693c2b845801aecef9f9ae4176577d075838`. M2 conserva V15.5 sin modificar; H2/MySQL iguales, SHA-256 del checkout `88401f11d316d4b7a36859c13affcaed8be9b79667799943cf7792fc64f3a4a7`. Logs privados: focal `ca137fd56d568053decd0385e49a6230c33e8b216d35d2948b0bf00808bfdaf6`; MySQL M2 `747d3a417ac48b4eae2e08747cf1ee082c6db5958cd7e60bd9556dceef988272`. Procesos y listener propios finales: cero. La regresión completa incorpora además la aserción de que una descarga con varias revalidaciones conserva un solo evento de solicitud y un rechazo al retirarse permiso; no se sustituye esa corrida por los focalizados.
 
+## M3 · Referencia y consentimiento por recurso
+
+La revisión del bloque detectó una vía de ampliación: combinar consulta por materia de un documento con gestión de otro Caso para crear una referencia que concediera consulta ordinaria en destino. Se cierra en backend y UI: referenciar exige lectura de gestión y descarga en origen, y gestión en destino; el vínculo no confiere lectura a terceros. Recursos históricos sin política no admiten vínculos nuevos hasta acreditar propietario; los reintentos históricos y los registros previos se conservan.
+
+V15.6 agrega `document_case_consent`, sin modificar V15.5. Consentimiento de consulta por Caso separado de publicación por materia, con documento ordinario, autorización de jefatura sobre ambos ámbitos, fundamento, revisión optimista, vigencia finita, flags de contenido/descarga e historia transaccional. No concede gestión o consulta por materia, ni crea una excepción entre unidades. La UI conecta ambos contratos y sus revisiones independientes; filtra documentos no referenciables. Puede confirmarse la asociación sin conceder consulta del destino.
+
+Un cambio del contexto propietario incrementa la revisión de protección con historia; retira también salidas a otros Casos, sin tocar bytes/clasificación. Cambios del destino invalidan por sus secuencias. Suspender/vencer área o materia propietaria impide consumo indirecto. Omitir el Caso en el acceso ciudadano no elude su política. La prueba V10 de compartir se adapta mediante una decisión real de jefatura y comprueba primero que el vínculo solo no entrega lectura, sin SQL que otorgue permisos. Esta sustitución del contrato provisional está respaldada por §15.3 del rector.
+
+Pruebas focalizadas M3: 54/54 H2/MockMvc (API, idempotencia, actualización hasta V15.6 y regresión documental/Formulario), luego 22/22 de dominio con cierre adicional por suspensión del contexto propietario. La primera selección de migración detectó una expectativa incorrecta del test: sin facultad de Caso corresponde 404, no lista vacía; se corrigió la expectativa sin abrir acceso. DOM focal 8/8; lint/build correctos. La primera regresión completa previa a M3 ejecutó 389 pruebas, nueve omitidas, un fallo en enumeración de temporales rechazados; el método pasó al repetirse con temporales privados. Otra invocación diagnóstica sin temporal privado falló correctamente por DACL y no se usa como evidencia de aceptación. Se exige repetir la batería completa con el script oficial; no se excluye ni altera esa prueba.
+
+MySQL M3 **15/15**, cero fallos/errores/omisiones, Windows nativo 8.0.46. Instancia nueva `siger-autoridad-mysql-3056cee3cbfe43d28505e37ad8984c06`, cierre comprobado sin procesos propios restantes. Seis rutas V14/15.1/15.2/15.3/15.4/15.5→15.6, conservación de cuenta/asignación histórica y pruebas funcionales de áreas, materias, pertinencia, FIR, original ciudadano y consentimiento sin materia fabricada. SHA-256 `mysql-m3.log`: `be153a18750b9205bf9e607c85ab98b8b00b6aa609803c0c9a7c31486ae64c7b`. V15.6 H2/MySQL idénticas; hash checkout `4e5b1fde77f5812ad57f87d32f5dc69b348b5dc83b5d7c6b8d8d6f12da816387`. No es prueba sobre MySQL operativo ni batería completa en ese motor. Matriz: 138 reglas, 18 filas revisadas en este bloque al añadir ACC-03; no se declara cierre global.
+
 ## Dependencias pendientes
 
-FIR de actuaciones/bitácora completa, reservas adicionales y excepción conjunta ACC-10 requieren su alcance y autoridades; no se habilitan con concesión ordinaria. Colaboradores, reapertura con valoración nueva, transferencia con aceptación, SOL institucional/nacimiento U2 de REQ, fuente maestra/SSO/MFA y datos nominales continúan pendientes. No se inicia una etapa amplia U2 dentro de este PR.
+FIR de actuaciones/bitácora completa, reservas adicionales y excepción conjunta ACC-10 requieren el procedimiento institucional pendiente PE-03, además de autoridades y habilitaciones; no se habilitan con concesión ordinaria. Colaboradores, reapertura con valoración nueva, transferencia con aceptación, SOL institucional/nacimiento U2 de REQ, fuente maestra/SSO/MFA y datos nominales continúan pendientes. No se inicia una etapa amplia U2 dentro de este PR.
 
 ## Preguntas institucionales
 
 1. Para habilitar datos reales: catálogo, principal histórico, autoridades y respaldos por el canal institucional privado.
-2. Para excepciones sensibles: habilitaciones de Gestión y jefatura competente y alcance de reservas PE-03; mantener cierre hasta acreditarlas.
+2. Para excepciones sensibles: confirmar autoridad y procedimiento PE-03, luego habilitaciones de Gestión y jefatura competente, alcance, vigencia y reservas; mantener cierre hasta acreditarlos.
 
