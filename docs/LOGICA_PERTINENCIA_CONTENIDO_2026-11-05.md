@@ -4,7 +4,7 @@
 
 Rama dependiente `feature/siger-pertinencia-documental`, worktree exclusivo `C:\req\worktrees\siger-logica`, origen limpio `d455b98f1067b3fbe56931b0f01bb7b5406362d8`. Base de integración `feature/siger-logica-negocio`, PR #2 en borrador. No se repiten U0–U1.6b.1. Rector local íntegro SHA-256 `80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4`; no se publica. Contrato: [pertinencia y contenido](../contratos/pertinencia-y-proteccion-contenido-v1.md).
 
-Bloques M1/M2 funcionales: acreditación explícita del principal histórico de REQ; pertinencia de COM por Caso y materia; valoración sucesiva por profesional; protección documental y publicación específica de consulta por materia; listados, descarga, visor e interfaz conectados. No es cierre de U1/U2/U6 ni habilitación nominal. Las evidencias de cada bloque se distinguen de la regresión y CI final; no se atribuye a este desarrollo la CI del padre.
+Bloques M1/M2/M3 funcionales: acreditación explícita del principal histórico de REQ; pertinencia de COM por Caso y materia; valoración sucesiva por profesional; protección documental y consulta específica por materia o Caso; listados, descarga, visor e interfaz conectados. No es cierre de U1/U2/U6 ni habilitación nominal. Las evidencias de cada bloque se distinguen de la regresión y CI final; no se atribuye a este desarrollo la CI del padre.
 
 ## Reglas y decisiones
 
@@ -67,9 +67,39 @@ Pruebas focalizadas M3: 54/54 H2/MockMvc (API, idempotencia, actualización hast
 
 MySQL M3 **15/15**, cero fallos/errores/omisiones, Windows nativo 8.0.46. Instancia nueva `siger-autoridad-mysql-3056cee3cbfe43d28505e37ad8984c06`, cierre comprobado sin procesos propios restantes. Seis rutas V14/15.1/15.2/15.3/15.4/15.5→15.6, conservación de cuenta/asignación histórica y pruebas funcionales de áreas, materias, pertinencia, FIR, original ciudadano y consentimiento sin materia fabricada. SHA-256 `mysql-m3.log`: `be153a18750b9205bf9e607c85ab98b8b00b6aa609803c0c9a7c31486ae64c7b`. V15.6 H2/MySQL idénticas; hash checkout `4e5b1fde77f5812ad57f87d32f5dc69b348b5dc83b5d7c6b8d8d6f12da816387`. No es prueba sobre MySQL operativo ni batería completa en ese motor. Matriz: 138 reglas, 18 filas revisadas en este bloque al añadir ACC-03; no se declara cierre global.
 
+## Componentes, compatibilidad y corte
+
+| Componente | Resultado |
+|---|---|
+| `AutoridadesInstitucionales` | Registro firmado 1.3 y acreditación histórica del principal; versiones previas sin reinterpretación. |
+| `ContenidoInstitucional`, `NucleoInstitucional`, `ContenidoController` | Pertinencia, valoración sucesiva, protección, consulta por materia/Caso, control transaccional y API efectiva. |
+| Adaptadores y controladores documentales, `TransferenciaDocumento` | Misma política en rutas directas/indirectas y revalidación durante streaming. |
+| `NotificacionesInstitucionales` | Avisos internos genéricos, revalidados; ninguna habilitación de Graph. |
+| `ContenidoInstitucional.tsx`, Caso, materia, documentos, formulario y visor | Interfaz conectada; derechos separados, proyección autorizada y mensajes de bloqueos institucionales. |
+| Fixtures/pruebas de contenido, compartición, HTTP y migración | Circuito U1.5 real con identidades sintéticas; custodia real de archivos sintéticos y dobles documentales declarados. |
+| `Test-AutoridadMySql.ps1` | Instancia UUID descartable, aislamiento de cliente/servidor y seis rutas de actualización; sin servicio persistente. |
+
+Transporte Formulario 1.0/1.1 y V3 histórico, huellas, originales, recibos, Ed25519 y orden COMMIT→ACK conservados por regresión. Sin cambios al repositorio del Formulario, POM, dependencias npm, workflow o exclusiones de tests. `npm ci` informa **nueve vulnerabilidades moderadas** en el árbol existente; se documentan sin actualización masiva ni `audit fix --force`. El aviso Flyway/H2 sobre versión del motor ya existía; no se oculta ni se modifica configuración para ignorar controles.
+
+La integración con U4.5 requiere revisar cambios no publicados y reservar V15.5/V15.6 antes de integrar. Main remoto y referencia local U4.5 permanecen en G0 al consultar; el padre PR #2 sigue en `d455b98`. No se incorporan commits ajenos ni se toca otro worktree. Las nuevas políticas exigen desplegar conjuntamente backend/esquema/UI compatibles en un futuro autorizado; un binario anterior puede ignorarlas y no es una reversión segura acreditada.
+
+Este es un corte sustancial de pertinencia y documentos, con tres incrementos funcionales. El siguiente bloque recomendado es **U2 separado**, primero nacimiento SOL/REQ sin Caso, destinatario único y unidad principal con aceptación/trazabilidad; debe convivir con REQ históricos acreditados y no reutilizar semántica del U5 histórico. La derivación/reapertura con nuevas valoraciones y transferencia de principal necesita su circuito completo, no conversiones automáticas. No se inicia aquí una migración amplia de esos procesos.
+
 ## Dependencias pendientes
 
 FIR de actuaciones/bitácora completa, reservas adicionales y excepción conjunta ACC-10 requieren el procedimiento institucional pendiente PE-03, además de autoridades y habilitaciones; no se habilitan con concesión ordinaria. Colaboradores, reapertura con valoración nueva, transferencia con aceptación, SOL institucional/nacimiento U2 de REQ, fuente maestra/SSO/MFA y datos nominales continúan pendientes. No se inicia una etapa amplia U2 dentro de este PR.
+
+## Cierre local, publicación y verificación remota
+
+`Build-Siger.ps1` Windows nativo sobre backend funcional **685557080e09eaef5c3b2cd93f0fdff143ff37d1**: **399 pruebas backend, 390 aprobadas, nueve workers opt-in omitidos, cero fallos/errores**. Frontend **93/93**, lint/build y empaquetado correctos. Terminó 05/11/2026 08:45 CLST, 11:25 min Maven. Temporales privados nuevos `siger-build-52fd2b0aa7834623b0543463b4ad5ea6`; resultados Surefire preservados fuera de Git. El método de limpieza del Formulario pasó sin modificarlo en esta segunda regresión completa. Las tres pruebas históricas stress siguen excluidas por configuración preexistente; no son tres nuevas omisiones.
+
+Después se aclara únicamente texto de permisos y mensajes de bloqueos en frontend (sin cambio de contrato o lógica). Repetición frontend final **93/93**, lint/build correctos; backend/SQL sin cambios respecto del completo y MySQL M3. SHA-256 del log completo `969bc49856963c93cc21a5d505766fa36ed9cab082e138064b2364a142dd23e6`; frontend final `db55c44bbd291441e6ffe5a0a58787e0dcff020a11c33d79f226d311a416ec25`. La composición final backend/frontend se valida nuevamente en CI.
+
+Commits funcionales confirmados y publicados mediante push normal: **a266693** (M1), **fcb8715** (M2), **6855570** (M3). Cierre documental y textos en el commit que incorpora este apartado. Upstream `origin/feature/siger-pertinencia-documental`; resolver el SHA de cierre con `git log -1 --format=%H`. El manifiesto privado final y la entrega registran el HEAD exacto, sin autorreferencia imposible del commit que contiene el informe.
+
+**[PR #3 en borrador](https://github.com/chashmdai/sistema-de-requerimientos/pull/3)**, base `feature/siger-logica-negocio`; depende de [PR #2](https://github.com/chashmdai/sistema-de-requerimientos/pull/2), que permanece en borrador sobre `main`. Este corte añade 39 archivos de cambio, sin acumular U2–U9 ni fusionar ramas. La matriz conserva 138 filas/IDs únicos, con 18 actualizadas; las demás mantienen el diagnóstico/evidencia de su corte anterior.
+
+La CI del HEAD definitivo se comprueba **después del push de este cierre** en [los checks del PR #3](https://github.com/chashmdai/sistema-de-requerimientos/pull/3/checks). Sus SHA, ejecuciones, resultados Windows/Ubuntu y conteos efectivos se consignan en el PR y la entrega final una vez terminados; este documento no atribuye resultados remotos futuros. El corte no se entrega como aprobado sin esa comprobación. No hay merge, auto-merge, despliegue, workers/proveedores reales ni E2E físicos nuevos.
 
 ## Preguntas institucionales
 
