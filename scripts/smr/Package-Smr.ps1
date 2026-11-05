@@ -9,6 +9,9 @@ foreach($p in @($release,"$release\tools","$release\lib","$release\runtime")){[I
 Copy-Item -LiteralPath "$repo\siger-institucional\backend\target\siger-institucional-0.1.0-SNAPSHOT.jar" -Destination "$release\smr-rc1.jar"
 Copy-Item -LiteralPath "$repo\siger-institucional\backend\target\siger-institucional-0.1.0-SNAPSHOT.jar.original" -Destination "$release\tools\core.jar"
 Copy-Item -LiteralPath $PSScriptRoot -Destination "$release\scripts" -Recurse
+[IO.Directory]::CreateDirectory("$release\docs")|Out-Null
+Copy-Item "$repo\docs\SMR_*.md" -Destination "$release\docs"
+Copy-Item -LiteralPath "$Root\public" -Destination "$release\public" -Recurse
 # JDK Temurin completo: runtime portable con licencias, módulos y herramientas; no instalador ni cambios globales.
 Copy-Item -LiteralPath $JavaSource -Destination "$release\runtime\java25" -Recurse
 Copy-Item -LiteralPath ([IO.Path]::GetDirectoryName((Get-Process -Id $PID).Path)) -Destination "$release\runtime\pwsh" -Recurse
@@ -20,6 +23,7 @@ $files|ConvertTo-Json -Depth 4|Set-Content -LiteralPath "$release\runtime-manife
 $deps=@(Get-ChildItem "$release\lib" -File|ForEach-Object {@{file=$_.Name;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant()}})
 $deps|ConvertTo-Json -Depth 4|Set-Content -LiteralPath "$release\dependencies.json"
 $manifest=@{version=$Version;sourceCommit=(git -C $repo rev-parse HEAD);sourceDirty=[bool](git -C $repo status --porcelain);jarSha256=(Get-FileHash "$release\smr-rc1.jar").Hash.ToLowerInvariant();javaExeSha256=(Get-FileHash "$release\runtime\java25\bin\java.exe").Hash.ToLowerInvariant();javaVersion=$ver;javaRuntime='runtime/java25';runtimeManifestSha256=(Get-FileHash "$release\runtime-manifest.json").Hash.ToLowerInvariant();createdUtc=[DateTime]::UtcNow.ToString('o');productionE2e=$false;secretMaterialIncluded=$false}
+if(Test-Path "$Root\evidence\build-summary.json"){$summary=Get-Content -Raw "$Root\evidence\build-summary.json"|ConvertFrom-Json;if($summary.jarSha256 -ne $manifest.jarSha256){throw 'Resumen de pruebas no corresponde al JAR'};$manifest.tests=$summary}
 $manifest|ConvertTo-Json -Depth 5|Set-Content -LiteralPath "$release\manifest.json"
 $globalAfter=@{machineJavaHome=[Environment]::GetEnvironmentVariable('JAVA_HOME','Machine');userJavaHome=[Environment]::GetEnvironmentVariable('JAVA_HOME','User');machinePath=[Environment]::GetEnvironmentVariable('PATH','Machine');userPath=[Environment]::GetEnvironmentVariable('PATH','User');resolvedJava=(Get-Command java.exe).Source}
 foreach($k in $globalBefore.Keys){if($globalBefore[$k] -cne $globalAfter[$k]){throw 'Cambio global inesperado; investigar'}}

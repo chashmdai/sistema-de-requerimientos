@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]param([string]$Root='C:\req\smr',[Parameter(Mandatory)][string]$Backup,[ValidateSet('sintetico','recepcion')][string]$Instance='sintetico')
 . "$PSScriptRoot\ArchiveCrypto.ps1"
-$instance=Get-Content -Raw "$Root\instances\$Instance\instance.json"|ConvertFrom-Json;$platform=Get-Content -Raw "$Root\mysql\platform.json"|ConvertFrom-Json
+$configuration=Get-Content -Raw "$Root\instances\$Instance\instance.json"|ConvertFrom-Json;$platform=Get-Content -Raw "$Root\mysql\platform.json"|ConvertFrom-Json
 $dest=Join-Path $Root ('tests\restore-'+[guid]::NewGuid().ToString('N'));[IO.Directory]::CreateDirectory($dest)|Out-Null
 $secret=Read-SmrJson "$Root\recovery\backup-key.dpapi";$key=[Convert]::FromBase64String($secret.key)
 try{Unprotect-SmrArchive "$Backup\custodia.smrbackup" "$dest\custodia.zip" $key}finally{[Array]::Clear($key);$secret.Clear()}
@@ -34,9 +34,9 @@ try{
  $proc.WaitForExit();[IO.File]::WriteAllText("$dest\restore.err.log",$err.GetAwaiter().GetResult());$null=$out.GetAwaiter().GetResult();if($proc.ExitCode){throw 'Restore SQL falló; conservar estado parcial'}
 }finally{$credential.Clear();Remove-Item -LiteralPath $cnf}
 $store="$dest\store";[IO.Directory]::CreateDirectory($store)|Out-Null;Copy-Item -LiteralPath "$extract\objects" -Destination "$store\objects" -Recurse
-$db=Read-SmrJson "$Root\secrets\${target}_app.dpapi";$ack=if($instance.synthetic){Read-SmrJson "$Root\instances\$Instance\private\ack.dpapi"}else{Read-SmrJson "$Root\secrets\ack-identity.dpapi"}
-$p=@{url=$instance.dbUrl.Replace('/'+$instance.schema+'?',"/$target`?");user=$db.username;password=$db.password;store=$store;producerTrust="$extract\trust\producer.json";ownTrust="$extract\trust\ack.json";keyId=$ack.keyId;publicPem=$ack.publicPem;privatePem=$ack.privatePem;origin=$instance.origin}
-Invoke-SmrJava "$($instance.javaHome)\bin\java.exe" @('--enable-native-access=ALL-UNNAMED','-XX:-UsePerfData','-Xmx192m','--class-path',"$($instance.release)\tools\core.jar;$($instance.release)\lib\*","$PSScriptRoot\testing\VerifyRestore.java") ($p|ConvertTo-Json -Compress) "$dest\verify.log" "$dest\verify.err.log"|Out-Null
+$db=Read-SmrJson "$Root\secrets\${target}_app.dpapi";$ack=if($configuration.synthetic){Read-SmrJson "$Root\instances\$Instance\private\ack.dpapi"}else{Read-SmrJson "$Root\secrets\ack-identity.dpapi"}
+$p=@{url=$configuration.dbUrl.Replace('/'+$configuration.schema+'?',"/$target`?");user=$db.username;password=$db.password;store=$store;producerTrust="$extract\trust\producer.json";ownTrust="$extract\trust\ack.json";keyId=$ack.keyId;publicPem=$ack.publicPem;privatePem=$ack.privatePem;origin=$configuration.origin}
+Invoke-SmrJava "$($configuration.javaHome)\bin\java.exe" @('--enable-native-access=ALL-UNNAMED','-XX:-UsePerfData','-Xmx192m','--class-path',"$($configuration.release)\tools\core.jar;$($configuration.release)\lib\*","$PSScriptRoot\testing\VerifyRestore.java") ($p|ConvertTo-Json -Compress) "$dest\verify.log" "$dest\verify.err.log"|Out-Null
 $last=Get-Content "$dest\verify.log"|Where-Object {$_ -match '^\{"'}|Select-Object -Last 1;$result=$last|ConvertFrom-Json
 if($result.records -ne $manifest.records -or -not $result.exclusiveConsumerVerified){throw 'Restore no acreditado'}
 $result|ConvertTo-Json|Set-Content -LiteralPath "$Root\evidence\backup-restore-$Instance.json"
