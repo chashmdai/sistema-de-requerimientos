@@ -7,25 +7,25 @@ function useCommand(changed:()=>Promise<void>){
  async function command(route:string,body:object){const signature=JSON.stringify([route,body]);const key=keys.current.get(signature)??crypto.randomUUID();keys.current.set(signature,key);B(true);E('');try{await api.command(route,body,key);keys.current.delete(signature);await changed();}catch(e){E((e as Error).message);}finally{B(false);}}
  return {command,busy,error};
 }
-export function ProteccionDocumento({caso,documento,changed}:{caso:string;documento:string;changed:()=>void}){
+export function ProteccionDocumento({caso,documento,changed,soloRestringir=false}:{caso:string;documento:string;changed:()=>void;soloRestringir?:boolean}){
  const [control,C]=useState<api.ControlDocumento|null>(null),[error,E]=useState(''),[classification,K]=useState(''),[reason,R]=useState('');
  const [target,T]=useState(''),[from,F]=useState(''),[until,U]=useState(''),[content,V]=useState(false),[download,D]=useState(false),[state,S]=useState('ACTIVA');
- async function load(){const v=await api.controlDocumento(caso,documento);C(v);K(v.clasificacion);}
+ async function load(){const v=await api.controlDocumento(caso,documento);C(v);K(soloRestringir?'BLOQUEADO':v.clasificacion);}
  const run=useCommand(async()=>{await load();changed();});
  const base=`/nucleo/casos/${caso}/proteccion-documental/${documento}`;
  const previous=control?.publicaciones.find(p=>p.case_id===target);
  const targets=[...new Set([...(control?.contextos.map(c=>c.id)??[]),...(control?.publicaciones.map(p=>p.case_id)??[])])];
- return <section className="card"><button onClick={()=>{void load().catch(e=>E(e.message));}}>Protección y consulta por materia</button>{(error||run.error)&&<p role="alert">{error||run.error}</p>}{control&&<><p>Clasificación: {control.clasificacion}. FIR conserva consulta del responsable y jefatura competente; las excepciones sensibles siguen cerradas.</p>
+ return <section className="card"><button onClick={()=>{void load().catch(e=>E(e.message));}}>{soloRestringir?'Restringir consulta documental':'Protección y consulta por materia'}</button>{(error||run.error)&&<p role="alert">{error||run.error}</p>}{control&&<><p>Clasificación: {control.clasificacion}. FIR conserva consulta del responsable y jefatura competente; las excepciones sensibles siguen cerradas.</p>
  <form onSubmit={e=>{e.preventDefault();void run.command(base,{revision:control.revision,clasificacion:classification,fundamento:reason});}}>
- <label>Protección del contenido<select required value={classification} onChange={e=>K(e.target.value)}><option value="">Seleccionar</option>{!['ORDINARIO','FIR','BLOQUEADO'].includes(classification)&&<option value={classification} disabled>{classification}</option>}<option value="ORDINARIO">Ordinario</option><option value="FIR">Ficha Interna Reservada</option><option value="BLOQUEADO">Consulta bloqueada</option></select></label>
+ <label>Protección del contenido<select required value={classification} onChange={e=>K(e.target.value)}><option value="">Seleccionar</option>{!['ORDINARIO','FIR','BLOQUEADO'].includes(classification)&&<option value={classification} disabled>{classification}</option>}{!soloRestringir&&<><option value="ORDINARIO">Ordinario</option><option value="FIR">Ficha Interna Reservada</option></>}<option value="BLOQUEADO">Consulta bloqueada</option></select></label>
  <label>Fundamento documental<textarea required maxLength={1000} value={reason} onChange={e=>R(e.target.value)}/></label><button disabled={run.busy||!['ORDINARIO','FIR','BLOQUEADO'].includes(classification)}>Registrar protección</button></form>
- <form onSubmit={e=>{e.preventDefault();void run.command(base+'/consulta/'+target,{revision:previous?.revision??0,desde:new Date(from).toISOString(),hasta:new Date(until).toISOString(),contenido:content,descarga:download,estado:state,fundamento:reason});}}>
+ {!soloRestringir&&<form onSubmit={e=>{e.preventDefault();void run.command(base+'/consulta/'+target,{revision:previous?.revision??0,desde:new Date(from).toISOString(),hasta:new Date(until).toISOString(),contenido:content,descarga:download,estado:state,fundamento:reason});}}>
  <h4>Decisión específica de consulta por materia</h4><p>Se requiere materia vigente del Caso, referencia acreditada y facultad sobre origen y destino. Cambiar materia, área o protección retira esta habilitación.</p>
  <label>Contexto de consulta<select required value={target} onChange={e=>{T(e.target.value);const p=control.publicaciones.find(p=>p.case_id===e.target.value);if(p){const local=(n:number)=>{const d=new Date(n);return new Date(n-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};F(local(p.valid_from));U(local(p.valid_until));V(p.content_allowed);D(p.download_allowed);S(p.status);}}}><option value="">Seleccionar Caso</option>{targets.map(id=><option key={id} value={id}>{id} · {control.contextos.find(c=>c.id===id)?.matter_id??'Concesión anterior'}</option>)}</select></label>
  <label>Desde<input required type="datetime-local" value={from} onChange={e=>F(e.target.value)}/></label><label>Hasta<input required type="datetime-local" value={until} onChange={e=>U(e.target.value)}/></label>
  <label><input type="checkbox" checked={content} onChange={e=>{V(e.target.checked);if(!e.target.checked)D(false);}}/>Permitir consultar contenido</label><label><input type="checkbox" disabled={!content} checked={download} onChange={e=>D(e.target.checked)}/>Permitir descargar original</label>
  <label>Vigencia de la decisión<select value={state} onChange={e=>S(e.target.value)}><option value="ACTIVA">Activa</option><option value="SUSPENDIDA">Suspendida</option></select></label><p>Se usa el fundamento documental indicado arriba. Los metadatos no conceden contenido ni descarga.</p>
- <button disabled={run.busy||!reason.trim()||!target||(state==='ACTIVA'&&control.clasificacion!=='ORDINARIO')}>Registrar alcance de consulta</button></form>
+ <button disabled={run.busy||!reason.trim()||!target||(state==='ACTIVA'&&control.clasificacion!=='ORDINARIO')}>Registrar alcance de consulta</button></form>}
  <h4>Historia de decisiones</h4>{control.historial.map((h,i)=><p key={i}>{h.action_code} · {date(new Date(h.at_ms).toISOString())} · {h.actor_id}<br/>{h.reason_text}</p>)}</>}</section>;
 }
 export function PertinenciaReq({requerimiento}:{requerimiento:string}){

@@ -16,6 +16,8 @@ class ContenidoMigracionTest {
    assertEquals(404,assertThrows(FalloTecnico.class,()->x.docs.referencia(x.f.a(x.m.upr),p[0],doc.id(),"DESCARGA")).status);
    x.c().proteger(x.f.a(x.f.headA),UUID.randomUUID(),p[0],doc.id(),new ContenidoInstitucional.Proteccion(1,"FIR","Reserva en motor aislado"));assertTrue(x.docs.listar(x.f.a(x.m.upr),p[0]).isEmpty());
    assertArrayEquals(bytes,Files.readAllBytes(x.docs.verificarArchivo(x.docs.referencia(x.f.a(x.f.profA),p[0],doc.id()))));assertEquals(2L,x.c().control(x.f.a(x.f.headA),p[0],doc.id()).get("revision"));
+   x.c().proteger(x.f.a(x.f.profA),UUID.randomUUID(),p[0],doc.id(),new ContenidoInstitucional.Proteccion(2,"BLOQUEADO","Responsable restringe en motor aislado"));assertEquals(404,assertThrows(FalloTecnico.class,()->x.docs.referencia(x.f.a(x.f.profA),p[0],doc.id())).status);
+   var citizen=x.original();x.c().proteger(x.f.a(x.f.headA),UUID.randomUUID(),citizen.caso(),citizen.documento(),new ContenidoInstitucional.Proteccion(0,"BLOQUEADO","Original con acceso limitado"));assertEquals(0,x.f.core.detalle(x.f.a(x.f.dist),citizen.comunicacion()).contenido().formularioCompleto().path("adjuntos").size());assertEquals(x.d.mapper.writeValueAsString(citizen.entrega()),x.d.mapper.writeValueAsString(x.d.recepcion.completaRegistrada(citizen.comunicacion())));
   }
  }
  @Test void ddlH2MySqlIguales()throws Exception{try(var h=getClass().getResourceAsStream("/db/institucional/h2/V15_5__pertinencia_y_proteccion_documental.sql");var m=getClass().getResourceAsStream("/db/institucional/mysql/V15_5__pertinencia_y_proteccion_documental.sql")){assertNotNull(h);assertNotNull(m);assertArrayEquals(h.readAllBytes(),m.readAllBytes());}}

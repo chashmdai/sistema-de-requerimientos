@@ -23,4 +23,7 @@ test('principal decide casos y contenido por COM sin admitir automáticamente',a
 test('lector por materia consulta antecedentes sin ofrecer valoración',async()=>{
  vi.mocked(api.antecedentesPertinentes).mockResolvedValue([{comunicacion:'h1',revision:2,contenido:null,valoraciones:[]}]);render(<AntecedentesPertinentes caso={{...c,soloLectura:true}}/>);fireEvent.click(screen.getByText('Consultar antecedentes pertinentes'));await screen.findByText('Comunicación h1');expect(screen.queryByLabelText('Valoración en este Caso')).toBeNull();expect(screen.getByText('Contenido fuera de este alcance de consulta.')).toBeTruthy();
 });
+test('responsable puede restringir sin controles de publicación o desclasificación',async()=>{
+ render(<ProteccionDocumento caso="c1" documento="d1" soloRestringir changed={vi.fn()}/>);fireEvent.click(screen.getByText('Restringir consulta documental'));await screen.findByText(/Clasificación: ORDINARIO/);expect(screen.queryByRole('option',{name:'Ordinario'})).toBeNull();expect(screen.queryByText('Registrar alcance de consulta')).toBeNull();fireEvent.change(screen.getByLabelText('Fundamento documental'),{target:{value:'Restricción por asociación incorrecta'}});fireEvent.click(screen.getByText('Registrar protección'));await waitFor(()=>expect(api.command).toHaveBeenCalledWith('/nucleo/casos/c1/proteccion-documental/d1',{revision:2,clasificacion:'BLOQUEADO',fundamento:'Restricción por asociación incorrecta'},expect.any(String)));
+});
 

@@ -11,6 +11,7 @@ public final class AutorizacionNucleo implements AutorizacionDocumental {
     public void contextoDocumento(Operador a,UUID caso){core.autorizarConsultaCaso(a,caso);}
     public void contextoIngreso(Operador a,UUID com,UUID caso){core.contenidos().contextoIngreso(a,com,caso);}
     public void documento(Operador a,UUID caso,UUID documento,String accion){core.contenidos().autorizarDocumento(a,caso,documento,accion);}
+    public void revalidarDocumento(Operador a,UUID caso,UUID documento,String accion){core.contenidos().revalidarDocumento(a,caso,documento,accion);}
     public void registrarDocumento(Operador a,UUID caso,UUID documento){core.contenidos().registrarDocumento(a,caso,documento);}
     public ContenidoInstitucional.Permisos permisos(Operador a,UUID caso,UUID documento){return core.contenidos().permisos(a,caso,documento);}
     public void bloquearMutacion(Operador a){core.contenidos().bloquear(a);}

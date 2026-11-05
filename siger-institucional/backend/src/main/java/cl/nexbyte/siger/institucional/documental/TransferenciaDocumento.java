@@ -17,7 +17,7 @@ public final class TransferenciaDocumento {
         }catch(IllegalArgumentException invalid){headers.set("Content-Range","bytes */"+size);audit.accept("RANGO_INVALIDO");return new ResponseEntity<>(null,headers,HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE);}}
         long start=from,length=to-from+1;if(partial)headers.set("Content-Range","bytes "+from+"-"+to+"/"+size);headers.setContentLength(length);
         audit.accept(inline?"REPRESENTACION":"ORIGINAL");
-        StreamingResponseBody body=request.getMethod().equals("HEAD")?null:out->{revalidar.run();try(var channel=FileChannel.open(path,StandardOpenOption.READ)){channel.position(start);var input=java.nio.channels.Channels.newInputStream(channel);byte[] buffer=new byte[65536];long left=length;while(left>0){int n=input.read(buffer,0,(int)Math.min(buffer.length,left));if(n<0)throw new EOFException();out.write(buffer,0,n);left-=n;}}};
+        StreamingResponseBody body=request.getMethod().equals("HEAD")?null:out->{revalidar.run();try(var channel=FileChannel.open(path,StandardOpenOption.READ)){channel.position(start);var input=java.nio.channels.Channels.newInputStream(channel);byte[] buffer=new byte[65536];long left=length;while(left>0){int n=input.read(buffer,0,(int)Math.min(buffer.length,left));if(n<0)throw new EOFException();revalidar.run();out.write(buffer,0,n);left-=n;}}};
         return new ResponseEntity<>(body,headers,partial?HttpStatus.PARTIAL_CONTENT:HttpStatus.OK);
     }
 }

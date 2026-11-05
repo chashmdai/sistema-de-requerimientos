@@ -4,7 +4,7 @@ param([Parameter(Mandatory)][string]$JavaHome,[Parameter(Mandatory)][string]$Mav
 $ErrorActionPreference='Stop'
 $MySqlBin=[IO.Path]::GetFullPath($MySqlBin)
 if(-not $IsWindows){throw 'Este auxiliar provisiona solo una instancia Windows nativa descartable.'}
-if(Get-ChildItem Env:|Where-Object {$_.Name -like 'ROBUST_DB_*' -or $_.Name -like 'DOCUMENTAL_REAL_*' -or $_.Name -eq 'SIGER_U15_TEST_MYSQL_PASSWORD'}){throw 'Retirar del proceso las variables de otros entornos; no se reutilizan recursos ni credenciales.'}
+if(Get-ChildItem Env:|Where-Object {$_.Name -like 'ROBUST_DB_*' -or $_.Name -like 'DOCUMENTAL_REAL_*' -or $_.Name -eq 'SIGER_U15_TEST_MYSQL_PASSWORD' -or $_.Name -eq 'MYSQL_PWD'}){throw 'Retirar del proceso las variables de otros entornos; no se reutilizan recursos ni credenciales.'}
 $java=Join-Path $JavaHome 'bin/java.exe';$version=(& $java --version 2>&1)-join ' '
 if($LASTEXITCODE -or $version -notmatch '(?:openjdk|java) 25(?:[.\s-])'){throw 'Seleccionar Java25 explícito.'}
 foreach($exe in @('mysqld.exe','mysqladmin.exe')){if(-not(Test-Path -LiteralPath (Join-Path $MySqlBin $exe))){throw 'Faltan binarios MySQL; no se instala ni modifica un servicio.'}}
@@ -38,24 +38,29 @@ function Test-OwnListener {
  $listenerOwner=Get-CimInstance Win32_Process -Filter ('ProcessId='+[uint32]$listeners[0].OwningProcess)
  return $listenerOwner -and $listenerOwner.ExecutablePath -eq (Join-Path $MySqlBin 'mysqld.exe') -and $listenerOwner.CommandLine -and $listenerOwner.CommandLine.Contains('--datadir='+$dir)
 }
-$proc=$null;$oldJava=$env:JAVA_HOME;$oldMaven=$env:MAVEN_OPTS
+$proc=$null;$oldJava=$env:JAVA_HOME;$oldMaven=$env:MAVEN_OPTS;$oldLogin=$env:MYSQL_TEST_LOGIN_FILE
 try{
+ # Redirigir el login-path del cliente al ensayo, sin leer .mylogin.cnf compartido.
+ # https://dev.mysql.com/doc/mysql-installation-excerpt/8.0/en/environment-variables.html
+ $env:MYSQL_TEST_LOGIN_FILE=Join-Path $base 'sin-login-compartido.cnf'
  $proc=Start-Process -FilePath (Join-Path $MySqlBin 'mysqld.exe') -ArgumentList ($serverArgs|ForEach-Object {'"'+$_+'"'}) -WindowStyle Hidden -PassThru
  $ready=$false
- for($i=0;$i -lt 100;$i++){$proc.Refresh();if($proc.HasExited){throw 'La instancia propia no arrancó; consultar log privado.'};if(Test-OwnListener){& (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) status *> $null;if($LASTEXITCODE -eq 0){$ready=$true;break}};Start-Sleep -Milliseconds 200}
+ for($i=0;$i -lt 100;$i++){$proc.Refresh();if($proc.HasExited){throw 'La instancia propia no arrancó; consultar log privado.'};if(Test-OwnListener){& (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) --protocol=TCP --host=127.0.0.1 ('--port='+$port) --user=root status *> $null;if($LASTEXITCODE -eq 0){$ready=$true;break}};Start-Sleep -Milliseconds 200}
  if(-not $ready){throw 'La instancia propia no aceptó autenticación dentro del plazo.'}
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$password;$env:JAVA_HOME=$JavaHome;$env:MAVEN_OPTS='-Xmx256m -XX:-UsePerfData'
  Push-Location (Join-Path $PSScriptRoot '../backend')
  try{& $Maven -B -ntp '-Dtest=AutoridadMigracionTest,AreasMigracionTest,MateriasMigracionTest,ContenidoMigracionTest' ('-Dsiger.test.autoridad.mysql=jdbc:mysql://127.0.0.1:'+$port+'/'+$schema) ('-DargLine=--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir='+$base) test *> (Join-Path $base 'tests.log');if($LASTEXITCODE){throw 'Falló AutoridadMigracionTest; ver tests.log privado.'}}finally{Pop-Location}
  Write-Output 'MySQL descartable: cinco rutas de migración, áreas, materias, pertinencia y protección correctas; doce tests sin omisiones.'
 }finally{
+ try{
  $env:SIGER_U15_TEST_MYSQL_PASSWORD=$null;$env:JAVA_HOME=$oldJava;$env:MAVEN_OPTS=$oldMaven
  if($proc){
-  if(Test-OwnListener){& (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) shutdown *> $null}
+  if(Test-OwnListener){& (Join-Path $MySqlBin 'mysqladmin.exe') ('--defaults-file='+$client) --protocol=TCP --host=127.0.0.1 ('--port='+$port) --user=root shutdown *> $null}
   $proc.WaitForExit(10000)|Out-Null
   # mysqld en Windows puede lanzar un hijo. Solo detener PIDs con el datadir único que este auxiliar creó.
   $own=@(Get-CimInstance Win32_Process -Filter "Name='mysqld.exe'"|Where-Object {$_.CommandLine -and $_.CommandLine.Contains('--datadir='+$dir) -and $_.ExecutablePath -eq (Join-Path $MySqlBin 'mysqld.exe')})
   foreach($p in $own){Stop-Process -Id $p.ProcessId;Wait-Process -Id $p.ProcessId -Timeout 10 -ErrorAction SilentlyContinue}
  }
+ }finally{$env:MYSQL_TEST_LOGIN_FILE=$oldLogin}
  Write-Output ('Evidencia privada conservada en '+$base+'; no se borran bases ni se toca un servicio.')
 }

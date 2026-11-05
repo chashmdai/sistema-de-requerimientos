@@ -70,6 +70,40 @@ class ContenidoInstitucionalTest {
   var gate=new CountDownLatch(1);try(var pool=Executors.newFixedThreadPool(2)){var a=pool.submit(()->race(gate,c,doc));var b=pool.submit(()->race(gate,c,doc));gate.countDown();var rs=new ArrayList<>(List.of(a.get(10,TimeUnit.SECONDS),b.get(10,TimeUnit.SECONDS)));Collections.sort(rs);assertEquals(List.of(200,409),rs);}
  }
  int race(CountDownLatch gate,UUID c,UUID doc)throws Exception{gate.await();try{x.ordinario(c,doc,0);return 200;}catch(FalloTecnico e){return e.status;}}
+ @Test void pertinenciaRevierteSiFallaSuHistoria()throws Exception{
+  var p=x.par();UUID key=UUID.randomUUID();x.d.ddl(sql->sql.execute("ALTER TABLE communication_pertinence_history ADD CONSTRAINT test_pertinencia CHECK(reason_text<>'FORZAR_ROLLBACK')"));
+  try{assertThrows(org.springframework.dao.DataAccessException.class,()->x.c().determinar(f.a(f.headA),key,p[2],p[3],new Pertinencia(0,List.of(p[0]),true,"FORZAR_ROLLBACK")));}finally{x.d.ddl(sql->sql.execute("ALTER TABLE communication_pertinence_history DROP CONSTRAINT test_pertinencia"));}
+  assertEquals(0,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM communication_pertinence WHERE child_id=?",Long.class,p[3].toString()));assertEquals(0,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM communication_pertinence_target WHERE child_id=?",Long.class,p[3].toString()));assertEquals(0,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM core_command WHERE id=?",Long.class,key.toString()));
+ }
+ @Test void valoracionesConcurrentesConservanUnSoloPredecesor()throws Exception{
+  var p=x.par();x.c().determinar(f.a(f.headA),UUID.randomUUID(),p[2],p[3],new Pertinencia(0,List.of(p[0]),true,"Evaluación concurrente"));var gate=new CountDownLatch(1);
+  try(var pool=Executors.newFixedThreadPool(2)){java.util.concurrent.Callable<Integer> attempt=()->{gate.await();try{x.c().valorar(f.a(f.profA),UUID.randomUUID(),p[0],p[3],new Valoracion(1,0,"ADMITIDA","Valoración concurrente"));return 200;}catch(FalloTecnico e){return e.status;}};var a=pool.submit(attempt);var b=pool.submit(attempt);gate.countDown();var rs=new ArrayList<>(List.of(a.get(10,TimeUnit.SECONDS),b.get(10,TimeUnit.SECONDS)));Collections.sort(rs);assertEquals(List.of(200,409),rs);}
+  assertEquals(1,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM case_evidence_assessment WHERE child_id=?",Long.class,p[3].toString()));
+ }
+ @Test void revocacionDuranteStreamingDetieneLosBloquesSiguientes()throws Exception{
+  UUID c=x.m.caso();x.m.clasificar(c,0,"MAT_UPR",true);byte[] bytes=new byte[150000];Arrays.fill(bytes,(byte)'A');UUID doc=x.docs.cargar(f.a(f.profA),UUID.randomUUID(),c,null,"largo.txt",new java.io.ByteArrayInputStream(bytes)).id();x.ordinario(c,doc,0);x.c().publicar(f.a(f.headA),UUID.randomUUID(),c,doc,c,x.publicacion(0,true,true,"ACTIVA"));
+  var ref=x.docs.referencia(f.a(x.m.upr),c,doc,"DESCARGA");var d=ref.original();var response=cl.nexbyte.siger.institucional.documental.TransferenciaDocumento.responder(x.docs.verificarArchivo(ref),d.tamanio(),d.sha256(),d.nombre(),d.tipo(),false,new org.springframework.mock.web.MockHttpServletRequest("GET","/original"),mode->{},()->x.docs.revalidar(f.a(x.m.upr),c,doc,"DESCARGA"));
+  var out=new java.io.ByteArrayOutputStream(){boolean first=true;@Override public synchronized void write(byte[] b,int off,int len){super.write(b,off,len);if(first){first=false;x.c().proteger(f.a(f.headA),UUID.randomUUID(),c,doc,new Proteccion(1,"FIR","Reserva durante descarga"));}}};
+  denied(404,()->response.getBody().writeTo(out));assertEquals(65536,out.size());
+  assertEquals(1,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM matter_access_event WHERE actor_id=? AND resource_id=? AND action_code='DOCUMENTO_DESCARGA'",Long.class,x.m.upr,doc.toString()));
+  assertEquals(1,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM matter_access_event WHERE actor_id=? AND resource_id=? AND action_code='DOCUMENTO_REVOCADO'",Long.class,x.m.upr,doc.toString()));
+ }
+ @Test void avisosDePertinenciaNoEntreganComDeOtraMateria()throws Exception{
+  var p=x.par();x.c().determinar(f.a(f.headA),UUID.randomUUID(),p[2],p[3],new Pertinencia(0,List.of(p[1]),true,"Materia UPD únicamente"));
+  var recursos=new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(x.d.db,f.cat,f.core);var notices=new cl.nexbyte.siger.institucional.notificaciones.NotificacionesInstitucionales(x.d.db,f.cat,recursos,clock);
+  for(int i=0;i<50;i++)notices.proyectar();
+  assertTrue(notices.listar(f.a(x.m.upd),0,50).items().stream().anyMatch(n->n.tipo().equals("PERTINENCIA_ACTUALIZADA")&&n.ruta().equals("caso/"+p[1])));
+  assertFalse(notices.listar(f.a(x.m.upr),0,50).items().stream().anyMatch(n->n.tipo().equals("PERTINENCIA_ACTUALIZADA")&&n.ruta().equals("caso/"+p[1])));
+  assertFalse(cl.nexbyte.siger.institucional.notificaciones.NotificacionesInstitucionales.CORREO.contains("PERTINENCIA_ACTUALIZADA"));
+  x.m.clasificar(p[1],2,"MAT_UPR",true);assertFalse(notices.listar(f.a(x.m.upd),0,50).items().stream().anyMatch(n->n.ruta().equals("caso/"+p[1])));
+ }
+ @Test void responsableRestringePeroNoPublicaNiLevantaUnaFir(){
+  UUID c=x.m.caso(),doc=x.cargar(c).id();assertTrue(x.docs.documento(f.a(f.profA),c,doc).restringible());
+  x.c().proteger(f.a(f.profA),UUID.randomUUID(),c,doc,new Proteccion(0,"BLOQUEADO","Responsable restringe asociación a revisar"));denied(404,()->x.docs.referencia(f.a(f.profA),c,doc));
+  denied(404,()->x.c().proteger(f.a(f.profA),UUID.randomUUID(),c,doc,new Proteccion(1,"ORDINARIO","No puede ampliar su permiso")));
+  denied(404,()->x.c().publicar(f.a(f.profA),UUID.randomUUID(),c,doc,c,x.publicacion(0,true,true,"ACTIVA")));
+  assertTrue(((List<?>)x.c().control(f.a(f.profA),c,doc).get("publicaciones")).isEmpty());x.ordinario(c,doc,1);assertNotNull(x.docs.referencia(f.a(f.profA),c,doc));
+ }
  @Test void expiracionYSuspensionNoNecesitanReabrirLaMateria()throws Exception{
   UUID c=x.m.caso();x.m.clasificar(c,0,"MAT_UPR",true);UUID doc=x.cargar(c).id();x.ordinario(c,doc,0);x.c().publicar(f.a(f.headA),UUID.randomUUID(),c,doc,c,x.publicacion(0,true,true,"ACTIVA"));
   var before=clock.now;try{clock.now=clock.now.plusSeconds(1201);assertTrue(x.docs.listar(f.a(x.m.upr),c).isEmpty());}finally{clock.now=before;}
@@ -79,7 +113,7 @@ class ContenidoInstitucionalTest {
  @Test void streamingRevalidaAntesDelPrimerByte()throws Exception{
   UUID c=x.m.caso();x.m.clasificar(c,0,"MAT_UPR",true);UUID doc=x.cargar(c).id();x.ordinario(c,doc,0);x.c().publicar(f.a(f.headA),UUID.randomUUID(),c,doc,c,x.publicacion(0,true,true,"ACTIVA"));
   var ref=x.docs.referencia(f.a(x.m.upr),c,doc,"DESCARGA");var d=ref.original();var req=new org.springframework.mock.web.MockHttpServletRequest("GET","/original");req.addHeader("Range","bytes=0-3");
-  var response=cl.nexbyte.siger.institucional.documental.TransferenciaDocumento.responder(x.docs.verificarArchivo(ref),d.tamanio(),d.sha256(),d.nombre(),d.tipo(),false,req,mode->{},()->x.docs.autorizar(f.a(x.m.upr),c,doc,"DESCARGA"));
+  var response=cl.nexbyte.siger.institucional.documental.TransferenciaDocumento.responder(x.docs.verificarArchivo(ref),d.tamanio(),d.sha256(),d.nombre(),d.tipo(),false,req,mode->{},()->x.docs.revalidar(f.a(x.m.upr),c,doc,"DESCARGA"));
   x.c().proteger(f.a(f.headA),UUID.randomUUID(),c,doc,new Proteccion(1,"FIR","Reserva durante preparación de respuesta"));var out=new java.io.ByteArrayOutputStream();denied(404,()->response.getBody().writeTo(out));assertEquals(0,out.size());
  }
  @Test void acreditacionNoSustituyeAceptacionDeTransferencia()throws Exception{

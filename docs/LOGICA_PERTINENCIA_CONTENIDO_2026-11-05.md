@@ -39,6 +39,22 @@ QA/históricos/U4/COM-000001, JAR activos, Formulario, WSL/HTTP_503, servicios y
 
 Evidencia privada bajo LOCALAPPDATA `siger-pertinencia-49b422b77ecc46259590b3c58d7cda1f`; no se publican sobres, configuración o logs completos. La regresión completa backend/frontend y CI del HEAD final se registrarán al cierre del bloque.
 
+## Ampliación M2 y revisión conjunta
+
+Responsable actual puede restringir consulta de su documento sin obtener publicación o desclasificación. La jefatura conserva la facultad de revisar la condición. Se conectan controles limitados en UI y servidor. Un histórico necesita evidencia inequívoca; el modelo no inventa asociaciones ni propietarios para mostrar un botón.
+
+Original ciudadano protegido se prueba con entrega 1.1 y recibo Ed25519 sintéticos, custodia NTFS real en directorio descartable y HTTP simulado. La proyección excluye tanto descriptores como IDs de adjuntos; GET/HEAD/Range aplican la política independiente. Se conserva exactamente la entrega firmada. Los dobles documentales están identificados, sin ensayo físico de proveedores/recorrido público.
+
+Se prueban revocación de concesión y sesión vigente, retirada durante streaming, valoración concurrente, rollback de pertinencia si falla historia y cuerpos incompletos sin efectos. Las revalidaciones por bloque no se cuentan como aperturas/descargas nuevas. La auditoría registra solicitudes y rechazos técnicos, no comprensión. Los avisos nuevos son internos, genéricos por Caso y revalidados; no activan Graph ni publican nombres/documentos.
+
+Selección final de desarrollo M2: **30/30 H2/MockMvc**, sin omisiones/fallos/errores (`focal-validacion.log`). Frontend **92/92**, lint/build correctos (`front-m2.log`, `lint-m2.log`, `front-build-m2.log`); una aclaración de representación autorizada posterior se verifica también en el build completo. MySQL M2: **12/12**, sin omisiones/fallos/errores, instancia nueva `siger-autoridad-mysql-52955c13a0dc4b67907b033f60e94afe`; incluye original ciudadano firmado, restricción por responsable y comparación del original conservado.
+
+El auxiliar descarta MYSQL_PWD heredado, redirige MYSQL_TEST_LOGIN_FILE a una ruta privada del ensayo y fija protocolo/host/puerto/usuario del cliente. El mecanismo de login-path está documentado por [MySQL 8.0](https://dev.mysql.com/doc/mysql-installation-excerpt/8.0/en/environment-variables.html); no se inspecciona ni modifica el archivo compartido. Se conservan la comprobación de propiedad de listener/datadir y cierre exclusivamente propios. Un comando genérico de edición fue rechazado antes de ejecutarse por revisión automática; se aplicó un diff explícito del script y se validó con el ensayo aislado, sin cambiar infraestructura.
+
+La matriz conserva 138 reglas; este hito revisa 17 filas con evidencia y límites de FIR documental/pertinencia. El bloque no declara completas las reservas de bitácora, exportación, reasociación integral, reaperturas o U2. PR dependiente exclusivamente de PR #2; no se acumulan U2–U9. No se acredita downgrade seguro a un binario que desconozca la política nueva. Falta calificar rendimiento documental en la VM destino; las comprobaciones por bloque priorizan revocación efectiva y no sustituyen esa calificación.
+
+M1 confirmado en `a266693c2b845801aecef9f9ae4176577d075838`. M2 conserva V15.5 sin modificar; H2/MySQL iguales, SHA-256 del checkout `88401f11d316d4b7a36859c13affcaed8be9b79667799943cf7792fc64f3a4a7`. Logs privados: focal `ca137fd56d568053decd0385e49a6230c33e8b216d35d2948b0bf00808bfdaf6`; MySQL M2 `747d3a417ac48b4eae2e08747cf1ee082c6db5958cd7e60bd9556dceef988272`. Procesos y listener propios finales: cero. La regresión completa incorpora además la aserción de que una descarga con varias revalidaciones conserva un solo evento de solicitud y un rechazo al retirarse permiso; no se sustituye esa corrida por los focalizados.
+
 ## Dependencias pendientes
 
 FIR de actuaciones/bitácora completa, reservas adicionales y excepción conjunta ACC-10 requieren su alcance y autoridades; no se habilitan con concesión ordinaria. Colaboradores, reapertura con valoración nueva, transferencia con aceptación, SOL institucional/nacimiento U2 de REQ, fuente maestra/SSO/MFA y datos nominales continúan pendientes. No se inicia una etapa amplia U2 dentro de este PR.

@@ -29,6 +29,8 @@ La jefatura competente del contexto propietario determina:
 - FIR: solo responsable actual y jefatura competente del Caso propietario; no se hereda por referencia, materia, cargo o TI.
 - BLOQUEADO: restricción de consulta; conserva metadatos para responsable/jefatura del propietario, sin contenido ni descarga. No es eliminación ni cuarentena técnica.
 
+El responsable actual puede imponer BLOQUEADO sobre su documento acreditado (o histórico con evidencia inequívoca de creación). Esa facultad no permite clasificar ORDINARIO/FIR, levantar bloqueo, publicar a otra función ni consultar decisiones de otros contextos. Su UI ofrece únicamente restricción y el backend verifica la misma separación. La jefatura competente puede revisar fundadamente la condición.
+
 Para original ciudadano, la acreditación de contexto exige principal vigente, jefatura del contexto y lectura legítima del origen. FIR se limita a ficha de gestión interna, no reetiqueta un original ciudadano.
 
 La publicación por materia es otra decisión fundada, nominativa por **documento y Caso**, materia y contexto actuales, con vigencia finita y estado. Metadatos, contenido y descarga son derechos distintos. El otorgamiento requiere jefatura de origen y destino; retirar una publicación del propio recurso no requiere reabrir catálogo suspendido. Ni compartir REQ/Caso/materia ni acreditar pertinencia de COM publica sus adjuntos. La consulta documental de una COM hija gestionada por pertinencia requiere habilitación documental propia o derecho independiente sobre el original.
@@ -47,13 +49,17 @@ Todas bajo sesión HTTPS. Mutaciones con CSRF e Idempotency-Key:
 
 Se reutilizan núcleo, comandos idempotentes, guarda de identidad y bloqueos ordenados de COM; decisión/proyección/historia/evento confirman juntos. Carrera obsoleta devuelve 409, auditoría fallida revierte. La auditoría de consultas es técnica y no una actuación ni evidencia de lectura humana.
 
-Documentos de gestión y originales ciudadanos aplican política por documento a listados, metadatos, historial, GET/HEAD, Range, vista, páginas y representación. Se revalida después de preparar una vista y antes del primer byte del streaming. La representación institucional del formulario filtra descriptores de adjuntos excluidos; los bytes y sobres firmados conservados permanecen intactos. No es una edición del original ni una nueva versión del contrato público.
+Documentos de gestión y originales ciudadanos aplican política por documento a listados, metadatos, historial, GET/HEAD, Range, vista, páginas y representación. Se revalida después de preparar una vista, antes del primer byte y antes de cada bloque de streaming. Las revalidaciones internas no se registran como descargas nuevas; una retirada detiene los bloques posteriores y registra el rechazo técnico. La representación institucional del formulario filtra descriptores y referencias de adjuntos excluidos; los bytes y sobres firmados conservados permanecen intactos. No es una edición del original ni una nueva versión del contrato público.
+
+La pertinencia y valoración generan avisos internos genéricos del Caso autorizado, revalidados por recurso y materia, sin nombres de archivos ni contenido de COM. No activan correo nuevo ni conceden permiso de gestión. Los avisos del circuito de vínculos antiguo no vuelven a proyectar una COM gestionada por pertinencia.
 
 UI conecta selección de pertinencia, valoración, protección, publicación y consulta de documentos. Las concesiones de contenido no se convierten en gestión; el visor respeta descarga cerrada. Pruebas con dobles de antivirus/renderer no acreditan workers físicos.
 
 ## Persistencia y límites
 
 V15.5 H2/MySQL aditiva: principal acreditado, pertinencia actual/ámbitos/historia, valoraciones sucesivas, protección/historia y publicaciones documentales. V1–V15.4 intactas; sin outOfOrder, retroaprobaciones, semillas nominales ni borrado de originales.
+
+No se acredita downgrade a un JAR anterior que ignore estas políticas. Deben mantenerse juntos código, esquema y UI compatibles al planificar una futura integración/despliegue autorizado.
 
 U1 y U2 siguen parciales. No se habilitan excepciones sensibles, nuevos tipos de reserva, colaboradores, transferencia de principal, nacimiento de SOL institucional, reapertura con la evaluación nueva ni autoridad nominal real. Esas dependencias conservan cierre seguro y deben acreditarse en su incremento, no mediante excepciones de UI.
 
