@@ -1,6 +1,6 @@
 # Entrega progresiva de lógica SIGER · 02/11/2026
 
-La continuidad vigente está en [U1.6a · áreas y autorización efectiva](LOGICA_U1_6_AREAS_2026-11-02.md), sobre [U1.5](LOGICA_U1_5_AUTORIDAD_2026-11-02.md) y U1.3/U1.4. U1.6 y U1 siguen parciales. Los resultados de este informe mantienen su corte histórico.
+La continuidad vigente está en [U1.6b.1 · materias y consulta regional](LOGICA_U1_6B_MATERIAS_2026-11-05.md), sobre [U1.6a · áreas](LOGICA_U1_6_AREAS_2026-11-02.md), [U1.5](LOGICA_U1_5_AUTORIDAD_2026-11-02.md) y U1.3/U1.4. U1.6 y U1 siguen parciales. Los resultados de este informe mantienen su corte histórico.
 
 Continuidad posterior a `d19fa87d`: [U1.3 y siguientes](LOGICA_CONTINUIDAD_U1_2026-11-02.md). Los resultados siguientes conservan el corte acreditado de U1.1/U1.2; no se presentan como las pruebas nuevas de continuidad.
 

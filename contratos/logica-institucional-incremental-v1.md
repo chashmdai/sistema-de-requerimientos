@@ -138,3 +138,41 @@ Las derivaciones de Casos con área y hacia destinos con área quedan cerradas c
 Los Casos con área no heredan el autocierre BAJA ni el autocierre de una jefatura central: responsable solicita y otra persona con jefatura competente confirma. Cuentas alias se comparan por persona acreditada en las concesiones ejecutadas, no por ID de cuenta; identidad ambigua cierra la operación. La excepción de titular regional y las demás políticas integrales de cierre/tareas no quedan acreditadas por este endurecimiento.
 
 No se habilitan por este contrato lectura por materia, reservas/FIR, excepciones ACC-10, SOL institucional U2 ni acciones U5 responder/canalizar/escalar. No se modifican transporte Formulario–SIGER 1.0/1.1, recibos, firmas, originales, folios o COMMIT→ACK. El informe U1.6a identifica pruebas H2, MySQL descartable, MockMvc y DOM por separado; no son E2E físicos.
+
+## U1.6b.1 · Materia y consulta ordinaria de Caso regional
+
+Este apartado incorpora un primer alcance de consulta por materia; sustituye únicamente la ausencia de esa capacidad indicada en U1.6a. **No completa la lectura de todo expediente:** originales, documentos, COM hijas y antecedentes necesitan pertinencia y protección por contenido todavía pendientes. La nueva facultad no autoriza esas rutas. Tampoco habilita FIR, reservas o excepciones ACC-10.
+
+### Autoridad 1.2 y concesión independiente
+
+`Registro12` agrega explícitamente a los campos 1.1:
+
+- `materias:[{id,nombre,competencia,desde,hasta,estado}]`, competencia solo UPR/UPD, estado ACTIVA/SUSPENDIDA, vigencia finita. ID/competencia inmutables; cambiar competencia necesita otro ID, sin reinterpretar aprobaciones anteriores.
+- `sedesRegionales:[{id,desde,hasta,estado}]`, referenciando una sede existente. No se deduce región desde nombre, domicilio ciudadano o rol. Sin esa acreditación no existe lectura ni clasificación regional nueva.
+- `ambitosMateria:[{mandato,materia}]`, referencia exacta para cada mandato MATERIA. Las listas nuevas admiten hasta 32 entradas cada una, dentro de los límites previos del sobre. Sin datos reales el catálogo queda vacío.
+
+Se conservan sobre, firma Ed25519 y dominio U1.5; versión dentro de los bytes firmados. Los lectores 1.0/1.1 mantienen estructura y semántica y rechazan facultades MATERIA. La versión 1.2 no se confunde con versiones del transporte Formulario. Los catálogos se actualizan por entradas firmadas, con revisión e historia de sobres; omitir una entrada no elimina ni extiende su vigencia. Suspensión/fechas de materia o sede invalidan epoch de cuentas afectadas. No hay editor libre TI ni claves privadas en código.
+
+Solicitud nueva: `{beneficiario,rol:"DIRECTOR",alcance:"MATERIA",unidad:"UPR"|"UPD",sede,desde,hasta,fundamento,version:"1.2",materia}`. La unidad debe coincidir con la competencia acreditada de la materia; sede regional y catálogo deben estar vigentes y cubrir el intervalo. Área no forma parte de esta concesión de consulta. Las asignaciones conservan el ancla inerte V11 (unidad/sede NULL), con vínculo de materia e instrucción ejecutada coherente. Se reconstruye un Acceso MATERIA independiente; jamás se trata como jefatura de unidad/sede/área.
+
+Solicitud, aprobación independiente, ejecución TI, revocación, persona canónica, exclusión de alias/ciclos y vínculo de credencial del aprobador reutilizan U1.5. Un mandato exclusivamente de revocación puede retirar una concesión aunque materia/sede estén suspendidas; no permite aprobar accesos nuevos a catálogo inactivo. Concesiones 1.0 y 1.1 mantienen sus digests idempotentes originales.
+
+### Clasificación y acreditación ordinaria
+
+GET/POST `/nucleo/casos/{id}/materia`. POST `{revision,materia,consultaOrdinaria,fundamento}`, HTTPS, sesión individual, CSRF e Idempotency-Key. Exige simultáneamente coordinación regional vigente de la sede acreditada y jefatura competente del Caso, respetando áreas. Es una condición técnica conservadora de este corte; una coordinación de sede sola no hereda la jefatura de sus áreas.
+
+Materia y complejidad son independientes. Asignar/rectificar no mueve Caso, REQ, unidad, sede, área, profesional o tareas. `consultaOrdinaria` queda cerrada por defecto: la jefatura/coordinación acredita explícitamente la gestión ordinaria consultable. No es un CRUD de FIR ni declara ordinarios los originales o documentos. Un Caso sin esa acreditación, sin materia o con catálogo/sede suspendidos/vencidos no admite la nueva consulta. Los derechos independientes anteriores se conservan sin ratificación normativa automática.
+
+Área de Caso que cambia conserva materia e historia, pero suspende consulta ordinaria hasta nueva acreditación en destino. Esto evita trasladar silenciosamente una habilitación del contexto anterior. Todo confirma bajo guarda de identidad, bloqueo de COM y revisión del Caso; clasificación, revisión, historial, evento e idempotencia revierten juntos. Repetición idéntica revalida actor/ámbito y catálogo y no duplica historia. Cambio de materia retira inmediatamente la vía anterior de consulta, salvo derecho independiente vigente.
+
+### Lectura y límites por recurso
+
+GET `/nucleo/casos` incorpora casos de la materia/sede exactamente concedidas, además de los derechos previos independientes. Búsqueda opcional `q` por folio o ID, paginación, estado y total usan el mismo filtro. No permite búsquedas por relato ni amplía la búsqueda de Comunicaciones. GET `/nucleo/casos/{id}` devuelve `materia` y `soloLectura:true` cuando la única vía es MATERIA. La UI presenta ficha, actuaciones, decisiones e historial de responsabilidad ordinarios, sin controles de gestión ni llamadas laterales a documentos/antecedentes/reaperturas.
+
+Acceso a gestión, tarea, asignación, cierre, rectificación, original, documento, antecedente o REQ sigue requiriendo su autorización propia. La consulta de un Caso no entrega COM hermanas ni la totalidad del REQ. La historia de cambios de materia se muestra solo al gestor competente; el consultor recibe su materia actual, sin revelar materias anteriores. Listados/bandeja/consulta ordinaria no usan el ámbito MATERIA como jefatura SQL, ni siquiera en históricos sin área.
+
+Consultas por materia de ficha/listados/contexto registran `matter_access_event` separado de actuaciones y administración, sin texto sensible ni comprensión ficticia. Si falla su auditoría, la ficha no se entrega. La evaluación interna de autorización para avisos no se registra como visualización del expediente.
+
+La rectificación genera aviso interno `MATERIA_ACTUALIZADA` sobre recurso `CASO_CONSULTA`; se revalida el acceso al proyectarlo y consultarlo. Un destinatario que perdió su vía no ve el aviso anterior. No concede tarea ni gestión y no activa correo/Graph para esa categoría. Integración por correo y auditoría general completa siguen pendientes.
+
+V15.4 es aditiva, sin semillas nominales ni edición de V1–V15.3. Ver [informe U1.6b.1](../docs/LOGICA_U1_6B_MATERIAS_2026-11-05.md) para pruebas y límites. ORG-07/12 siguen parciales por pertinencia y protección de documentos/COM; no se declaran U1.6b ni U1 completos.
