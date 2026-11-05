@@ -31,7 +31,8 @@ final class ContenidoFixture implements AutoCloseable {
  ContenidoInstitucional c(){return f.core.contenidos();}
  record Original(UUID comunicacion,UUID documento,UUID caso,EntregaCompleta entrega,byte[] bytes){}
  Original original()throws Exception{return original("anexo-reservable.pdf","application/pdf");}
- Original original(String nombre,String tipo)throws Exception{
+ Original original(String nombre,String tipo)throws Exception{return original(nombre,tipo,true);}
+ Original original(String nombre,String tipo,boolean historico)throws Exception{
   Instant received=clock.instant();
   byte[] bytes="PDF-SINTETICO-CIUDADANO".getBytes(java.nio.charset.StandardCharsets.UTF_8);var attachment=new EntregaCompleta.Adjunto(UUID.randomUUID(),nombre,bytes.length,HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)),tipo,"VALIDADO");
   var c=d.mapper.createObjectNode();c.put("version","1.1");c.put("id",UUID.randomUUID().toString());c.put("recorridoId",UUID.randomUUID().toString());c.put("tipo","NNA");c.put("recibidaEn",received.toString());c.put("avisoVersion","SINTETICO_1");c.put("aceptaCanalDigital",false);
@@ -43,6 +44,7 @@ final class ContenidoFixture implements AutoCloseable {
   var proof=new cl.nexbyte.siger.institucional.robustez.ComprobanteDigital.Contenido("1.0",UUID.fromString(c.path("id").asString()),received,"CUSTODIA_PUBLICA",hash,provenance,"FORMULARIO_PUBLICO_DDN","SINTETICO_1");
   var e=new EntregaCompleta(c,hash,provenance,cl.nexbyte.siger.institucional.robustez.ComprobanteDigital.firmar(proof,"nucleo-test",d.publicKeys.getPrivate(),d.mapper));
   files.guardar(e.id(),attachment,new ByteArrayInputStream(bytes));UUID com=d.recepcion.guardarCompleta(e,files).registro().comunicacionId();
+  if(!historico)return new Original(com,UUID.fromString(d.db.sql.queryForObject("SELECT id FROM institution_document WHERE communication_id=? AND origin='INGRESO_CIUDADANO'",String.class,com.toString())),null,e,bytes);
   f.core.distribuir(f.a(f.dist),UUID.randomUUID(),com,new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",f.headA,"AREA_A"))));var dest=f.core.detalle(f.a(f.headA),com).destinos().getFirst();UUID caso=f.core.abrirCaso(f.a(f.headA),UUID.randomUUID(),dest.id(),new ContratosNucleo.Asignacion(dest.revision(),f.profA,null)).id();m.clasificar(caso,0,"MAT_UPR",true);acreditar(f.core.caso(f.a(f.headA),caso).requerimientoId(),"ACTIVA",f.end);
   return new Original(com,UUID.fromString(d.db.sql.queryForObject("SELECT id FROM institution_document WHERE communication_id=? AND origin='INGRESO_CIUDADANO'",String.class,com.toString())),caso,e,bytes);
  }

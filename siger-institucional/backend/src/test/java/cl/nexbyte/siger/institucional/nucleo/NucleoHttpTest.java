@@ -23,6 +23,14 @@ class NucleoHttpTest {
         @Bean NucleoInstitucional core(DatosNucleoTest d){return d.core;}
     }
     @Autowired MockMvc http;@Autowired DatosNucleoTest data;
+    @Test void reintentoHistoricoExactoDevuelveResultadoSinRehabilitarDistribucionProvisional()throws Exception{
+        var com=data.nuevaWeb();var key=UUID.randomUUID();var body=new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A","demo.jefatura.upr.a")));
+        var result=data.core.distribuir(data.actor("demo.distribucion"),key,com,body);var url="/nucleo/comunicaciones/"+com+"/distribuir";
+        http.perform(post(url).secure(true).with(user("demo.distribucion").roles("FUNCIONARIO_LAB")).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(data.mapper.writeValueAsString(body))).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(result.id().toString())).andExpect(jsonPath("$.revision").value(1));
+        for(var k:List.of(key,UUID.randomUUID()))http.perform(post(url).secure(true).with(user("demo.distribucion").roles("FUNCIONARIO_LAB")).with(csrf()).header("Idempotency-Key",k).contentType("application/json").content(data.mapper.writeValueAsString(new ContratosNucleo.Distribucion(1,body.destinos())))).andExpect(status().isConflict());
+        assertThat(data.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Long.class,com.toString())).isEqualTo(1);
+        assertThat(data.db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement WHERE communication_id=?",Long.class,com.toString())).isZero();
+    }
     @Test void credencialesNoSeBorranDelCatalogoTrasLoginYLogout()throws Exception{
         for(int attempt=0;attempt<3;attempt++){
             var session=new MockHttpSession();
@@ -70,15 +78,15 @@ class NucleoHttpTest {
         http.perform(get("/nucleo/session").secure(true).session(session)).andExpect(status().isOk()).andExpect(jsonPath("$.operador.id").value("demo.distribucion"));
         http.perform(post("/nucleo/logout").secure(true).session(session).with(csrf())).andExpect(status().isNoContent());assertThat(session.isInvalid()).isTrue();
     }
-    @Test void autorizacionPorRecursoYMutacionExigeCsrfSinUsarTokenTecnico()throws Exception{
+    @Test void rutaProvisionalCerradaConservaAutenticacionCsrfYNoEscribe()throws Exception{
         var cid=data.web();
         http.perform(get("/nucleo/comunicaciones").secure(true).header("Authorization","Bearer token-tecnico-no-es-login")).andExpect(status().isUnauthorized());
         http.perform(get("/nucleo/comunicaciones/"+cid).secure(true).with(user("demo.profesional.upd.a").roles("FUNCIONARIO_LAB"))).andExpect(status().isNotFound());
         var url="/nucleo/comunicaciones/"+cid+"/distribuir";String body="{\"revision\":0,\"destinos\":[{\"unidad\":\"UPR\",\"sede\":\"DEMO_SEDE_A\",\"evaluador\":\"demo.jefatura.upr.a\"}]}";
         http.perform(post(url).secure(true).with(user("demo.distribucion").roles("FUNCIONARIO_LAB")).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isForbidden());
         String key=UUID.randomUUID().toString();
-        for(int retry=0;retry<2;retry++)http.perform(post(url).secure(true).with(user("demo.distribucion").roles("FUNCIONARIO_LAB")).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isOk());
+        for(int retry=0;retry<2;retry++)http.perform(post(url).secure(true).with(user("demo.distribucion").roles("FUNCIONARIO_LAB")).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("FLUJO_INSTITUCIONAL_REQUERIDO"));
         http.perform(get("/nucleo/comunicaciones/"+cid).secure(true).with(user("demo.jefatura.uep.b").roles("FUNCIONARIO_LAB"))).andExpect(status().isNotFound());
-        assertThat(data.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Long.class,cid.toString())).isEqualTo(1);
+        assertThat(data.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Long.class,cid.toString())).isEqualTo(0);
     }
 }

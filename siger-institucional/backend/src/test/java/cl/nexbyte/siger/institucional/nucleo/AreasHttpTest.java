@@ -5,7 +5,7 @@ import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotati
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 @SpringBootTest(classes=AreasHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.identidad.habilitada=true"}) @AutoConfigureMockMvc @DirtiesContext
 class AreasHttpTest {
- @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,ConcesionesController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
+ @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,NucleoU2Controller.class,ConcesionesController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
  @Configuration static class Fixture {
   @Bean(destroyMethod="close") DatosNucleoTest datos()throws Exception{return new DatosNucleoTest(Files.createTempDirectory("areas-http-"));}
   @Bean AreasFixture fixture(DatosNucleoTest d)throws Exception{return new AreasFixture(d,Clock.systemUTC());}
@@ -14,12 +14,26 @@ class AreasHttpTest {
   @Bean HabilitacionNucleo gate(){return new HabilitacionNucleo(HabilitacionNucleoTest.valid());}@Bean Clock relojLimitesLogin(){return Clock.systemUTC();}
  }
  @Autowired MockMvc http;@Autowired AreasFixture f;
+ @Test void recorridoInstitucionalRealHttpComSolReqSinCasoConCsrfYAutorizacion()throws Exception{
+  var com=f.d.nuevaWeb();var dist=login("distribuidor");var head=login("jefe.a");var prof=login("prof.a");var other=login("jefe.b");
+  String path="/nucleo/institucional/comunicaciones/"+com+"/distribuir",body=f.d.mapper.writeValueAsString(new NucleoU2.Encaminar(0,new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",f.headA,"AREA_A"),"Clasificación institucional sintética",null));
+  http.perform(post(path).secure(true).session(dist).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  var result=http.perform(post(path).secure(true).session(dist).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isOk()).andReturn();String sol=f.d.mapper.readTree(result.getResponse().getContentAsString()).path("id").asString();
+  org.junit.jupiter.api.Assertions.assertEquals(0,f.d.db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement WHERE communication_id=?",Long.class,com.toString()));
+  path="/nucleo/institucional/solicitudes/"+sol+"/asumir";body=f.d.mapper.writeValueAsString(new NucleoU2.Asumir(0,f.profA,"Asunción institucional",null));
+  http.perform(post(path).secure(true).session(other).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isNotFound());
+  result=http.perform(post(path).secure(true).session(head).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isOk()).andReturn();String req=f.d.mapper.readTree(result.getResponse().getContentAsString()).path("id").asString();
+  http.perform(get("/nucleo/institucional/requerimientos/"+req).secure(true).session(prof)).andExpect(status().isOk()).andExpect(jsonPath("$.state").value("ACTIVO")).andExpect(jsonPath("$.casos.length()").value(0));
+  http.perform(get("/nucleo/institucional/requerimientos/"+req).secure(true).session(other)).andExpect(status().isNotFound());
+  http.perform(post("/nucleo/institucional/requerimientos/"+req+"/cerrar").secure(true).session(prof).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"revision\":0,\"texto\":\"Respuesta profesional concreta entregada\"}")).andExpect(status().isOk());
+  http.perform(get("/nucleo/institucional/requerimientos/"+req).secure(true).session(head)).andExpect(status().isOk()).andExpect(jsonPath("$.state").value("TERMINADO"));
+ }
  MockHttpSession login(String name)throws Exception{var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",name).param("password",name.equals("zz.autoridad.fixture")?f.f.claveRevisor:f.passwords.get(name))).andExpect(status().isNoContent());return s;}
  @Test void apiNoAdmiteAreaOmitidaNiLaCreaPorPerfil()throws Exception{
-  var dist=login("distribuidor");var legacy=login("jefe.historico");var com=f.d.nuevaWeb();String body=f.d.mapper.writeValueAsString(new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",f.legacy))));
+  var dist=login("distribuidor");var legacy=login("jefe.historico");var com=f.d.nuevaWeb();String body=f.d.mapper.writeValueAsString(new NucleoU2.Encaminar(0,new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",f.legacy),"Clasificación institucional",null));
   http.perform(get("/nucleo/catalogo").secure(true).session(dist)).andExpect(status().isOk()).andExpect(jsonPath("$.ambitosConAreas[0].unidad").value("UPR"));
-  http.perform(post("/nucleo/comunicaciones/"+com+"/distribuir").secure(true).session(dist).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AREA_REQUERIDA"));
-  http.perform(post("/nucleo/destinos/"+f.emptyDestination+"/abrir-caso").secure(true).session(legacy).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(f.d.mapper.writeValueAsString(new ContratosNucleo.Asignacion(0,f.legacy,null)))).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AREA_REQUERIDA"));
+  http.perform(post("/nucleo/institucional/comunicaciones/"+com+"/distribuir").secure(true).session(dist).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AREA_REQUERIDA"));
+  http.perform(post("/nucleo/destinos/"+f.emptyDestination+"/abrir-caso").secure(true).session(legacy).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(f.d.mapper.writeValueAsString(new ContratosNucleo.Asignacion(0,f.legacy,null)))).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("FLUJO_INSTITUCIONAL_REQUERIDO"));
  }
  @Test void circuitoPorAreaConSesionesRealesCsrfListadosYCambioControlado()throws Exception{
   var ca=f.caso("AREA_A",f.headA,f.profA);var cb=f.caso("AREA_B",f.headB,f.profB);MockHttpSession a=login("jefe.a"),b=login("jefe.b"),ti=login("ti.areas"),old=login("jefe.historico");

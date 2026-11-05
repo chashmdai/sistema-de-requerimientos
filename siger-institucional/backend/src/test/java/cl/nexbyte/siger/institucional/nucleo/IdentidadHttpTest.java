@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest(classes=IdentidadHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.identidad.habilitada=true"})
 @AutoConfigureMockMvc @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_CLASS)
 class IdentidadHttpTest {
- @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,IdentidadController.class,ConcesionesController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
+ @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,NucleoU2Controller.class,IdentidadController.class,ConcesionesController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
  @Configuration static class Fixture{
   @Bean Clock relojLimitesLogin(){return Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"),ZoneOffset.UTC);}
   static String tiPassword=UUID.randomUUID()+"AZ",tiId;
@@ -74,16 +74,17 @@ class IdentidadHttpTest {
  @Test void regDis01ApiRechazaDestinoAjenoSinEscrituraYPermiteLocalConCsrf()throws Exception{
   String pass=UUID.randomUUID()+"aZ";var u=user(pass);ConcesionFixture.otorgar(data.db,ids,Fixture.tiId,u.id(),new IdentidadInstitucional.Otorgar("COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A",Instant.now().minusSeconds(1),null),Clock.systemUTC());
   var com=core.registrarManual(cat.operador(u.id()),UUID.randomUUID(),new ContratosNucleo.Manual("Atención sintética local","TELÉFONO",Instant.now().minusSeconds(1),"DEMO_SEDE_A",null)).id();
-  var s=login(u.usuario(),pass);String route="/nucleo/comunicaciones/"+com+"/distribuir";var key=UUID.randomUUID();
-  var body=new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UEP","DEMO_SEDE_B",u.id())));
+  var s=login(u.usuario(),pass);String route="/nucleo/institucional/comunicaciones/"+com+"/distribuir";var key=UUID.randomUUID();
+  var body=new NucleoU2.Encaminar(0,new ContratosNucleo.NuevoDestino("UEP","DEMO_SEDE_B",u.id()),"Clasificación local",null);
   http.perform(post(route).secure(true).session(s).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(data.mapper.writeValueAsString(body))).andExpect(status().isForbidden());
   assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,com.toString()));
   assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_command WHERE id=?",Integer.class,key.toString()));
-  body=new ContratosNucleo.Distribucion(0,List.of(new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",u.id())));
+  body=new NucleoU2.Encaminar(0,new ContratosNucleo.NuevoDestino("UPR","DEMO_SEDE_A",u.id()),"Clasificación local",null);
   String json=data.mapper.writeValueAsString(body);
   http.perform(post(route).secure(true).session(s).header("Idempotency-Key",key).contentType("application/json").content(json)).andExpect(status().isForbidden());
-  for(int n=0;n<2;n++)http.perform(post(route).secure(true).session(s).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(json)).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(1));
-  assertEquals(1,data.db.sql.queryForObject("SELECT COUNT(*) FROM distribution_event WHERE communication_id=?",Integer.class,com.toString()));
+  for(int n=0;n<2;n++)http.perform(post(route).secure(true).session(s).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(json)).andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(0));
+  assertEquals(0,data.db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement WHERE communication_id=?",Integer.class,com.toString()));
+  assertEquals(1,data.db.sql.queryForObject("SELECT COUNT(*) FROM institution_sol WHERE communication_id=?",Integer.class,com.toString()));
  }
  @Test void tiCreaPorHttpNoDevuelveHashYFuncionarioNoAdministra()throws Exception{
   var ti=login("ti.http",Fixture.tiPassword);String pass=UUID.randomUUID()+"aZ",name="nuevo."+UUID.randomUUID();var json=data.mapper.writeValueAsString(new IdentidadInstitucional.Crear(name,"Nombre sintético",name+"@example.invalid","Administrativo","UPR","DEMO_SEDE_A",pass));
