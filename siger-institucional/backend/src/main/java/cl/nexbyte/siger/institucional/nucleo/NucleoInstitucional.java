@@ -21,6 +21,7 @@ public final class NucleoInstitucional {
         this.materias=new PoliticaMaterias(db,clock);this.autoridad=autoridad;this.areas=new PoliticaAreas(db,clock);this.lectura=new org.springframework.transaction.support.TransactionTemplate(db.tx.getTransactionManager());this.lectura.setIsolationLevelName("ISOLATION_REPEATABLE_READ");this.lectura.setReadOnly(true);this.lectura.setTimeout(5);this.db=db;this.catalogo=catalogo;this.recepcion=recepcion;this.mapper=mapper;this.clock=clock;this.prefix=prefix;this.width=width;
     }
     public TerminoColaboracion terminoColaboracion(){return new TerminoColaboracion(db,this,catalogo,clock);}
+    public BitacoraGestion bitacora(){return new BitacoraGestion(db,this,clock);}
     public NucleoU2 u2(){return new NucleoU2(db,this,catalogo,clock,mapper);}
     public EquipoCaso equipo(){return new EquipoCaso(db,this,catalogo,clock,mapper);}
     public cl.nexbyte.siger.institucional.notificaciones.TareasPersonales tareas(){return new cl.nexbyte.siger.institucional.notificaciones.TareasPersonales(db,new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(db,catalogo,this),mapper,clock);}
@@ -37,9 +38,11 @@ public final class NucleoInstitucional {
     /** Compatibilidad de transporte: solo reproduce un comando ya confirmado. La fila se
      * bloquea antes de delegar; el método original verifica acción, actor y hash del payload.
      * Una ruta provisional cerrada nunca puede ejecutar trabajo nuevo por esta vía. */
-    Resultado soloReintento(Operador a,UUID key,Supplier<Resultado> replay){return db.transaction(()->{
+    Resultado soloReintento(Operador a,UUID key,Supplier<Resultado> replay){return soloReintento(a,key,replay,"FLUJO_INSTITUCIONAL_REQUERIDO");}
+    Resultado soloReintentoGestion(Operador a,UUID key,Supplier<Resultado> replay){return soloReintento(a,key,replay,"BITACORA_FECHA_EFECTIVA_REQUERIDA");}
+    private Resultado soloReintento(Operador a,UUID key,Supplier<Resultado> replay,String codigo){return db.transaction(()->{
         bloquearAcceso(a);var previous=db.sql.queryForList("SELECT actor_id FROM core_command WHERE id=? FOR UPDATE",id(key));
-        if(previous.isEmpty())throw new FalloTecnico(409,"FLUJO_INSTITUCIONAL_REQUERIDO");
+        if(previous.isEmpty())throw new FalloTecnico(409,codigo);
         if(!a.id().equals(previous.getFirst().get("actor_id")))throw new FalloTecnico(409);
         return replay.get();
     });}
@@ -294,8 +297,15 @@ public final class NucleoInstitucional {
         actor(a);var initial=caseRow(caseId);if(!canCase(a,initial))throw new FalloTecnico(404);DeclaracionNna.relato(request.texto());var communication=uuid(initial.get("communication_id"));
         return execute(key,a,"REGISTRAR_ACTUACION",List.of(caseId,request),()->{
             lock(communication);var c=caseRow(caseId);if(!canCase(a,c))throw new FalloTecnico(404);revision(c,request.revision());if(!"EN_GESTION".equals(c.get("state")))throw new FalloTecnico(409);
-            db.sql.update("INSERT INTO core_action VALUES(?,?,?,?,?)",id(UUID.randomUUID()),id(caseId),a.id(),now(),request.texto());db.sql.update("UPDATE core_case SET revision=revision+1 WHERE id=?",id(caseId));bump(communication);event(communication,"CASO",caseId,a,"ACTUACION_PROVISIONAL_REGISTRADA");return new Resultado(caseId,number(c,"revision")+1);
+            return insertarActuacion(a,caseId,request,UUID.randomUUID(),now(),"ACTUACION_PROVISIONAL_REGISTRADA");
         });
+    }
+    /** Solo dentro de execute y tras autorizar/bloquear el Caso. Mantiene el registro original. */
+    Resultado insertarActuacion(Operador a,UUID caso,Decision request,UUID accion,long registrada,String codigo){
+        var c=caseRow(caso);var com=uuid(c.get("communication_id"));
+        db.sql.update("INSERT INTO core_action VALUES(?,?,?,?,?)",id(accion),id(caso),a.id(),registrada,request.texto());
+        db.sql.update("UPDATE core_case SET revision=revision+1 WHERE id=?",id(caso));bump(com);event(com,"CASO",caso,a,codigo);
+        return new Resultado(caso,number(c,"revision")+1);
     }
     public Resultado revisarCaso(Operador a,UUID key,UUID caseId,Decision request,String decision){
         return revisarCaso(a,key,caseId,request,decision,false,null,null);
