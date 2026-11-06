@@ -11,12 +11,18 @@ public final class NotificacionesInstitucionales {
  private record Aviso(String categoria,String tipo,UUID recurso){}
  private static UUID uuid(Object o){return UUID.fromString(o.toString());}
  private static long num(Map<String,Object> r,String k){return ((Number)r.get(k)).longValue();}
- public static String titulo(String category){return switch(category){case "PERTINENCIA_ACTUALIZADA"->"Antecedentes del Caso actualizados";case "MATERIA_ACTUALIZADA"->"Materia de Caso actualizada";case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "SOLICITUD_CREADA"->"Preparación de Solicitud registrada";case "SOLICITUD_MODIFICADA"->"Preparación de Solicitud actualizada";case "SOLICITUD_PREPARADA"->"Borrador de gestión preparado";case "SOLICITUD_SEGUIMIENTO"->"Seguimiento de Solicitud registrado";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
+ public static String titulo(String category){return switch(category){case "CONTINUIDAD_SOLICITADA"->"Decisión institucional de continuidad pendiente";case "CONTINUIDAD_DECIDIDA"->"Decisión institucional de continuidad registrada";case "PERTINENCIA_ACTUALIZADA"->"Antecedentes del Caso actualizados";case "MATERIA_ACTUALIZADA"->"Materia de Caso actualizada";case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "SOLICITUD_CREADA"->"Preparación de Solicitud registrada";case "SOLICITUD_MODIFICADA"->"Preparación de Solicitud actualizada";case "SOLICITUD_PREPARADA"->"Borrador de gestión preparado";case "SOLICITUD_SEGUIMIENTO"->"Seguimiento de Solicitud registrado";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
  private List<Aviso> avisos(String stream,Map<String,Object> e){
   String code=e.get("code").toString();UUID resource=uuid(e.get(stream.equals("RECEPCION")?"aggregate_id":"resource_id"));
   if(stream.equals("RECEPCION"))return code.equals("COMUNICACION_REGISTRADA")?List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource)):List.of();
   if(stream.equals("TAREA"))return List.of(new Aviso(code,"SOLICITUD".equals(e.get("resource_type"))?"SOLICITUD":"TAREA",resource));
   return switch(code){
+   case "PRINCIPAL_TRANSFERENCIA_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TRASLADO_REQ_U2",resource));
+   case "DERIVACION_INSTITUCIONAL_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","DERIVACION_U2",resource));
+   case "REAPERTURA_INSTITUCIONAL_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","REAPERTURA_U2",resource));
+   case "PRINCIPAL_ACEPTADA","PRINCIPAL_RECHAZADA","PRINCIPAL_RETIRADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","TRASLADO_REQ_U2",resource));
+   case "DERIVACION_ACEPTADA","DERIVACION_RECHAZADA","DERIVACION_RETIRADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","DERIVACION_U2",resource));
+   case "REAPERTURA_APROBADA","REAPERTURA_RECHAZADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","REAPERTURA_U2",resource));
    case "ANTECEDENTE_PERTINENTE","COM_VALORADA_EN_CONTEXTO"->List.of(new Aviso("PERTINENCIA_ACTUALIZADA","CASO_CONSULTA",resource));
    case "MATERIA_RECTIFICADA"->List.of(new Aviso("MATERIA_ACTUALIZADA","CASO_CONSULTA",resource));
    case "COMUNICACION_MANUAL_REGISTRADA"->List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource));
@@ -33,6 +39,7 @@ public final class NotificacionesInstitucionales {
   try{
    permisos.actor(a);
    switch(tipo){
+    case "TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->permisos.continuidad(a,tipo,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
     case "COMUNICACION"->{var rows=db.sql.queryForList("SELECT site_id,state FROM core_communication WHERE id=?",id.toString());String site=rows.isEmpty()?null:(String)rows.getFirst().get("site_id");if(!a.distribuyeSede(site))return false;permisos.recurso(a,tipo,id);}
     case "DESTINO"->{var d=permisos.fila("core_destination",id.toString());permisos.destino(a,d);}
     case "CASO_CONSULTA"->{permisos.recurso(a,tipo,id);}

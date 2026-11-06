@@ -4,6 +4,7 @@ import cl.nexbyte.siger.institucional.nucleo.*;import cl.nexbyte.siger.instituci
 public final class RecursosNotificacion {
  private final BaseJdbc db;private final CatalogoLaboratorio catalogo;private final NucleoInstitucional core;
  public RecursosNotificacion(BaseJdbc db,CatalogoLaboratorio catalogo,NucleoInstitucional core){this.db=db;this.catalogo=catalogo;this.core=core;}
+ public void continuidad(Operador a,String tipo,UUID id,boolean solicitud){core.continuidad().autorizarAviso(a,tipo,id,solicitud);}
  public void actor(Operador a){if(a==null)throw new FalloTecnico(401);if(!catalogo.operador(a.id()).equals(a))throw new FalloTecnico(403);}
  public void recurso(Operador a,String tipo,UUID id){
   actor(a);if(tipo==null&&id==null)return;if(tipo==null||id==null)throw new FalloTecnico(400);
@@ -26,5 +27,5 @@ public final class RecursosNotificacion {
  public void derivacion(Operador a,UUID id){core.autorizarDerivacion(a,id);var t=fila("core_transfer",id.toString());if(!a.jefeEn(t.get("target_unit").toString(),t.get("target_site").toString()))throw new FalloTecnico(404);}
  public void reapertura(Operador a,UUID id){core.autorizarReapertura(a,id);var r=fila("core_reopen",id.toString());var c=caso(a,UUID.fromString(r.get("case_id").toString()));if(!a.jefeEn(c.unidad(),c.sede(),c.area()))throw new FalloTecnico(404);}
  public void antecedente(Operador a,UUID id){core.autorizarAntecedente(a,id);}
- public String href(String tipo,UUID id){return switch(tipo){case "COMUNICACION"->"comunicacion/"+id;case "CASO","CASO_CONSULTA"->"caso/"+id;case "SOLICITUD"->"solicitudes/"+id;case "TAREA"->"tareas/"+id;case "ANTECEDENTE"->"antecedentes";case "DESTINO"->{var d=fila("core_destination",id.toString());yield "comunicacion/"+d.get("communication_id");}case "DERIVACION","REAPERTURA"->"decisiones";default->"bandeja";};}
+ public String href(String tipo,UUID id){return switch(tipo){case "TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->"u2";case "COMUNICACION"->"comunicacion/"+id;case "CASO","CASO_CONSULTA"->"caso/"+id;case "SOLICITUD"->"solicitudes/"+id;case "TAREA"->"tareas/"+id;case "ANTECEDENTE"->"antecedentes";case "DESTINO"->{var d=fila("core_destination",id.toString());yield "comunicacion/"+d.get("communication_id");}case "DERIVACION","REAPERTURA"->"decisiones";default->"bandeja";};}
 }

@@ -41,7 +41,7 @@ public final class ContenidoInstitucional {
         var rows=db.sql.queryForList("SELECT * FROM core_requirement WHERE id=?",id(req));if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();
     }
     private Map<String,Object> principal(UUID req){
-        var dynamic=db.sql.queryForList("SELECT i.unit_code,i.site_id,i.area_id,i.authority_revision AS batch_revision,i.origin_code FROM institution_req i WHERE i.requirement_id=?",id(req));if(!dynamic.isEmpty())return dynamic.getFirst();
+        var dynamic=db.sql.queryForList("SELECT i.unit_code,i.site_id,i.area_id,COALESCE(t.accepted_authority,i.authority_revision) AS batch_revision,CASE WHEN t.id IS NULL THEN i.origin_code ELSE 'TRANSFERENCIA_U2' END AS origin_code FROM institution_req i LEFT JOIN institution_req_transfer t ON t.accepted_destination=i.principal_destination AND t.requirement_id=i.requirement_id AND t.state='ACEPTADA' WHERE i.requirement_id=?",id(req));if(!dynamic.isEmpty())return dynamic.getFirst();
         var rows=db.sql.queryForList("SELECT * FROM authority_requirement_principal WHERE requirement_id=? ORDER BY batch_revision DESC LIMIT 1",id(req));
         if(rows.isEmpty())throw new FalloTecnico(409,"PRINCIPAL_REQ_NO_ACREDITADO");
         var p=rows.getFirst();if(!"ACTIVA".equals(p.get("status"))||n(p,"valid_from")>clock.millis()||n(p,"valid_until")<=clock.millis())throw new FalloTecnico(409,"PRINCIPAL_REQ_NO_ACREDITADO");return p;
