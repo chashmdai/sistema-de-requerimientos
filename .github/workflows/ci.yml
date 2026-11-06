@@ -8,10 +8,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest]
+        part: [1, 2]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -22,6 +25,35 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: siger-institucional/front/package-lock.json
-      - name: React y Spring Boot (H2, sin proveedores externos)
+      - name: Comprobar inventario y rechazo de cobertura incompleta
         shell: pwsh
-        run: ./siger-institucional/scripts/Build-Siger.ps1
+        run: ./siger-institucional/scripts/Test-CiCoverageHarness.ps1 -JavaHome "$env:JAVA_HOME"
+      - name: React y Spring Boot (partición completa H2, sin proveedores)
+        shell: pwsh
+        run: ./siger-institucional/scripts/Build-Siger.ps1 -TestPart ${{ matrix.part }} -TestParts 2 -CoverageDirectory "${{ runner.temp }}/siger-coverage-${{ matrix.os }}-${{ matrix.part }}"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.part }}
+          path: ${{ runner.temp }}/siger-coverage-${{ matrix.os }}-${{ matrix.part }}/coverage-*.json
+          if-no-files-found: error
+  cobertura:
+    needs: verificar
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: coverage-${{ matrix.os }}-*
+          path: ${{ runner.temp }}/siger-coverage-total
+          merge-multiple: true
+      - name: Acreditar unión disjunta de todas las clases
+        shell: pwsh
+        run: ./siger-institucional/scripts/Test-CiCoverage.ps1 -Mode Aggregate -Directory "${{ runner.temp }}/siger-coverage-total" -Parts 2

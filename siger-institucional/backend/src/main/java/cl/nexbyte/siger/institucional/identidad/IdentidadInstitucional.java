@@ -9,6 +9,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 /** Frontera local de identidad. Las facultades se resuelven desde asignaciones vigentes, nunca desde el cargo. */
 public final class IdentidadInstitucional {
     private final BaseJdbc db;private final Clock clock;private final BCryptPasswordEncoder encoder=new BCryptPasswordEncoder(12);
+    private volatile SubroganciasInstitucionales funciones;
+    void funciones(SubroganciasInstitucionales value){funciones=value;}
+    public SubroganciasInstitucionales funciones(){return funciones;}
     public IdentidadInstitucional(BaseJdbc db,Clock clock){this.db=db;this.clock=clock;}
     public record Crear(String usuario,String nombre,String correo,String cargo,String unidad,String sede,String password){
         @Override public String toString(){return "Crear[reservado]";}
@@ -36,6 +39,9 @@ public final class IdentidadInstitucional {
     private void ti(String a){if(!operador(a).ti())throw new FalloTecnico(403);}
     private void revision(Map<String,Object> r,long expected){if(num(r,"security_epoch")!=expected)throw new FalloTecnico(409,"VERSION_OBSOLETA");}
     public List<Acceso> accesos(String id){
+        var base=accesosBase(id);var resolver=funciones;return resolver==null?base:resolver.aplicar(id,base);
+    }
+    List<Acceso> accesosBase(String id){
         long at=now();
         var accesses=new ArrayList<>(db.sql.queryForList("SELECT a.role_code,CASE WHEN g.area_id IS NULL THEN a.scope_code ELSE 'AREA' END AS scope_code,COALESCE(ar.unit_code,a.unit_code) AS unit_code,COALESCE(ar.site_id,a.site_id) AS site_id,g.area_id FROM staff_assignment a LEFT JOIN staff_assignment_area g ON g.assignment_id=a.id LEFT JOIN institution_area ar ON ar.id=g.area_id WHERE NOT EXISTS(SELECT 1 FROM staff_assignment_matter mx WHERE mx.assignment_id=a.id) AND a.actor_id=? AND a.revoked_ms IS NULL AND a.valid_from<=? AND (a.valid_until IS NULL OR a.valid_until>?) AND (g.area_id IS NULL OR EXISTS(SELECT 1 FROM approved_assignment p JOIN access_instruction i ON i.id=p.instruction_id JOIN instruction_area ia ON ia.instruction_id=i.id WHERE p.assignment_id=a.id AND i.state='EJECUTADA' AND i.beneficiary_id=a.actor_id AND i.role_code=a.role_code AND i.valid_from=a.valid_from AND i.valid_until=a.valid_until AND ia.area_id=g.area_id)) AND (g.area_id IS NULL OR EXISTS(SELECT 1 FROM institution_area ar WHERE ar.id=g.area_id AND (a.role_code<>'DIRECTOR' OR ar.head_mode='DIRECCION') AND ar.valid_from<="+at+" AND ar.valid_until>"+at+")) AND (COALESCE(ar.site_id,a.site_id) IS NULL OR EXISTS(SELECT 1 FROM org_site_validity s WHERE s.site_id=COALESCE(ar.site_id,a.site_id) AND s.valid_from<=? AND (s.valid_until IS NULL OR s.valid_until>?))) AND (COALESCE(ar.unit_code,a.unit_code) IS NULL OR EXISTS(SELECT 1 FROM org_unit_validity u WHERE u.unit_code=COALESCE(ar.unit_code,a.unit_code) AND u.valid_from<=? AND (u.valid_until IS NULL OR u.valid_until>?))) ORDER BY a.id",id,at,at,at,at,at,at).stream().map(r->new Acceso(str(r,"role_code"),str(r,"scope_code"),str(r,"unit_code"),str(r,"site_id"),str(r,"area_id"))).toList());
         accesses.addAll(accesosMateria(id,at));

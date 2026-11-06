@@ -21,7 +21,14 @@ public final class AutoridadesInstitucionales {
     public record PrincipalReq(UUID requerimiento,String unidad,String sede,String area,Instant desde,Instant hasta,String estado,String referencia,String sha256){}
     public record Registro13(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedesRegionales,List<AmbitoMateria> ambitosMateria,List<PrincipalReq> principales){@Override public String toString(){return "RegistroAutoridad13[reservado]";}}
     public record Registro12(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedesRegionales,List<AmbitoMateria> ambitosMateria){@Override public String toString(){return "RegistroAutoridad12[reservado]";}}
-    private record Leido(Registro base,List<Area> areas,Map<String,String> ambitos,List<CambioArea> cambios,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedes,Map<String,String> ambitosMateria){Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c){this(r,a,m,c,List.of(),List.of(),Map.of());}}
+    public record AmbitoFuncion(String rol,String alcance,String unidad,String sede,String area){}
+    public record Funcion(String id,String codigoFuncion,String ruta,String autoriza,String sede,String titular,List<String> subrogantes,List<String> autoridades,List<AmbitoFuncion> ambitos,Instant desde,Instant hasta,String referencia,String sha256,String estado){@Override public String toString(){return "DesignacionFuncional[reservada]";}}
+    public record Registro14(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedesRegionales,List<AmbitoMateria> ambitosMateria,List<PrincipalReq> principales,List<Funcion> funciones){@Override public String toString(){return "RegistroAutoridad14[reservado]";}}
+    public record ContextoFunciones(String persona,List<Funcion> funciones,long revision){}
+    private record Leido(Registro base,List<Area> areas,Map<String,String> ambitos,List<CambioArea> cambios,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedes,Map<String,String> ambitosMateria,List<Funcion> funciones){
+        Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c){this(r,a,m,c,List.of(),List.of(),Map.of(),List.of());}
+        Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c,List<CatalogoMaterias.Materia> mat,List<CatalogoMaterias.SedeRegional> s,Map<String,String> am){this(r,a,m,c,mat,s,am,List.of());}
+    }
     public record Sobre(String keyId,String payload,String firma){@Override public String toString(){return "SobreAutoridad[reservado]";}}
     private static final byte[] DOMAIN="SIGER_AUTORIDAD_1\0".getBytes(StandardCharsets.UTF_8);
     private final BaseJdbc db;
@@ -34,6 +41,16 @@ public final class AutoridadesInstitucionales {
         .streamReadConstraints(tools.jackson.core.StreamReadConstraints.builder().maxNestingDepth(12).maxStringLength(44000).maxNumberLength(30).build()).build()).enable(tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();}
     public AutoridadesInstitucionales(BaseJdbc db,IdentidadInstitucional ids,JsonMapper json,Clock clock,Map<String,PublicKey> trust){
         this.db=db;this.ids=ids;this.json=json;this.clock=clock;this.trust=Map.copyOf(trust);
+        actualizarFunciones();
+    }
+    public SubroganciasInstitucionales subrogancias(){return new SubroganciasInstitucionales(db,ids,this,json,clock);}
+    private void actualizarFunciones(){
+        try{ids.funciones(db.sql.queryForObject("SELECT COUNT(*) FROM institution_function_scope",Long.class)>0?subrogancias():null);}
+        catch(org.springframework.jdbc.BadSqlGrammarException e){
+            // Las pruebas de actualización pueden construir identidad antes de V15.12.
+            // Ningún registro 1.4 es aceptable sin sus tablas.
+            String state=e.getSQLException().getSQLState();if(state==null||!state.startsWith("42"))throw e;
+        }
     }
     static String str(Map<String,Object> r,String key){return r.get(key)==null?null:r.get(key).toString();}
     static long num(Map<String,Object> r,String key){return ((Number)r.get(key)).longValue();}
@@ -60,7 +77,7 @@ public final class AutoridadesInstitucionales {
             ampliado=decodificar(bytes);registro=ampliado.base();
         }catch(FalloTecnico e){throw e;}catch(GeneralSecurityException|RuntimeException e){throw new FalloTecnico(400);}
         validar(registro);String hash=sha(bytes);
-        return db.transaction(()->{
+        long installed=db.transaction(()->{
             guard();long current=revision();
             if(registro.revision()==current){var old=db.sql.queryForMap("SELECT payload_sha256 FROM authority_batch WHERE revision=?",current);if(hash.equals(old.get("payload_sha256")))return current;throw new FalloTecnico(409,"REGISTRO_AUTORIDAD_CONFLICTIVO");}
             if(registro.revision()!=current+1)throw new FalloTecnico(409,"VERSION_OBSOLETA");
@@ -78,6 +95,11 @@ public final class AutoridadesInstitucionales {
             }
             importarMaterias(ampliado);
             importarPrincipales(bytes,registro);
+            subrogancias().registrarAmbitos(ampliado.funciones(),registro.revision());
+            // Instalar el resolver antes de liberar identity_guard: no hay una ventana
+            // entre COMMIT del primer ámbito y activación de su política en memoria.
+            // Si esta transacción revierte, el resolver observa cero ámbitos y conserva la compatibilidad.
+            actualizarFunciones();
             for(var cambio:ampliado.cambios()){
                 var catalogo=new CatalogoAreas(db,clock);var destino=catalogo.exigir(cambio.destino(),cambio.unidad(),cambio.sede());
                 if(cambio.desde().isBefore(destino.desde())||cambio.hasta().isAfter(destino.hasta()))throw new FalloTecnico(400);
@@ -91,9 +113,10 @@ public final class AutoridadesInstitucionales {
             }
             db.sql.update("UPDATE authority_registry SET revision=? WHERE id=1",registro.revision());evento(null,Long.toString(registro.revision()),"REGISTRO_IMPORTADO","FIRMA_VERIFICADA",Map.of("sha256",hash,"keyId",sobre.keyId()));return registro.revision();
         });
+        actualizarFunciones();return installed;
     }
     private void validar(Registro r){
-        if(r==null||!Set.of("1.0","1.1","1.2","1.3").contains(r.version())||r.revision()<1||r.emitida()==null||r.expira()==null||r.emitida().isAfter(clock.instant())||!r.expira().isAfter(clock.instant())||r.vinculos()==null||r.mandatos()==null||r.vinculos().size()>128||r.mandatos().size()>32)throw new FalloTecnico(400);
+        if(r==null||!Set.of("1.0","1.1","1.2","1.3","1.4").contains(r.version())||r.revision()<1||r.emitida()==null||r.expira()==null||r.emitida().isAfter(clock.instant())||!r.expira().isAfter(clock.instant())||r.vinculos()==null||r.mandatos()==null||r.vinculos().size()>128||r.mandatos().size()>32)throw new FalloTecnico(400);
         intervalo(r.emitida(),r.expira(),r.expira());Set<String> actors=new HashSet<>(),mandates=new HashSet<>();
         for(var v:r.vinculos()){
             if(v==null)throw new FalloTecnico(400);codigo(v.actor());codigo(v.persona());intervalo(v.desde(),v.hasta(),r.expira());if(v.autenticacion()==null||!v.autenticacion().matches("[a-f0-9]{64}")||!actors.add(v.actor()))throw new FalloTecnico(400);
@@ -108,6 +131,13 @@ public final class AutoridadesInstitucionales {
         var reader=lectorPrivado();String version=reader.readTree(bytes).path("version").asString();
         if(version.equals("1.0")){var r=reader.readValue(bytes,Registro.class);validar(r);if(r.mandatos().stream().anyMatch(m->Set.of("AREA","MATERIA").contains(m.alcance())))throw new FalloTecnico(400);return new Leido(r,List.of(),Map.of(),List.of());}
         if(version.equals("1.2"))return decodificar12(reader.readValue(bytes,Registro12.class));
+        if(version.equals("1.4")){
+            var r=reader.readValue(bytes,Registro14.class);
+            validarPrincipales(new Registro13(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria(),r.principales()));
+            var base=decodificar12(new Registro12(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria()));
+            validarFunciones(r);
+            return new Leido(base.base(),base.areas(),base.ambitos(),base.cambios(),base.materias(),base.sedes(),base.ambitosMateria(),r.funciones());
+        }
         if(version.equals("1.3")){var r=reader.readValue(bytes,Registro13.class);validarPrincipales(r);return decodificar12(new Registro12(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria()));}
         if(!version.equals("1.1"))throw new FalloTecnico(400);var r=reader.readValue(bytes,Registro11.class);var result=decodificar11(r);if(r.mandatos().stream().anyMatch(m->m.alcance().equals("MATERIA")))throw new FalloTecnico(400);return result;
     }
@@ -128,13 +158,47 @@ public final class AutoridadesInstitucionales {
         if(r.mandatos().stream().anyMatch(m->m.alcance().equals("MATERIA")&&!scopes.containsKey(m.id())))throw new FalloTecnico(400);
         return new Leido(common.base(),common.areas(),common.ambitos(),common.cambios(),r.materias(),r.sedesRegionales(),Map.copyOf(scopes));
     }
+    private void validarFunciones(Registro14 r){
+        if(r.funciones()==null||r.funciones().size()>32)throw new FalloTecnico(400);
+        Set<String> idsFuncion=new HashSet<>();
+        for(var f:r.funciones()){
+            if(f==null)throw new FalloTecnico(400);codigo(f.id());codigo(f.codigoFuncion());codigo(f.sede());codigo(f.titular());
+            texto(f.referencia(),180);intervalo(f.desde(),f.hasta(),r.expira());
+            if(!idsFuncion.add(f.id())||!Set.of("REGIONAL","CENTRAL").contains(f.ruta())||!Set.of("ACTIVA","SUSPENDIDA").contains(f.estado())||f.sha256()==null||!f.sha256().matches("[a-f0-9]{64}")||f.subrogantes()==null||f.subrogantes().isEmpty()||f.subrogantes().size()>32||f.autoridades()==null||f.autoridades().isEmpty()||f.autoridades().size()>32||f.ambitos()==null||f.ambitos().isEmpty()||f.ambitos().size()>32)throw new FalloTecnico(400);
+            if(!Objects.equals(f.autoriza(),f.ruta().equals("REGIONAL")?"JEFATURA_SEDES_REGIONALES":"JEFATURA_GESTION"))throw new FalloTecnico(400);
+            boolean regional=r.sedesRegionales().stream().anyMatch(s->s.id().equals(f.sede())&&s.estado().equals("ACTIVA")&&!s.desde().isAfter(f.desde())&&!s.hasta().isBefore(f.hasta()));
+            if(f.ruta().equals("REGIONAL")!=regional)throw new FalloTecnico(400,"RUTA_FUNCIONAL_NO_ACREDITADA");
+            var personas=new HashSet<String>();personas.add(f.titular());
+            for(var p:f.subrogantes()){codigo(p);if(!personas.add(p))throw new FalloTecnico(400);}
+            for(var p:f.autoridades()){codigo(p);if(!personas.add(p))throw new FalloTecnico(400);}
+            for(var p:personas)if(r.vinculos().stream().noneMatch(v->v.persona().equals(p)))throw new FalloTecnico(400,"PERSONA_FUNCIONAL_NO_ACREDITADA");
+            var ambitos=new HashSet<AmbitoFuncion>();
+            for(var a:f.ambitos()){
+                if(a==null||!Set.of("COORDINADOR","COORDINADOR_REGIONAL","DIRECTOR").contains(a.rol())||!f.sede().equals(a.sede())||!ambitos.add(a))throw new FalloTecnico(400);
+                if(f.ruta().equals("REGIONAL")&&a.rol().equals("DIRECTOR"))throw new FalloTecnico(400);
+                if(a.area()!=null){
+                    if(!a.alcance().equals("AREA")||a.rol().equals("COORDINADOR_REGIONAL")||r.areas().stream().noneMatch(ar->ar.id().equals(a.area())&&ar.unidad().equals(a.unidad())&&ar.sede().equals(a.sede())&&!ar.desde().isAfter(f.desde())&&!ar.hasta().isBefore(f.hasta())&&(!a.rol().equals("DIRECTOR")||ar.jefatura().equals("DIRECCION"))))throw new FalloTecnico(400);
+                }else if(a.rol().equals("COORDINADOR_REGIONAL")){
+                    if(!a.alcance().equals("SEDE")||a.unidad()!=null||!f.ruta().equals("REGIONAL"))throw new FalloTecnico(400);
+                }else if(!a.alcance().equals("UNIDAD_SEDE")||a.unidad()==null)throw new FalloTecnico(400);
+            }
+        }
+        for(var f:r.funciones())for(var g:r.funciones())if(f!=g&&f.estado().equals("ACTIVA")&&g.estado().equals("ACTIVA")&&f.desde().isBefore(g.hasta())&&g.desde().isBefore(f.hasta())&&(f.codigoFuncion().equals(g.codigoFuncion())||f.ambitos().stream().anyMatch(a->g.ambitos().stream().anyMatch(b->Objects.equals(a.unidad(),b.unidad())&&Objects.equals(a.sede(),b.sede())&&Objects.equals(a.area(),b.area())))))throw new FalloTecnico(409,"FUNCIONES_SOLAPADAS");
+    }
+    public ContextoFunciones contextoFunciones(String actor){
+        ids.exigirCuentaHabilitada(actor);var r=vigenteCompleto();String persona=persona(actor,r.base());
+        String fingerprint=sha(db.sql.queryForObject("SELECT password_hash FROM staff_account WHERE actor_id=?",String.class,actor).getBytes(StandardCharsets.UTF_8));
+        if(r.base().vinculos().stream().noneMatch(v->v.actor().equals(actor)&&v.autenticacion().equals(fingerprint)))throw new FalloTecnico(409,"ACREDITACION_CREDENCIAL_OBSOLETA");
+        return new ContextoFunciones(persona,r.funciones(),r.base().revision());
+    }
     private void validarPrincipales(Registro13 r){
         if(r.principales()==null||r.principales().size()>32)throw new FalloTecnico(400);var seen=new HashSet<UUID>();
         for(var p:r.principales()){if(p==null||p.requerimiento()==null||!seen.add(p.requerimiento())||!Set.of("ACTIVA","SUSPENDIDA").contains(p.estado())||p.sha256()==null||!p.sha256().matches("[a-f0-9]{64}"))throw new FalloTecnico(400);codigo(p.unidad());codigo(p.sede());if(p.area()!=null)codigo(p.area());texto(p.referencia(),180);intervalo(p.desde(),p.hasta(),r.expira());}
     }
     private void importarPrincipales(byte[] bytes,Registro base){
-        if(!base.version().equals("1.3"))return;
-        for(var p:lectorPrivado().readValue(bytes,Registro13.class).principales()){
+        if(!Set.of("1.3","1.4").contains(base.version()))return;
+        var principales=base.version().equals("1.4")?lectorPrivado().readValue(bytes,Registro14.class).principales():lectorPrivado().readValue(bytes,Registro13.class).principales();
+        for(var p:principales){
             if(db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement WHERE id=?",Long.class,p.requerimiento().toString())!=1)throw new FalloTecnico(409,"REQ_NO_ACREDITABLE");
             var old=db.sql.queryForList("SELECT unit_code,site_id,area_id FROM authority_requirement_principal WHERE requirement_id=? ORDER BY batch_revision DESC LIMIT 1",p.requerimiento().toString());
             if(!old.isEmpty()&&(!p.unidad().equals(old.getFirst().get("unit_code"))||!p.sede().equals(old.getFirst().get("site_id"))||!Objects.equals(p.area(),old.getFirst().get("area_id"))))throw new FalloTecnico(409,"TRANSFERENCIA_REQ_REQUIERE_ACEPTACION");

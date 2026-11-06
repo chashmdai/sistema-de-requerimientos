@@ -11,6 +11,7 @@ public final class RecursosNotificacion {
  public void recurso(Operador a,String tipo,UUID id){
   actor(a);if(tipo==null&&id==null)return;if(tipo==null||id==null)throw new FalloTecnico(400);
   switch(tipo){
+   case "SUBROGANCIA"->{if(!core.avisoSubrogancia(a.id(),id))throw new FalloTecnico(404);}
    case "COMUNICACION"->core.autorizarLectura(a,id);
    case "CASO"->core.autorizarCaso(a,id);
    case "CASO_CONSULTA"->core.autorizarConsultaCaso(a,id);
@@ -30,5 +31,5 @@ public final class RecursosNotificacion {
  public void reapertura(Operador a,UUID id){core.autorizarReapertura(a,id);var r=fila("core_reopen",id.toString());var c=caso(a,UUID.fromString(r.get("case_id").toString()));if(!a.jefeEn(c.unidad(),c.sede(),c.area()))throw new FalloTecnico(404);}
  public void antecedente(Operador a,UUID id){core.autorizarAntecedente(a,id);}
  public void terminoColaboracion(Operador a,UUID id,boolean pendiente){actor(a);core.terminoColaboracion().autorizarAviso(a,id,pendiente);}
- public String href(String tipo,UUID id){return switch(tipo){case "TERMINO_COLAB","TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->"u2";case "EQUIPO"->"casos";case "COMUNICACION"->"comunicacion/"+id;case "CASO","CASO_CONSULTA"->"caso/"+id;case "SOLICITUD"->"solicitudes/"+id;case "TAREA"->"tareas/"+id;case "ANTECEDENTE"->"antecedentes";case "DESTINO"->{var d=fila("core_destination",id.toString());yield "comunicacion/"+d.get("communication_id");}case "DERIVACION","REAPERTURA"->"decisiones";default->"bandeja";};}
+ public String href(String tipo,UUID id){return switch(tipo){case "SUBROGANCIA"->"subrogancias";case "TERMINO_COLAB","TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->"u2";case "EQUIPO"->"casos";case "COMUNICACION"->"comunicacion/"+id;case "CASO","CASO_CONSULTA"->"caso/"+id;case "SOLICITUD"->"solicitudes/"+id;case "TAREA"->"tareas/"+id;case "ANTECEDENTE"->"antecedentes";case "DESTINO"->{var d=fila("core_destination",id.toString());yield "comunicacion/"+d.get("communication_id");}case "DERIVACION","REAPERTURA"->"decisiones";default->"bandeja";};}
 }
