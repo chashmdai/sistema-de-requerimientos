@@ -8,7 +8,7 @@ Worktree exclusivo C:\req\worktrees\siger-logica. Mantener identidad, autorizaci
 
 ## Git y evidencia publicada
 
-Rama actual codex/siger-subrogancias, base cdb176f2ea81ef66727c2077cbf271fdb05fa9e1. El commit de implementación conserva este checkpoint; consultar git log -1 para su SHA. Conservar todos los cambios locales de subrogancias: no reconstruir A/colaboraciones. Todavía sin PR/upstream propio; publicar PR dependiente de #7 tras la regresión integral.
+Rama actual codex/siger-subrogancias, base cdb176f2ea81ef66727c2077cbf271fdb05fa9e1. El commit de implementación conserva este checkpoint; consultar git log -1 para su SHA. Conservar todos los cambios locales de subrogancias: no reconstruir A/colaboraciones. PR #8 en borrador publicado, upstream sincronizado en adb7eeb. Corrección CI pendiente de commit y publicación; no reutilizar la CI de otro HEAD.
 
 Cadena preservada: main → #2 → #3 → #4 → #5 → #6 → #7. Main remoto verificado95cf2ae; referencia U4.5 sin nuevas migraciones concurrentes observadas; no se modifica su directorio. Revisar refs antes de publicar.
 
@@ -48,3 +48,13 @@ SUB-CONT-01 y cierres excepcionales específicos; territorio acreditado y concil
 Rector SHA80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4 verificado. Cuestionario27 no encontrado localmente; rector suficiente para este circuito. Investigar y avanzar sin preguntas ordinarias.
 
 
+
+## Recuperación y CI posterior al corte histórico
+
+Se completó la integral local del padre adb7eeb: 506/497 aprobadas/9 omitidas, frontend129/129, lint/build/package, Maven27:33. CI42233659071: Ubuntu506/482/24 aprobado; Windows cancelado a30min con446 métodos, cero fallos/errores y9 omitidos, faltaron60. Logs completos preservados. Ver LOGICA_CI_PARTICIONES_2026-11-06.md para diagnóstico y corrección sin ampliar presupuesto/exclusiones.
+
+Hijo codex/siger-continuidad-excepcional recuperable en commit60b25e9, todavía local: SUB-CONT-01 por Caso, Registro1.5/V15.13, UI real y doble canal funcional conforme§16. H2 focal8/8, doble canal52/52, MySQL nativo23/23 más focal modalidad1/1 (solapado), frontend133/133/lint/TypeScript. Integral/CI del hijo pendientes. Su checkpoint conserva el detalle; no sustituirlo por este corte del padre.
+
+Acción actual: calificar auxiliar CI (inventario compilado y diez rechazos negativos aprobados), terminar partición1 local, confirmar/publicar corrección del padre y comprobar el nuevo HEAD en Windows/Ubuntu. Después volver al hijo limpio, incorporar solo esta corrección propia sin reescribir historial, terminar su calificación/publicación y continuar C/D/E. No repetir A/B ni pedir validación funcional. Main/padres/entornos preservados.
+
+Partición1 local final:243/234/9,cero fallos/errores,33/71 raíces;129 frontend/lint/build/package. Auxiliar seis raíces sintéticas/diez rechazos aprobado. Publicar corrección CI y volver al hijo60b25e9; no atribuir esta selección al hijo.
