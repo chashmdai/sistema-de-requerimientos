@@ -1,4 +1,4 @@
-# Funciones y subrogancias institucionales · v1
+# Funciones y subrogancias institucionales · v1, revisión1.1
 
 Implementación del levantamiento validado el 06/11/2026 (§§10/13). Este contrato de aplicación no cambia el transporte Formulario–SIGER, COM, firmas originales ni COMMIT→ACK. No habilita despliegues ni designaciones reales.
 
@@ -39,7 +39,7 @@ El autocierre del titular regional utiliza una ruta separada: exige designación
 
 `GET/POST /nucleo/casos/{id}/autocierre-regional` consulta la habilitación o confirma con revisión/fundamento. Consultar el botón no concede facultad.
 
-Los eventos durablemente registrados producen avisos internos mínimos para titular, subrogante y autoridad con identidad vigente, deduplicados y autorizados de nuevo al consultar. Estos avisos no tienen envío de correo adicional por defecto. Recibir un aviso no constituye aprobación ni acuse y no concede acceso a expedientes.
+Los eventos durablemente registrados producen avisos internos mínimos para titular, subrogante y autoridad con identidad vigente, deduplicados y autorizados de nuevo al consultar. Cada aviso funcional nuevo prepara ambos canales conforme a §16 y al contrato notificaciones-funcionales-doble-canal-v1. La indicación EV-15 sin acuse adicional se refiere al acuse; no exime el correo. Se conservan NO_APLICA históricos sin retroenvío y el transporte real permanece apagado. Recibir un aviso no constituye aprobación ni acuse y no concede acceso a expedientes.
 
 ## Persistencia y habilitación
 

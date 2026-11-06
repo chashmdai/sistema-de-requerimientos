@@ -25,6 +25,7 @@ public final class NucleoInstitucional {
     public EquipoCaso equipo(){return new EquipoCaso(db,this,catalogo,clock,mapper);}
     public cl.nexbyte.siger.institucional.notificaciones.TareasPersonales tareas(){return new cl.nexbyte.siger.institucional.notificaciones.TareasPersonales(db,new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(db,catalogo,this),mapper,clock);}
     public ContinuidadU2 continuidad(){return new ContinuidadU2(db,this,catalogo,clock,mapper);}
+    public RevisionExcepcional revisionesExcepcionales(){return new RevisionExcepcional(db,this,catalogo,autoridad,clock,mapper);}
     public boolean avisoSubrogancia(String actor,UUID id){return autoridad!=null&&autoridad.subrogancias().autorizarAviso(actor,id);}
     void jefaturaOrigen(Operador a,Map<String,Object> contexto,long emitida){
         String ar=areas.area(contexto);
@@ -296,41 +297,43 @@ public final class NucleoInstitucional {
         });
     }
     public Resultado revisarCaso(Operador a,UUID key,UUID caseId,Decision request,String decision){
-        return revisarCaso(a,key,caseId,request,decision,false);
+        return revisarCaso(a,key,caseId,request,decision,false,null,null);
     }
-    public Resultado autocierreRegional(Operador a,UUID key,UUID caseId,Decision request){return revisarCaso(a,key,caseId,request,"CIERRE",true);}
+    public Resultado autocierreRegional(Operador a,UUID key,UUID caseId,Decision request){return revisarCaso(a,key,caseId,request,"CIERRE",true,null,null);}
+    Resultado cierreExcepcional(Operador a,UUID key,UUID caseId,Decision request,UUID excepcion,RevisionExcepcional.Confirmar confirmation){return revisarCaso(a,key,caseId,request,"CIERRE",false,excepcion,confirmation);}
     private void titularRegional(Operador a,Map<String,Object> c){
         head(a,c);if(autoridad==null||!a.id().equals(c.get("responsible_id"))||!areas.profesional(a,c))throw new FalloTecnico(403,"TITULAR_REGIONAL_NO_ACREDITADO");
         autoridad.subrogancias().titularRegional(a.id(),str(c,"unit_code"),str(c,"site_id"),areas.area(c));
     }
     public Map<String,Boolean> autocierreRegional(Operador a,UUID id){actor(a);var c=caseRow(id);if(!canCase(a,c))throw new FalloTecnico(404);try{titularRegional(a,c);return Map.of("permitido",true);}catch(FalloTecnico e){if(Set.of(401,403,404,409).contains(e.status))return Map.of("permitido",false);throw e;}}
-    private Resultado revisarCaso(Operador a,UUID key,UUID caseId,Decision request,String decision,boolean regional){
+    private Resultado revisarCaso(Operador a,UUID key,UUID caseId,Decision request,String decision,boolean regional,UUID excepcion,RevisionExcepcional.Confirmar confirmation){
         actor(a);if(!Set.of("SOLICITUD_TERMINO","DEVOLUCION","CIERRE").contains(decision))throw new FalloTecnico(400);text(request.texto(),2000);
-        var initial=caseRow(caseId);if(!canCase(a,initial))throw new FalloTecnico(404);var communication=uuid(initial.get("communication_id"));
-        if(regional)titularRegional(a,initial);else confirmarIndependiente(a,initial,decision);
-        return execute(key,a,regional?"AUTOCIERRE_REGIONAL_TITULAR":decision,List.of(caseId,request),()->{
-            lock(communication);var c=caseRow(caseId);if(!canCase(a,c))throw new FalloTecnico(404);revision(c,request.revision());String state=str(c,"state"),next;String modality=null;
-            if(regional)titularRegional(a,c);else confirmarIndependiente(a,c,decision);
+        var initial=caseRow(caseId);if(excepcion!=null){revisionesExcepcionales().revisor(a,excepcion);autorizarConsultaCaso(a,caseId);}else if(!canCase(a,initial))throw new FalloTecnico(404);var communication=uuid(initial.get("communication_id"));
+        if(excepcion==null){if(regional)titularRegional(a,initial);else confirmarIndependiente(a,initial,decision);}
+        return execute(key,a,excepcion!=null?"CIERRE_EXCEPCIONAL":regional?"AUTOCIERRE_REGIONAL_TITULAR":decision,excepcion==null?List.of(caseId,request):List.of(caseId,request,excepcion,confirmation),()->{
+            lock(communication);var c=caseRow(caseId);if(excepcion!=null)autorizarConsultaCaso(a,caseId);else if(!canCase(a,c))throw new FalloTecnico(404);revision(c,request.revision());String state=str(c,"state"),next;String modality=null;
+            if(excepcion!=null)revisionesExcepcionales().validar(a,excepcion,confirmation,caseId);else if(regional)titularRegional(a,c);else confirmarIndependiente(a,c,decision);
             if(decision.equals("CIERRE")&&terminoColaboracion().pendienteCaso(caseId))throw new FalloTecnico(409,"INTERVENCION_REQUIERE_DECISION_EXPLICITA");
             if(decision.equals("CIERRE")&&equipo().obligatorias(caseId))throw new FalloTecnico(409,"TAREAS_OBLIGATORIAS_PENDIENTES");
             if(!decision.equals("DEVOLUCION")&&equipo().esperaPendiente(caseId))throw new FalloTecnico(409,"ESPERA_REQUIERE_DECISION_EXPLICITA");
             if(!decision.equals("DEVOLUCION")&&pendiente(caseId))throw new FalloTecnico(409);
             if(decision.equals("SOLICITUD_TERMINO")){
                 if(!a.id().equals(c.get("responsible_id"))||!state.equals("EN_GESTION"))throw new FalloTecnico(409);next="REVISION_TERMINO";
-            }else if(decision.equals("CIERRE")&&!areas.jefe(a,c)&&areas.profesional(a,c)){
+            }else if(excepcion==null&&decision.equals("CIERRE")&&!areas.jefe(a,c)&&areas.profesional(a,c)){
                 if(!a.id().equals(c.get("responsible_id"))||!state.equals("EN_GESTION")||!"BAJA".equals(c.get("complexity_code")))throw new FalloTecnico(409);
                 next="CERRADO";modality="PROFESIONAL_BAJA";
             }else{
-                head(a,c);
+                if(excepcion==null)head(a,c);
                 if(decision.equals("DEVOLUCION")){if(!state.equals("REVISION_TERMINO"))throw new FalloTecnico(409);next="EN_GESTION";}
                 else{
                     boolean personal=a.id().equals(c.get("responsible_id"))&&state.equals("EN_GESTION")&&db.sql.queryForObject("SELECT COUNT(*) FROM core_action WHERE case_id=? AND actor_id=?",Long.class,id(caseId),a.id())>0;
-                    if(regional?!Set.of("EN_GESTION","REVISION_TERMINO").contains(state):!state.equals("REVISION_TERMINO")&&!personal)throw new FalloTecnico(409);next="CERRADO";modality="JEFATURA";
+                    if(regional?!Set.of("EN_GESTION","REVISION_TERMINO").contains(state):!state.equals("REVISION_TERMINO")&&!personal)throw new FalloTecnico(409);next="CERRADO";modality=excepcion==null?"JEFATURA":"EXCEPCIONAL";
                 }
             }
             db.sql.update("UPDATE core_case SET state=?,revision=revision+1,closed_ms=?,closed_by=? WHERE id=?",next,next.equals("CERRADO")?now():null,next.equals("CERRADO")?a.id():null,id(caseId));
             if(next.equals("CERRADO")){if(casoU2(caseId)&&db.sql.queryForObject("SELECT COUNT(*) FROM institution_case_closure_request WHERE case_id=? AND case_revision=?",Long.class,id(caseId),number(c,"revision"))>0)modality="DERIVACION";db.sql.update("UPDATE core_case SET closure_mode=? WHERE id=?",modality,id(caseId));if(casoU2(caseId))db.sql.update("INSERT INTO institution_case_closure VALUES(?,?,?,?,?)",id(caseId),number(c,"revision")+1,now(),a.id(),modality);}
             db.sql.update("INSERT INTO core_review VALUES(?,?,?,?,?,?)",id(UUID.randomUUID()),id(caseId),a.id(),now(),decision,request.texto());
+            if(excepcion!=null){revisionesExcepcionales().consumir(a,excepcion,request.texto());u2().historia(communication,caseId,"CASO",number(c,"revision")+1,a,"CASO_CIERRE_EXCEPCIONAL",request.texto(),Map.of("autorizacion",id(excepcion),"permiso","CONFIRM_CASE_CLOSURE"));}
             if(regional){var f=autoridad.subrogancias().titularRegional(a.id(),str(c,"unit_code"),str(c,"site_id"),areas.area(c));u2().historia(communication,caseId,"CASO",number(c,"revision")+1,a,"CASO_AUTOCIERRE_REGIONAL_TITULAR",request.texto(),Map.of("funcionesEjercidas",List.of("PROFESIONAL_RESPONSABLE","COORDINACION_REGIONAL_TITULAR"),"designacion",f.id(),"referencia",f.referencia(),"sha256",f.sha256()));}
             bump(communication);reevaluate(communication,a);event(communication,"CASO",caseId,a,decision.equals("CIERRE")?("PROFESIONAL_BAJA".equals(modality)?"CASO_CERRADO_PROFESIONAL_BAJA":"CASO_CERRADO"):decision.equals("DEVOLUCION")?"TERMINO_DEVUELTO_CON_OBSERVACIONES":"TERMINO_SOLICITADO");return new Resultado(caseId,number(c,"revision")+1);
         });

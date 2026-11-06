@@ -101,7 +101,7 @@ public final class SubroganciasInstitucionales {
                 var id=UUID.fromString(str(e,"result_id"));autorizarComando(actor,ctx,op,fila(id));return new Resultado(id,num(e,"result_revision"));
             }
             var result=work.get();db.sql.update("INSERT INTO function_command VALUES(?,?,?,?,?,?)",key.toString(),actor,op,digest,result.id().toString(),result.revision());
-            autoridad.evento(actor,result.id().toString(),"SUBROGANCIA_"+op,"CONFIRMADO",fila(result.id()));aviso(result.id(),result.revision(),op);return result;
+            autoridad.evento(actor,result.id().toString(),"SUBROGANCIA_"+op,"CONFIRMADO",fila(result.id()));if(!op.equals("EJECUTAR")||fila(result.id()).get("activated_ms")==null)aviso(result.id(),result.revision(),op);return result;
         });}catch(FalloTecnico e){if(Set.of(403,404,409).contains(e.status))db.transaction(()->{autoridad.guard();autoridad.evento(actor,resource==null?null:resource.toString(),"SUBROGANCIA_"+op,"DENEGADO_"+e.status,null);return null;});throw e;}
     }
     public Resultado solicitar(String actor,UUID key,Solicitud r){
@@ -191,4 +191,5 @@ public final class SubroganciasInstitucionales {
         return false;
     }
     public boolean autorizarAviso(String actor,UUID id){try{var c=autoridad.contextoFunciones(actor);var e=fila(id);return c.persona().equals(e.get("requested_person"))||c.persona().equals(e.get("titular_person"))||c.funciones().stream().anyMatch(f->f.id().equals(e.get("designation_id"))&&f.autoridades().contains(c.persona()));}catch(FalloTecnico ex){if(Set.of(401,403,404,409).contains(ex.status))return false;throw ex;}}
+    public boolean casoPropioSubrogante(String actor,String unidad,String sede,String area){var ctx=autoridad.contextoFunciones(actor);for(var e:db.sql.queryForList("SELECT * FROM institution_substitution WHERE requested_by=? AND executed_ms IS NOT NULL AND from_ms<=? AND executed_ms<=?",actor,clock.millis(),clock.millis())){integro(e);if(ctx.persona().equals(e.get("substitute_person"))&&(e.get("ended_ms")==null||num(e,"ended_ms")>Math.max(num(e,"from_ms"),num(e,"executed_ms")))&&documento(e).ambitos().stream().map(SubroganciasInstitucionales::acceso).anyMatch(a->a.cubre(unidad,sede,area)))return true;}return false;}
 }

@@ -1,0 +1,27 @@
+package cl.nexbyte.siger.institucional.nucleo;
+import cl.nexbyte.siger.institucional.*;import cl.nexbyte.siger.institucional.identidad.*;import cl.nexbyte.siger.institucional.robustez.*;import java.nio.file.*;import java.time.*;import java.util.*;
+import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;import org.springframework.boot.SpringBootConfiguration;import org.springframework.boot.autoconfigure.EnableAutoConfiguration;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;import org.springframework.context.annotation.*;import org.springframework.test.annotation.DirtiesContext;import org.springframework.test.web.servlet.MockMvc;import org.springframework.mock.web.MockHttpSession;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+
+@SpringBootTest(classes=RevisionExcepcionalHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.identidad.habilitada=true"}) @AutoConfigureMockMvc @DirtiesContext
+class RevisionExcepcionalHttpTest {
+ @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,NucleoU2Controller.class,RevisionExcepcionalController.class,ErroresTecnicos.class,JsonEstricto.class,Fixture.class})static class Application{}
+ @Configuration static class Fixture {
+  @Bean(destroyMethod="close") DatosNucleoTest datos()throws Exception{return new DatosNucleoTest(Files.createTempDirectory("revision-excep-http-"));}
+  @Bean RevisionExcepcionalFixture fixture(DatosNucleoTest d)throws Exception{return new RevisionExcepcionalFixture(d,Clock.systemUTC());}
+  @Bean IdentidadInstitucional ids(RevisionExcepcionalFixture f){return f.f.ids;}@Bean CatalogoLaboratorio cat(RevisionExcepcionalFixture f){return f.f.cat;}@Bean NucleoInstitucional core(RevisionExcepcionalFixture f){return f.f.core;}
+  @Bean AutoridadesInstitucionales authority(RevisionExcepcionalFixture f){return f.f.f.autoridades;}
+  @Bean HabilitacionNucleo gate(){return new HabilitacionNucleo(HabilitacionNucleoTest.valid());}@Bean Clock relojLimitesLogin(){return Clock.systemUTC();}
+ }
+ @Autowired MockMvc http;@Autowired RevisionExcepcionalFixture f;
+ MockHttpSession login(String name)throws Exception{var session=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(session).with(csrf()).param("username",name).param("password",name.equals("zz.autoridad.fixture")?f.f.f.claveRevisor:f.f.passwords.get(name))).andExpect(status().isNoContent());return session;}
+ String send(MockHttpSession session,String path,Object body,int expected)throws Exception{return http.perform(post(path).secure(true).session(session).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(f.d.mapper.writeValueAsString(body))).andExpect(status().is(expected)).andReturn().getResponse().getContentAsString();}
+ @Test void recorridoAutorizadoSinAutoaprobacionNiFacultadGlobalYConCsrf()throws Exception{
+  var owner=login("prof.b");var reviewer=login("prof.a");var alias=login("alias.subrogante");var auth=login("zz.autoridad.fixture");var ti=login("ti.areas");
+  String path="/nucleo/casos/"+f.cas+"/revision-excepcional";var request=new RevisionExcepcional.Solicitar(f.rev(),f.reviewer,f.clock.instant(),f.clock.instant().plusSeconds(300),"Titular no puede revisar: requiere persona distinta",List.of());
+  http.perform(post(path).secure(true).session(owner).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(f.d.mapper.writeValueAsString(request))).andExpect(status().isForbidden());var id=UUID.fromString(f.d.mapper.readTree(send(owner,path,request,200)).path("id").asString());String resource="/nucleo/revisiones-excepcionales/"+id;
+  send(owner,resource+"/aprobar",new RevisionExcepcional.Decidir(0,"No puede autoaprobar"),404);http.perform(get("/nucleo/revisiones-excepcionales").secure(true).session(ti)).andExpect(jsonPath("$.length()").value(0));http.perform(get("/nucleo/casos/"+f.cas).secure(true).session(auth)).andExpect(status().isNotFound());send(auth,resource+"/aprobar",new RevisionExcepcional.Decidir(0,"Autoriza autoridad competente acreditada"),200);
+  String response=http.perform(get(resource).secure(true).session(reviewer)).andExpect(status().isOk()).andExpect(jsonPath("$.instruccion.puedeConfirmar").value(true)).andReturn().getResponse().getContentAsString();var packet=f.d.mapper.readTree(response);var confirmation=new RevisionExcepcional.Confirmar(1,f.rev(),packet.path("huellaAntecedentes").asString(),true,"Revisión expresa actual por persona nominal");send(alias,resource+"/confirmar",confirmation,404);send(reviewer,"/nucleo/casos/"+f.cas+"/cerrar",new ContratosNucleo.Decision(f.rev(),"No jefatura global"),404);send(reviewer,resource+"/confirmar",confirmation,200);
+  http.perform(get("/nucleo/casos/"+f.cas).secure(true).session(reviewer)).andExpect(jsonPath("$.estado").value("CERRADO"));http.perform(get("/nucleo/institucional/requerimientos/"+f.req).secure(true).session(owner)).andExpect(jsonPath("$.state").value("ACTIVO"));http.perform(get("/nucleo/casos/"+f.other).secure(true).session(reviewer)).andExpect(status().isNotFound());
+ }
+}

@@ -94,7 +94,7 @@ class ContenidoInstitucionalTest {
   for(int i=0;i<50;i++)notices.proyectar();
   assertTrue(notices.listar(f.a(x.m.upd),0,50).items().stream().anyMatch(n->n.tipo().equals("PERTINENCIA_ACTUALIZADA")&&n.ruta().equals("caso/"+p[1])));
   assertFalse(notices.listar(f.a(x.m.upr),0,50).items().stream().anyMatch(n->n.tipo().equals("PERTINENCIA_ACTUALIZADA")&&n.ruta().equals("caso/"+p[1])));
-  assertFalse(cl.nexbyte.siger.institucional.notificaciones.NotificacionesInstitucionales.CORREO.contains("PERTINENCIA_ACTUALIZADA"));
+  assertTrue(x.d.db.sql.queryForObject("SELECT COUNT(*) FROM institution_notification n JOIN notification_outbox o ON o.notification_id=n.id WHERE n.category='PERTINENCIA_ACTUALIZADA' AND n.recipient_id=? AND n.resource_id=? AND o.state='PENDIENTE'",Long.class,x.m.upd,p[1].toString())>0);assertEquals(0,x.d.db.sql.queryForObject("SELECT COUNT(*) FROM mail_attempt",Long.class));
   x.m.clasificar(p[1],2,"MAT_UPR",true);assertFalse(notices.listar(f.a(x.m.upd),0,50).items().stream().anyMatch(n->n.ruta().equals("caso/"+p[1])));
  }
  @Test void responsableRestringePeroNoPublicaNiLevantaUnaFir(){
