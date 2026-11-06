@@ -42,6 +42,8 @@ class BitacoraGestionHttpTest {
         enviar(reader,path,registro(2,"Leer no es gestionar",null),404);http.perform(get(path).secure(true).session(other)).andExpect(status().isNotFound());http.perform(get(path).secure(true).session(ti)).andExpect(status().isNotFound());
         String original=m.d.db.sql.queryForObject("SELECT id FROM core_action WHERE case_id=?",String.class,c.toString());String text=m.d.db.sql.queryForObject("SELECT body_text FROM core_action WHERE id=?",String.class,original);
         enviar(head,path,registro(2,"Constancia corregida",original),200);http.perform(get(path+"/constancias/"+original).secure(true).session(reader)).andExpect(status().isOk()).andExpect(jsonPath("$.descripcion").value(text));assertEquals(text,m.d.db.sql.queryForObject("SELECT body_text FROM core_action WHERE id=?",String.class,original));
+        String corrected=m.d.db.sql.queryForObject("SELECT action_id FROM institution_case_action WHERE rectifies_id=?",String.class,original);
+        http.perform(get(path+"/constancias/"+corrected).secure(true).session(reader)).andExpect(status().isOk()).andExpect(jsonPath("$.ejecutor").value(m.f.profA)).andExpect(jsonPath("$.registrador").value(m.f.headA));
         http.perform(put(path).secure(true).session(head).with(csrf()).contentType("application/json").content("{}")).andExpect(status().isMethodNotAllowed());
         m.clasificar(c,3,"MAT_UPD",true);http.perform(get(path+"/constancias/"+original).secure(true).session(reader)).andExpect(status().isNotFound());http.perform(get(path).secure(true).session(reader)).andExpect(status().isNotFound());
     }

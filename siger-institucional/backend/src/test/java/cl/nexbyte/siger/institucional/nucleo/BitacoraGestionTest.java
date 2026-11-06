@@ -53,6 +53,7 @@ class BitacoraGestionTest {
         var view=bit.requerimiento(f.a(f.prof),q,0,25);var e=view.entradas().getFirst();assertTrue(e.id().startsWith("REQ:"));assertEquals(f.prof,e.ejecutor());assertEquals(e,bit.constanciaReq(f.a(f.prof),q,e.id()));assertEquals(1,view.total());
         assertEquals(1,f.d.db.sql.queryForObject("SELECT COUNT(*) FROM institution_flow_history WHERE resource_id=? AND action_code='REQ_ATENCION_SIN_CASO'",Long.class,q.toString()));
         bit.registrarRequerimiento(f.a(f.head),key(),q,registro(view.revision(),"Corrección de gestión sin Caso",e.id()));
+        var corrected=bit.requerimiento(f.a(f.prof),q,0,25).entradas().stream().filter(a->a.rectifica()!=null).findFirst().orElseThrow();assertEquals(f.prof,corrected.ejecutor());assertEquals(f.head,corrected.registrador());
         assertEquals(2,bit.requerimiento(f.a(f.prof),q,0,25).total());assertEquals(requirements,f.d.db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement",Long.class));
         assertEquals(0,f.d.db.sql.queryForObject("SELECT COUNT(*) FROM core_case WHERE requirement_id=?",Long.class,q.toString()));
         f.core.u2().actuar(f.a(f.head),key(),q,new Decision(2,"Cierre explícito de la atención"),true);
@@ -131,5 +132,22 @@ class BitacoraGestionTest {
             assertEquals(closed?0:1,bit.requerimiento(f.a(f.head),q,0,25).total());
             assertEquals(closed?"TERMINADO":"ACTIVO",f.core.u2().requerimiento(f.a(f.head),q).get("state"));
         }
+    }
+    @Test void jefaturaRectificaSinAtribuirseLaGestionDelProfesionalNiInventarEjecutorHistorico(){
+        bit.registrarCaso(f.a(f.prof),key(),cas,registro(rev(),"Gestión realmente realizada por el profesional",null));String first=vista().entradas().getFirst().id();
+        bit.registrarCaso(f.a(f.head),key(),cas,registro(rev(),"Jefatura corrige el registro, no realiza de nuevo la gestión",first));
+        var correction=vista().entradas().stream().filter(e->e.rectifica()!=null).findFirst().orElseThrow();assertEquals(f.head,correction.registrador());assertEquals(f.prof,correction.ejecutor());
+        bit.registrarCaso(f.a(f.head),key(),cas,registro(rev(),"Nueva corrección de la misma gestión",correction.id()));
+        assertTrue(vista().entradas().stream().allMatch(e->e.ejecutor().equals(f.prof)));
+        f.core.actuar(f.a(f.prof),key(),cas,new Decision(rev(),"Constancia histórica sin ejecutor acreditado"));
+        var historic=vista().entradas().stream().filter(e->e.version()==null).findFirst().orElseThrow();
+        bit.registrarCaso(f.a(f.head),key(),cas,registro(rev(),"Rectifica historia sin inventarle ejecutor",historic.id()));
+        var h=vista().entradas().stream().filter(e->historic.id().equals(e.rectifica())).findFirst().orElseThrow();assertNull(h.ejecutor());assertEquals(f.head,h.registrador());
+    }
+    @Test void cadenaAlteradaConCicloFallaCerradaSinAtribuirUnEjecutor(){
+        bit.registrarCaso(f.a(f.prof),key(),cas,registro(rev(),"Gestión original",null));String first=vista().entradas().getFirst().id();
+        bit.registrarCaso(f.a(f.head),key(),cas,registro(rev(),"Rectificación legítima",first));String second=vista().entradas().stream().filter(e->e.rectifica()!=null).findFirst().orElseThrow().id();
+        f.d.db.sql.update("UPDATE institution_case_action SET rectifies_id=?,correction_reason='Alteración sintética externa al circuito' WHERE action_id=?",second,first);
+        denied(409,()->vista());denied(409,()->bit.constanciaCaso(f.a(f.prof),cas,second));
     }
 }

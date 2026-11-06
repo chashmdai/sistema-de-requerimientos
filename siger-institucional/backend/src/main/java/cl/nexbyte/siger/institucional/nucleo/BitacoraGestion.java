@@ -46,17 +46,36 @@ public final class BitacoraGestion {
     private static UUID caseId(String id){try{return UUID.fromString(id);}catch(IllegalArgumentException e){throw new FalloTecnico(400);}}
     private void auditar(Operador a,UUID recurso,String codigo){new PoliticaMaterias(db,clock).auditar(a,recurso.toString(),codigo);}
     private boolean gestiona(Operador a,UUID caso){try{core.autorizarCaso(a,caso);return true;}catch(FalloTecnico e){if(e.status==404)return false;throw e;}}
-    private Entrada entradaCaso(Map<String,Object> r){return new Entrada(s(r,"id"),s(r,"schema_version"),s(r,"body_text"),fecha(r,"effective_ms"),fecha(r,"at_ms"),s(r,"actor_id"),r.get("schema_version")==null?null:s(r,"actor_id"),s(r,"rectifies_id"),s(r,"corrected_by"),s(r,"correction_reason"));}
-    private Entrada entradaReq(Map<String,Object> r){return new Entrada(reqId(n(r,"seq")),s(r,"schema_version"),s(r,"reason_text"),fecha(r,"effective_ms"),fecha(r,"at_ms"),s(r,"actor_id"),r.get("schema_version")==null?null:s(r,"actor_id"),r.get("rectifies_seq")==null?null:reqId(n(r,"rectifies_seq")),r.get("corrected_by")==null?null:reqId(n(r,"corrected_by")),s(r,"correction_reason"));}
+    /** Rectificar acredita a quien rectifica; nunca cambia quién realizó la gestión original. */
+    private String ejecutor(Map<String,Object> row,boolean req,Map<String,String> cache){
+        var path=new LinkedHashSet<String>();Map<String,Object> current=row;String resolved;
+        while(true){
+            String key=(req?"REQ:":"CAS:")+s(current,req?"seq":"id");
+            if(cache.containsKey(key)){resolved=cache.get(key);break;}
+            if(!path.add(key))throw new FalloTecnico(409,"CADENA_RECTIFICACION_INVALIDA");
+            if(current.get("schema_version")==null){resolved=null;break;}
+            Object original=current.get(req?"rectifies_seq":"rectifies_id");
+            if(original==null){resolved=s(current,"actor_id");break;}
+            var parents=req
+                ?db.sql.queryForList("SELECT h.*,d.schema_version,d.rectifies_seq FROM institution_flow_history h LEFT JOIN institution_req_action d ON d.history_seq=h.seq WHERE h.seq=? AND h.resource_id=? AND h.resource_kind='REQ' AND h.action_code IN "+ACCIONES_REQ,original,current.get("resource_id"))
+                :db.sql.queryForList("SELECT a.*,d.schema_version,d.rectifies_id FROM core_action a LEFT JOIN institution_case_action d ON d.action_id=a.id WHERE a.id=? AND a.case_id=?",original,current.get("case_id"));
+            if(parents.size()!=1)throw new FalloTecnico(409,"CADENA_RECTIFICACION_INVALIDA");
+            current=parents.getFirst();
+        }
+        for(String key:path)cache.put(key,resolved);
+        return resolved;
+    }
+    private Entrada entradaCaso(Map<String,Object> r,Map<String,String> cache){return new Entrada(s(r,"id"),s(r,"schema_version"),s(r,"body_text"),fecha(r,"effective_ms"),fecha(r,"at_ms"),s(r,"actor_id"),ejecutor(r,false,cache),s(r,"rectifies_id"),s(r,"corrected_by"),s(r,"correction_reason"));}
+    private Entrada entradaReq(Map<String,Object> r,Map<String,String> cache){return new Entrada(reqId(n(r,"seq")),s(r,"schema_version"),s(r,"reason_text"),fecha(r,"effective_ms"),fecha(r,"at_ms"),s(r,"actor_id"),ejecutor(r,true,cache),r.get("rectifies_seq")==null?null:reqId(n(r,"rectifies_seq")),r.get("corrected_by")==null?null:reqId(n(r,"corrected_by")),s(r,"correction_reason"));}
     public Entrada constanciaCaso(Operador a,UUID caso,String accion){return db.transaction(()->{
         core.bloquearAcceso(a);core.autorizarConsultaCaso(a,caso);UUID id=caseId(accion);
         var rows=db.sql.queryForList("SELECT a.*,d.schema_version,d.effective_ms,d.rectifies_id,d.correction_reason,(SELECT x.action_id FROM institution_case_action x WHERE x.rectifies_id=a.id) AS corrected_by FROM core_action a LEFT JOIN institution_case_action d ON d.action_id=a.id WHERE a.case_id=? AND a.id=?",caso.toString(),id.toString());
-        if(rows.isEmpty())throw new FalloTecnico(404);auditar(a,caso,"CONSULTAR_CONSTANCIA");return entradaCaso(rows.getFirst());
+        if(rows.isEmpty())throw new FalloTecnico(404);auditar(a,caso,"CONSULTAR_CONSTANCIA");return entradaCaso(rows.getFirst(),new HashMap<>());
     });}
     public Entrada constanciaReq(Operador a,UUID req,String accion){return db.transaction(()->{
         var flow=core.u2();flow.guard(a);flow.lector(a,flow.req(req));long seq=reqSeq(accion);
         var rows=db.sql.queryForList("SELECT h.*,d.schema_version,d.effective_ms,d.rectifies_seq,d.correction_reason,(SELECT x.history_seq FROM institution_req_action x WHERE x.rectifies_seq=h.seq) AS corrected_by FROM institution_flow_history h LEFT JOIN institution_req_action d ON d.history_seq=h.seq WHERE h.resource_id=? AND h.seq=? AND h.resource_kind='REQ' AND h.action_code IN "+ACCIONES_REQ,req.toString(),seq);
-        if(rows.isEmpty())throw new FalloTecnico(404);auditar(a,req,"CONSULTAR_CONSTANCIA");return entradaReq(rows.getFirst());
+        if(rows.isEmpty())throw new FalloTecnico(404);auditar(a,req,"CONSULTAR_CONSTANCIA");return entradaReq(rows.getFirst(),new HashMap<>());
     });}
 
     public Vista caso(Operador a,UUID caso,int pagina,int tamanio){
@@ -65,7 +84,7 @@ public final class BitacoraGestion {
             core.bloquearAcceso(a);core.autorizarConsultaCaso(a,caso);var c=core.caseRow(caso);
             long total=db.sql.queryForObject("SELECT COUNT(*) FROM core_action WHERE case_id=?",Long.class,caso.toString());
             var rows=db.sql.queryForList("SELECT a.*,d.schema_version,d.effective_ms,d.rectifies_id,d.correction_reason,(SELECT x.action_id FROM institution_case_action x WHERE x.rectifies_id=a.id) AS corrected_by FROM core_action a LEFT JOIN institution_case_action d ON d.action_id=a.id WHERE a.case_id=? ORDER BY COALESCE(d.effective_ms,a.at_ms),a.at_ms,a.id LIMIT ? OFFSET ?",caso.toString(),tamanio,(long)pagina*tamanio);
-            var entries=rows.stream().map(this::entradaCaso).toList();
+            var cache=new HashMap<String,String>();var entries=rows.stream().map(r->entradaCaso(r,cache)).toList();
             auditar(a,caso,"CONSULTAR_BITACORA_CASO");
             return new Vista("CASO",caso,n(c,"revision"),gestiona(a,caso)&&"EN_GESTION".equals(c.get("state")),entries,pagina,tamanio,total);
         });
@@ -76,7 +95,7 @@ public final class BitacoraGestion {
             var flow=core.u2();flow.guard(a);var row=flow.req(req);flow.lector(a,row);
             long total=db.sql.queryForObject("SELECT COUNT(*) FROM institution_flow_history WHERE resource_id=? AND resource_kind='REQ' AND action_code IN "+ACCIONES_REQ,Long.class,req.toString());
             var rows=db.sql.queryForList("SELECT h.*,d.schema_version,d.effective_ms,d.rectifies_seq,d.correction_reason,(SELECT x.history_seq FROM institution_req_action x WHERE x.rectifies_seq=h.seq) AS corrected_by FROM institution_flow_history h LEFT JOIN institution_req_action d ON d.history_seq=h.seq WHERE h.resource_id=? AND h.resource_kind='REQ' AND h.action_code IN "+ACCIONES_REQ+" ORDER BY COALESCE(d.effective_ms,h.at_ms),h.at_ms,h.seq LIMIT ? OFFSET ?",req.toString(),tamanio,(long)pagina*tamanio);
-            var entries=rows.stream().map(this::entradaReq).toList();
+            var cache=new HashMap<String,String>();var entries=rows.stream().map(r->entradaReq(r,cache)).toList();
             boolean sinCasos=db.sql.queryForObject("SELECT COUNT(*) FROM core_case WHERE requirement_id=?",Long.class,req.toString())==0;
             auditar(a,req,"CONSULTAR_BITACORA_REQ");
             return new Vista("REQ",req,n(row,"revision"),sinCasos&&"ACTIVO".equals(row.get("state")),entries,pagina,tamanio,total);

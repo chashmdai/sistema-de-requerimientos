@@ -41,7 +41,7 @@ export function BitacoraGestion({contexto,recurso,version,changed,abrir=false,ce
   {error&&<p className="error" role="alert">{error}</p>}
   {!data&&!error&&<p role="status">Consultando actuaciones autorizadas…</p>}
   {data&&<>
-   <p>{data.total} actuaciones en este {contexto==='CASO'?'Caso':'Requerimiento'}.</p>
+   <p>{data.total} constancias en este {contexto==='CASO'?'Caso':'Requerimiento'}.</p>
    {data.puedeRegistrar&&!form&&<button disabled={busy||pending} onClick={()=>comenzar(null)}>Registrar gestión realizada</button>}
    {form&&<form onSubmit={e=>{e.preventDefault();void enviar();}}>
     <h3>{original?'Rectificación vinculada':'Nueva actuación'}</h3><p>Registra aquí la gestión ordinaria. Los contenidos reservados se conservan en documentos internos protegidos.</p>
