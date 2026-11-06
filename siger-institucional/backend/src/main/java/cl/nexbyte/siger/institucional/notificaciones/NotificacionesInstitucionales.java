@@ -11,12 +11,12 @@ public final class NotificacionesInstitucionales {
  private record Aviso(String categoria,String tipo,UUID recurso){}
  private static UUID uuid(Object o){return UUID.fromString(o.toString());}
  private static long num(Map<String,Object> r,String k){return ((Number)r.get(k)).longValue();}
- public static String titulo(String category){return switch(category){case "CONTINUIDAD_SOLICITADA"->"Decisión institucional de continuidad pendiente";case "CONTINUIDAD_DECIDIDA"->"Decisión institucional de continuidad registrada";case "PERTINENCIA_ACTUALIZADA"->"Antecedentes del Caso actualizados";case "MATERIA_ACTUALIZADA"->"Materia de Caso actualizada";case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "SOLICITUD_CREADA"->"Preparación de Solicitud registrada";case "SOLICITUD_MODIFICADA"->"Preparación de Solicitud actualizada";case "SOLICITUD_PREPARADA"->"Borrador de gestión preparado";case "SOLICITUD_SEGUIMIENTO"->"Seguimiento de Solicitud registrado";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
+ public static String titulo(String category){return switch(category){case "EQUIPO_ACTUALIZADO"->"Participación en equipo actualizada";case "ESPERA_PENDIENTE"->"Espera de antecedentes pendiente de decisión";case "CONTINUIDAD_SOLICITADA"->"Decisión institucional de continuidad pendiente";case "CONTINUIDAD_DECIDIDA"->"Decisión institucional de continuidad registrada";case "PERTINENCIA_ACTUALIZADA"->"Antecedentes del Caso actualizados";case "MATERIA_ACTUALIZADA"->"Materia de Caso actualizada";case "COMUNICACION_NUEVA"->"Nueva Comunicación pendiente de distribución";case "DESTINO_PENDIENTE"->"Comunicación recibida para evaluación";case "CASO_ASIGNADO"->"Caso asignado o reasignado";case "ANTECEDENTE_NUEVO"->"Nuevos antecedentes por evaluar";case "VINCULO_PENDIENTE"->"Comunicación vinculada pendiente de encaminamiento";case "REVISION_TERMINO"->"Revisión de término pendiente";case "DERIVACION_PENDIENTE"->"Derivación pendiente de decisión";case "REAPERTURA_PENDIENTE"->"Reapertura pendiente de decisión";case "TAREA_RECORDATORIO"->"Recordatorio de tarea personal";case "TAREA_VENCIDA"->"Plazo de tarea personal vencido";case "SOLICITUD_CREADA"->"Preparación de Solicitud registrada";case "SOLICITUD_MODIFICADA"->"Preparación de Solicitud actualizada";case "SOLICITUD_PREPARADA"->"Borrador de gestión preparado";case "SOLICITUD_SEGUIMIENTO"->"Seguimiento de Solicitud registrado";case "TAREA_CREADA"->"Tarea personal creada";default->"Tarea personal actualizada";};}
  private List<Aviso> avisos(String stream,Map<String,Object> e){
   String code=e.get("code").toString();UUID resource=uuid(e.get(stream.equals("RECEPCION")?"aggregate_id":"resource_id"));
   if(stream.equals("RECEPCION"))return code.equals("COMUNICACION_REGISTRADA")?List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource)):List.of();
   if(stream.equals("TAREA"))return List.of(new Aviso(code,"SOLICITUD".equals(e.get("resource_type"))?"SOLICITUD":"TAREA",resource));
-  return switch(code){
+  return switch(code){case "EQUIPO_PARTICIPACION_ACTUALIZADA"->List.of(new Aviso("EQUIPO_ACTUALIZADO","EQUIPO",resource));case "ESPERA_ANTECEDENTES_SOLICITADA"->List.of(new Aviso("ESPERA_PENDIENTE","CASO",resource));
    case "PRINCIPAL_TRANSFERENCIA_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TRASLADO_REQ_U2",resource));
    case "DERIVACION_INSTITUCIONAL_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","DERIVACION_U2",resource));
    case "REAPERTURA_INSTITUCIONAL_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","REAPERTURA_U2",resource));
@@ -38,24 +38,24 @@ public final class NotificacionesInstitucionales {
  private boolean autorizado(Operador a,String categoria,String tipo,UUID id,String eventKey,String stream){
   try{
    permisos.actor(a);
-   switch(tipo){
+   switch(tipo){case "EQUIPO"->permisos.equipo(a,id);
     case "TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->permisos.continuidad(a,tipo,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
     case "COMUNICACION"->{var rows=db.sql.queryForList("SELECT site_id,state FROM core_communication WHERE id=?",id.toString());String site=rows.isEmpty()?null:(String)rows.getFirst().get("site_id");if(!a.distribuyeSede(site))return false;permisos.recurso(a,tipo,id);}
     case "DESTINO"->{var d=permisos.fila("core_destination",id.toString());permisos.destino(a,d);}
     case "CASO_CONSULTA"->{permisos.recurso(a,tipo,id);}
-    case "CASO"->{var c=permisos.caso(a,id);if(categoria.equals("CASO_ASIGNADO")){if(!a.id().equals(c.responsable()))return false;}else {if(!a.jefeEn(c.unidad(),c.sede(),c.area()))return false;var d=permisos.fila("core_destination",c.destinoId().toString());if(!a.id().equals(d.get("evaluator_id")))return false;}}
+    case "CASO"->{var c=permisos.caso(a,id);if(categoria.equals("CASO_ASIGNADO")){if(!a.id().equals(c.responsable()))return false;}else {if(!a.jefeEn(c.unidad(),c.sede(),c.area()))return false;var d=permisos.fila("core_destination",c.destinoId().toString());if(!categoria.equals("ESPERA_PENDIENTE")&&!a.id().equals(d.get("evaluator_id")))return false;}}
     case "ANTECEDENTE"->{permisos.antecedente(a,id);var l=db.sql.queryForMap("SELECT * FROM core_link WHERE child_id=?",id.toString());if(categoria.equals("ANTECEDENTE_NUEVO")){if(l.get("case_reference")==null)return false;var c=permisos.caso(a,uuid(l.get("case_reference")));if(!a.id().equals(c.responsable())||!a.profesionalEn(c.unidad(),c.sede(),c.area()))return false;}else if(!a.distribuidor()&&db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND evaluator_id=?",Integer.class,l.get("parent_id"),a.id())==0)return false;}
     case "DERIVACION"->{permisos.derivacion(a,id);}
     case "REAPERTURA"->{permisos.reapertura(a,id);var r=permisos.fila("core_reopen",id.toString());var c=permisos.caso(a,uuid(r.get("case_id")));if(!a.id().equals(permisos.fila("core_destination",c.destinoId().toString()).get("evaluator_id")))return false;}
     case "SOLICITUD"->permisos.solicitud(a,id);
-    case "TAREA"->{var t=permisos.fila("institution_task",id.toString());permisos.tarea(a,t);}
+    case "TAREA"->{var t=permisos.fila("institution_task",id.toString());permisos.tarea(a,t);if(!a.id().equals(t.get("responsible_id"))&&!a.id().equals(t.get("creator_id")))return false;if(Set.of("TAREA_RECORDATORIO","TAREA_VENCIDA").contains(categoria)&&!a.id().equals(t.get("responsible_id")))return false;}
 
     default->{return false;}
    }
    return true;
   }catch(FalloTecnico unavailable){if(Set.of(401,403,404,409).contains(unavailable.status))return false;throw unavailable;}
  }
- private boolean temporalVigente(String categoria,UUID id,String eventKey){if(!Set.of("TAREA_RECORDATORIO","TAREA_VENCIDA").contains(categoria))return true;var t=permisos.fila("institution_task",id.toString());if(!Set.of("PENDIENTE","EN_CURSO").contains(t.get("state")))return false;Object planned=t.get(categoria.equals("TAREA_RECORDATORIO")?"reminder_ms":"deadline_ms");if(planned==null||((Number)planned).longValue()>clock.millis())return false;var rows=db.sql.queryForList("SELECT event_key FROM workflow_event WHERE seq=?",Long.parseLong(eventKey));return !rows.isEmpty()&&rows.getFirst().get("event_key").equals(id+":"+categoria+":"+planned);}
+ private boolean temporalVigente(String categoria,UUID id,String eventKey){if(!Set.of("TAREA_RECORDATORIO","TAREA_VENCIDA").contains(categoria))return true;var t=permisos.fila("institution_task",id.toString());if(!Set.of("PENDIENTE","EN_CURSO").contains(t.get("state")))return false;Object planned=t.get(categoria.equals("TAREA_RECORDATORIO")?"reminder_ms":"deadline_ms");if(planned==null||((Number)planned).longValue()>clock.millis())return false;var rows=db.sql.queryForList("SELECT event_key FROM workflow_event WHERE seq=?",Long.parseLong(eventKey));return !rows.isEmpty()&&rows.getFirst().get("event_key").equals(id+":"+categoria+":"+planned+(((Number)t.get("reminder_generation")).longValue()==0?"":":G"+t.get("reminder_generation")));}
  private boolean accionVigente(String c,String tipo,UUID id,String key){
   if(!temporalVigente(c,id,key))return false;
   return switch(c){
