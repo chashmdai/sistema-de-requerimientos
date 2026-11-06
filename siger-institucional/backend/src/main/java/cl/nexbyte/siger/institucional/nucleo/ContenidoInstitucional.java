@@ -150,12 +150,12 @@ public final class ContenidoInstitucional {
         if(managed&&caso!=null&&"INGRESO_CIUDADANO".equals(d.get("origin"))&&!core.caseRow(caso).get("communication_id").equals(d.get("communication_id"))&&gestionada(uuid(d.get("communication_id")))){
             try{core.autorizarLectura(a,uuid(d.get("communication_id")));}catch(FalloTecnico e){if(e.status==404)managed=false;else throw e;}
         }
-            if(p.isEmpty()){if(caso!=null&&core.casoU2(caso)&&"INGRESO_CIUDADANO".equals(d.get("origin"))&&Objects.equals(d.get("communication_id"),core.caseRow(caso).get("communication_id")))core.autorizarLectura(a,uuid(d.get("communication_id")));if(!managed)throw new FalloTecnico(404);boolean admin=administrableHistorico(a,caso,doc);return new Permisos(true,true,admin,"HISTORICO_SIN_ACREDITAR",admin||propietarioHistorico(a,caso,doc));}
+            if(p.isEmpty()){if(caso!=null&&!propietario(a,caso))throw new FalloTecnico(404);if(caso!=null&&core.casoU2(caso)&&"INGRESO_CIUDADANO".equals(d.get("origin"))&&Objects.equals(d.get("communication_id"),core.caseRow(caso).get("communication_id")))core.autorizarLectura(a,uuid(d.get("communication_id")));if(!managed)throw new FalloTecnico(404);boolean admin=administrableHistorico(a,caso,doc);return new Permisos(true,true,admin,"HISTORICO_SIN_ACREDITAR",admin||propietarioHistorico(a,caso,doc));}
             UUID owner=uuid(p.get("owner_case"));boolean propio=propietario(a,owner);boolean head=areas.jefe(a,core.caseRow(owner));String kind=p.get("classification").toString();
             boolean restringir=propio&&Objects.equals(caso,owner);
             if(kind.equals("BLOQUEADO")){if(!propio)throw new FalloTecnico(404);return new Permisos(false,false,head&&Objects.equals(caso,owner),kind,restringir);}
             if(kind.equals("FIR")){if(!propio)throw new FalloTecnico(404);return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);}
-            if(managed&&propio)return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);
+            if(managed&&(propio||Objects.equals(caso,owner)&&core.equipo().participa(a,owner)&&(kind.equals("ORDINARIO")||a.id().equals(d.get("created_by")))))return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);
             if(caso==null)throw new FalloTecnico(404);
             var origin=core.caseRow(owner);String originArea=areas.area(origin);String originMatter=new PoliticaMaterias(db,clock).materia(owner);
             if(originArea!=null&&!areas.vigente(originArea,origin.get("unit_code").toString(),origin.get("site_id").toString())||originMatter!=null&&db.sql.queryForObject("SELECT COUNT(*) FROM institution_matter WHERE id=? AND status='ACTIVA' AND valid_from<=? AND valid_until>?",Long.class,originMatter,clock.millis(),clock.millis())!=1)throw new FalloTecnico(404);

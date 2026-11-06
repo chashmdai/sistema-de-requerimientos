@@ -29,7 +29,7 @@ public final class ContratosNucleo {
     public record Antecedente(UUID hija,String folio,UUID padre,UUID requerimientoId,UUID casoId,String estado,long revision,String motivo,String vinculadoPor,Instant fecha,String evaluador,String decisionFundamento,String decididoPor,Instant decididoEn,Contenido contenido){}
     public record Reapertura(UUID id,UUID casoId,UUID requerimientoId,String unidad,String sede,String solicitante,Instant fechaSolicitud,long revisionCaso,long revisionCasoActual,String responsableActual,Instant cierreAnterior,String modalidadCierreAnterior,String fundamento,List<UUID> antecedentes,String estado,long revision,String decididoPor,Instant fechaDecision,String fundamentoDecision,UUID sustituye,String area){}
     public record Periodo(UUID id,UUID autorizacion,Instant inicio,String autorizadoPor){}
-    public record CasoResumen(UUID id,UUID comunicacionId,String folio,UUID requerimientoId,String unidad,String sede,String responsable,String clasificacion,String estado,long revision,boolean derivacionPendiente,boolean reaperturaPendiente,String area){}
+    public record CasoResumen(UUID id,UUID comunicacionId,String folio,UUID requerimientoId,String unidad,String sede,String responsable,String clasificacion,String estado,long revision,boolean derivacionPendiente,boolean reaperturaPendiente,String area,boolean enEspera){}
     public record Pagina<T>(List<T> items,long total,int pagina,int limite){}
     public record Bandeja(long comunicaciones,long casosAsignados,long antecedentesPendientes,long sinEncaminar,long reaperturasPendientes,long derivacionesPendientes,long revisionesPendientes){}
     public record Resumen(UUID id,long secuencia,String folio,Instant registradaEn,String canal,String estado,long revision,UUID requerimientoId,String estadoRequerimiento,int casosAbiertos,int destinosPendientes,String origen,String sedeOrigen,String regionAsunto,String canalDeclarado,UUID solicitudInstitucionalId,boolean requerimientoInstitucional){}
@@ -42,7 +42,7 @@ public final class ContratosNucleo {
     public record AsignacionHistorica(String responsable,String complejidadProvisional,String autor,Instant fecha){}
     public record Caso(UUID id,UUID comunicacionId,UUID requerimientoId,UUID destinoId,String unidad,String sede,String responsable,String complejidadProvisional,String estado,long revision,
         List<Actuacion> actuaciones,List<Revision> revisiones,List<AsignacionHistorica> asignaciones,String clasificacion,List<ClasificacionHistorica> clasificaciones,
-        String modalidadCierre,UUID casoOrigen,boolean derivacionPendiente,String area,String materia,boolean soloLectura,boolean institucional,String objetivo){}
+        String modalidadCierre,UUID casoOrigen,boolean derivacionPendiente,String area,String materia,boolean soloLectura,boolean institucional,String objetivo,boolean enEspera){}
     public record Evento(long secuencia,String tipo,UUID recurso,String autor,Instant fecha,String codigo){}
     public record Vinculo(UUID hija,UUID padre,UUID casoReferencia,String autor,Instant fecha,String motivo){}
     public record Aviso(UUID id,UUID hija,UUID padre,Instant fecha,boolean leido){}
