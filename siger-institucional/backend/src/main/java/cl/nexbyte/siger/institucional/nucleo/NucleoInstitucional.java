@@ -21,6 +21,7 @@ public final class NucleoInstitucional {
         this.materias=new PoliticaMaterias(db,clock);this.autoridad=autoridad;this.areas=new PoliticaAreas(db,clock);this.lectura=new org.springframework.transaction.support.TransactionTemplate(db.tx.getTransactionManager());this.lectura.setIsolationLevelName("ISOLATION_REPEATABLE_READ");this.lectura.setReadOnly(true);this.lectura.setTimeout(5);this.db=db;this.catalogo=catalogo;this.recepcion=recepcion;this.mapper=mapper;this.clock=clock;this.prefix=prefix;this.width=width;
     }
     public NucleoU2 u2(){return new NucleoU2(db,this,catalogo,clock,mapper);}
+    public ContinuidadU2 continuidad(){return new ContinuidadU2(db,this,catalogo,clock,mapper);}
     /** Compatibilidad de transporte: solo reproduce un comando ya confirmado. La fila se
      * bloquea antes de delegar; el método original verifica acción, actor y hash del payload.
      * Una ruta provisional cerrada nunca puede ejecutar trabajo nuevo por esta vía. */
@@ -254,7 +255,7 @@ public final class NucleoInstitucional {
     }
     private Operador responsableHabilitado(String id){try{return catalogo.operador(id);}catch(FalloTecnico e){if(e.status==401||e.status==404)throw new FalloTecnico(400,"RESPONSABLE_NO_HABILITADO");throw e;}}
     private void validarResponsable(Map<String,Object> row,String id){var responsible=responsableHabilitado(id);if(!(areas.jefe(responsible,row)||areas.profesional(responsible,row)))throw new FalloTecnico(400);}
-    private void assignment(UUID caseId,Operador a,Asignacion request){db.sql.update("INSERT INTO core_assignment VALUES(?,?,?,?,?,?)",id(UUID.randomUUID()),id(caseId),request.responsable(),request.complejidadProvisional(),a.id(),now());}
+    private void assignment(UUID caseId,Operador a,Asignacion request){var assignment=UUID.randomUUID();db.sql.update("INSERT INTO core_assignment VALUES(?,?,?,?,?,?)",id(assignment),id(caseId),request.responsable(),request.complejidadProvisional(),a.id(),now());if(casoU2(caseId))continuidad().asignacionActual(caseId,assignment);}
     public Resultado asignar(Operador a,UUID key,UUID caseId,Asignacion request){
         if(casoU2(caseId)&&request.complejidadProvisional()!=null){actor(a);head(a,caseRow(caseId));throw new FalloTecnico(409,"COMPLEJIDAD_EXCLUSIVA_REQ");}
         actor(a);var initial=caseRow(caseId);head(a,initial);validarResponsable(initial,request.responsable());DeclaracionNna.texto(request.complejidadProvisional(),300,false);var communication=uuid(initial.get("communication_id"));
@@ -262,6 +263,7 @@ public final class NucleoInstitucional {
             lock(communication);var c=caseRow(caseId);head(a,c);validarResponsable(c,request.responsable());revision(c,request.revision());if(!Set.of("EN_GESTION","CERRADO").contains(c.get("state")))throw new FalloTecnico(409);
             // Reasignar un cerrado permite encaminar antecedentes; nunca lo reabre.
             if("CERRADO".equals(c.get("state"))&&!Objects.equals(request.complejidadProvisional(),c.get("complexity_text")))throw new FalloTecnico(409);
+            if(casoU2(caseId)&&!request.responsable().equals(c.get("responsible_id"))&&db.sql.queryForObject("SELECT COUNT(*) FROM institution_task WHERE resource_type='CASO' AND resource_id=? AND state NOT IN ('COMPLETADA','CANCELADA')",Long.class,id(caseId))>0)throw new FalloTecnico(409,"TAR09_REQUIERE_EVOLUCION_AGENDA");
             db.sql.update("UPDATE core_case SET responsible_id=?,complexity_text=?,revision=revision+1 WHERE id=?",request.responsable(),request.complejidadProvisional(),id(caseId));assignment(caseId,a,request);bump(communication);event(communication,"CASO",caseId,a,"RESPONSABLE_Y_COMPLEJIDAD_REGISTRADOS");return new Resultado(caseId,number(c,"revision")+1);
         });
     }
@@ -305,13 +307,13 @@ public final class NucleoInstitucional {
                 }
             }
             db.sql.update("UPDATE core_case SET state=?,revision=revision+1,closed_ms=?,closed_by=? WHERE id=?",next,next.equals("CERRADO")?now():null,next.equals("CERRADO")?a.id():null,id(caseId));
-            if(next.equals("CERRADO"))db.sql.update("UPDATE core_case SET closure_mode=? WHERE id=?",modality,id(caseId));
+            if(next.equals("CERRADO")){if(casoU2(caseId)&&db.sql.queryForObject("SELECT COUNT(*) FROM institution_case_closure_request WHERE case_id=? AND case_revision=?",Long.class,id(caseId),number(c,"revision"))>0)modality="DERIVACION";db.sql.update("UPDATE core_case SET closure_mode=? WHERE id=?",modality,id(caseId));if(casoU2(caseId))db.sql.update("INSERT INTO institution_case_closure VALUES(?,?,?,?,?)",id(caseId),number(c,"revision")+1,now(),a.id(),modality);}
             db.sql.update("INSERT INTO core_review VALUES(?,?,?,?,?,?)",id(UUID.randomUUID()),id(caseId),a.id(),now(),decision,request.texto());
             bump(communication);reevaluate(communication,a);event(communication,"CASO",caseId,a,decision.equals("CIERRE")?("PROFESIONAL_BAJA".equals(modality)?"CASO_CERRADO_PROFESIONAL_BAJA":"CASO_CERRADO"):decision.equals("DEVOLUCION")?"TERMINO_DEVUELTO_CON_OBSERVACIONES":"TERMINO_SOLICITADO");return new Resultado(caseId,number(c,"revision")+1);
         });
     }
     private void confirmarIndependiente(Operador a,Map<String,Object> c,String decision){if(casoU2(uuid(c.get("id")))&&decision.equals("CIERRE")){head(a,c);if(!"REVISION_TERMINO".equals(c.get("state"))||personaU2(a.id()).equals(personaU2(str(c,"responsible_id"))))throw new FalloTecnico(409,"CIERRE_REQUIERE_PERSONA_INDEPENDIENTE");}String ar=areas.area(c);if(ar!=null&&decision.equals("CIERRE")&&(!areas.jefe(a,c)||areas.persona(a.id(),ar).equals(areas.persona(str(c,"responsible_id"),ar))))throw new FalloTecnico(409,"CIERRE_REQUIERE_PERSONA_INDEPENDIENTE");}
-    private String personaU2(String actor){var rows=db.sql.queryForList("SELECT person_id FROM authority_binding WHERE actor_id=? AND batch_revision=(SELECT revision FROM authority_registry WHERE id=1) AND valid_from<=? AND valid_until>?",actor,now(),now());if(rows.size()!=1)throw new FalloTecnico(409,"IDENTIDAD_INSTITUCIONAL_NO_ACREDITADA");return str(rows.getFirst(),"person_id");}
+    String personaU2(String actor){var rows=db.sql.queryForList("SELECT person_id FROM authority_binding WHERE actor_id=? AND batch_revision=(SELECT revision FROM authority_registry WHERE id=1) AND valid_from<=? AND valid_until>?",actor,now(),now());if(rows.size()!=1)throw new FalloTecnico(409,"IDENTIDAD_INSTITUCIONAL_NO_ACREDITADA");return str(rows.getFirst(),"person_id");}
     public Resultado vincular(Operador a,UUID key,UUID child,Vinculacion request){
         actor(a);distributor(a);if(child.equals(request.padre()))throw new FalloTecnico(400);id(request.padre());text(request.motivo(),1000);
         return execute(key,a,"VINCULAR_COMUNICACION",List.of(child,request),()->{
@@ -342,7 +344,7 @@ public final class NucleoInstitucional {
             if(db.sql.update("UPDATE core_notice SET read_ms=? WHERE id=? AND recipient_id=? AND read_ms IS NULL",now(),id(notice),a.id())==1)event(parent,"VINCULO",notice,a,"AVISO_INTERNO_LEIDO");return new Resultado(notice,0);
         });
     }
-    private boolean pendiente(UUID caseId){return db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE origin_case_id=? AND state='PENDIENTE'",Long.class,id(caseId))>0;}
+    private boolean pendiente(UUID caseId){return db.sql.queryForObject("SELECT COUNT(*) FROM core_transfer WHERE origin_case_id=? AND state='PENDIENTE'",Long.class,id(caseId))>0||continuidad().derivacionPendiente(caseId);}
     private List<ClasificacionHistorica> classificationHistory(UUID caseId){return db.sql.queryForList("SELECT * FROM core_complexity WHERE case_id=? ORDER BY at_ms,id",id(caseId)).stream().map(r->new ClasificacionHistorica(str(r,"classification"),str(r,"reason_text"),str(r,"actor_id"),date(r,"at_ms"))).toList();}
     public Resultado clasificar(Operador a,UUID key,UUID caseId,Clasificacion request){
         actor(a);var initial=caseRow(caseId);head(a,initial);if(casoU2(caseId))throw new FalloTecnico(409,"COMPLEJIDAD_EXCLUSIVA_REQ");if(request.clasificacion()!=null&&!request.clasificacion().equals("BAJA"))throw new FalloTecnico(400);text(request.fundamento(),2000);
@@ -484,6 +486,7 @@ public final class NucleoInstitucional {
         });
     }
     public Resultado decidirReapertura(Operador a,UUID key,UUID requestId,DecidirReapertura request,boolean approve){
+        if(db.sql.queryForObject("SELECT COUNT(*) FROM institution_reopen WHERE request_id=?",Long.class,id(requestId))>0){var r=reopenRow(requestId);autorizarCaso(a,uuid(r.get("case_id")));throw new FalloTecnico(409,"FLUJO_INSTITUCIONAL_REQUERIDO");}
         actor(a);var initial=reopenRow(requestId);var first=caseRow(uuid(initial.get("case_id")));head(a,first);text(request.fundamento(),2000);
         return execute(key,a,approve?"APROBAR_REAPERTURA":"RECHAZAR_REAPERTURA",List.of(requestId,request),()->{
             var parent=uuid(first.get("communication_id"));lock(parent);var r=reopenRow(requestId);var caseId=uuid(r.get("case_id"));var c=caseRow(caseId);head(a,c);revision(r,request.revision());revision(c,request.revisionCaso());

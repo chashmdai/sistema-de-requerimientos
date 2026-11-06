@@ -9,7 +9,7 @@ import java.nio.file.Path;import java.util.*;
 class NucleoU2Test {
  @TempDir Path temp;DatosAvisosTest f;NucleoU2 flow;
  @BeforeEach void setup()throws Exception{String mysql=System.getProperty("siger.test.autoridad.mysql");f=new DatosAvisosTest(temp,mysql==null?null:mysql+"_u2?sslMode=DISABLED&allowPublicKeyRetrieval=true&connectTimeout=3000&socketTimeout=10000");flow=f.core.u2();}
- @AfterEach void close(){if(f!=null){for(String t:List.of("institution_flow_history","institution_collaboration","institution_case","institution_req","institution_sol"))f.d.db.sql.update("DELETE FROM "+t);f.close();}}
+ @AfterEach void close(){if(f!=null){f.close();}}
  NuevoDestino principal(){return new NuevoDestino("UPR","DEMO_SEDE_A",f.head);}
  UUID sol(UUID com){return flow.distribuir(f.a(f.dist),UUID.randomUUID(),com,new Encaminar(0,principal(),"Clasificación profesional sintética",null)).id();}
  UUID req(){return flow.asumir(f.a(f.head),UUID.randomUUID(),sol(f.manual()),new Asumir(0,f.prof,"Asunción de atención institucional",null)).id();}
