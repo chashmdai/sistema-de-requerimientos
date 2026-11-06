@@ -1,0 +1,31 @@
+package cl.nexbyte.siger.institucional.documental;
+
+import cl.nexbyte.siger.institucional.nucleo.*;import cl.nexbyte.siger.institucional.nucleo.CatalogoLaboratorio.Operador;
+import cl.nexbyte.siger.institucional.formulario.*;import cl.nexbyte.siger.institucional.robustez.*;
+import java.io.*;import java.time.*;import java.util.*;
+import org.springframework.beans.factory.ObjectProvider;import org.springframework.web.bind.annotation.*;import org.springframework.security.core.Authentication;import org.springframework.http.*;import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
+/** Solo documento: sin rutas de expediente, relato, equipo o historial de otros contextos. */
+@RestController @RequestMapping("/nucleo/accesos-reservados/{acceso}/documento")
+@ConditionalOnProperty(name="institucional.documental.habilitada",havingValue="true")
+public final class DocumentoReservadoController {
+    public record Metadatos(UUID id,String origen,String nombre,long tamanio,String sha256,String tipo,String representacion,boolean consultable,boolean descargable){}
+    private final BaseJdbc db;private final NucleoInstitucional core;private final CatalogoLaboratorio cat;private final ArchivoInstitucional files;private final RecepcionInstitucionalJdbc receiver;private final ObjectProvider<VisorDocumento> visor;
+    public DocumentoReservadoController(BaseJdbc db,NucleoInstitucional core,CatalogoLaboratorio cat,ArchivoInstitucional files,RecepcionInstitucionalJdbc receiver,ObjectProvider<VisorDocumento> visor){this.db=db;this.core=core;this.cat=cat;this.files=files;this.receiver=receiver;this.visor=visor;}
+    private Operador actor(Authentication a){return SesionFuncionario.actual(a,cat);}
+    private AccesoReservado.Consulta autorizar(Operador a,UUID id,String accion,boolean apertura){return core.accesosReservados().documentoAislado(a,id,accion,apertura);}
+    private DocumentoPrivado referencia(AccesoReservado.Consulta c){
+        var rows=db.sql.queryForList("SELECT * FROM institution_document WHERE id=?",c.documento().toString());if(rows.size()!=1)throw new FalloTecnico(404);var r=rows.getFirst();UUID doc=c.documento(),com=UUID.fromString(r.get("communication_id").toString());String key=r.get("storage_key").toString(),origin=r.get("origin").toString();EntregaCompleta.Adjunto original;String author=null;
+        if(origin.equals("GESTION_INSTITUCIONAL")){if(!key.equals("gestion/"+doc)||r.get("created_by")==null)throw new FalloTecnico(409,"INTEGRIDAD_DOCUMENTAL_INVALIDA");author=r.get("created_by").toString();original=new EntregaCompleta.Adjunto(doc,r.get("name").toString(),((Number)r.get("size_bytes")).longValue(),r.get("sha256").toString(),r.get("media_type").toString(),"VALIDADO");}
+        else if(origin.equals("INGRESO_CIUDADANO")){var delivery=receiver.completaRegistrada(com);original=delivery.adjuntos().stream().filter(a->a.id().toString().equals(r.get("attachment_id"))).findFirst().orElseThrow(()->new FalloTecnico(409,"INTEGRIDAD_DOCUMENTAL_INVALIDA"));}
+        else throw new FalloTecnico(404);
+        return new DocumentoPrivado(doc,com,origin,key,original,author,Instant.ofEpochMilli(((Number)r.get("created_ms")).longValue()));
+    }
+    private static String representacion(DocumentoPrivado d){String tipo=d.original().tipo();return FormatosDocumento.paginable(tipo)?"PAGINAS":tipo.startsWith("audio/")?"AUDIO":tipo.startsWith("video/")?"VIDEO":"DESCARGA";}
+    private VisorDocumento visor(){var service=visor.getIfAvailable();if(service==null)throw new FalloTecnico(503,"VISTA_NO_DISPONIBLE");return service;}
+    private void evento(Operador a,AccesoReservado.Consulta c,String codigo){db.sql.update("INSERT INTO document_event(document_id,case_id,action_id,actor_id,at_ms,event_code) VALUES(?,?,NULL,?,?,?)",c.documento().toString(),c.caso().toString(),a.id(),System.currentTimeMillis(),codigo);}
+    @GetMapping public Metadatos metadatos(Authentication auth,@PathVariable UUID acceso){var a=actor(auth);var permit=autorizar(a,acceso,"METADATOS",true);var ref=referencia(permit);var d=ref.original();autorizar(a,acceso,"METADATOS",false);return new Metadatos(ref.id(),ref.origen(),d.nombre(),d.tamanio(),d.sha256(),d.tipo(),representacion(ref),permit.contenido(),permit.descarga());}
+    @GetMapping("/vista") public VisorDocumento.Vista vista(Authentication auth,@PathVariable UUID acceso){var a=actor(auth);var permit=autorizar(a,acceso,"CONTENIDO",true);var v=visor().vista(referencia(permit));autorizar(a,acceso,"CONTENIDO",false);evento(a,permit,"VISTA_RESERVADA_CONSULTADA");return new VisorDocumento.Vista(v.representacion(),v.paginas(),v.perfil(),v.originalInline(),permit.descarga());}
+    @RequestMapping(value="/paginas/{pagina}",method={RequestMethod.GET,RequestMethod.HEAD}) public ResponseEntity<StreamingResponseBody> pagina(Authentication auth,@PathVariable UUID acceso,@PathVariable int pagina,jakarta.servlet.http.HttpServletRequest request){var a=actor(auth);var permit=autorizar(a,acceso,"CONTENIDO",true);var p=visor().pagina(referencia(permit),pagina);autorizar(a,acceso,"CONTENIDO",false);return TransferenciaDocumento.responder(p.path(),p.tamanio(),p.sha256(),"pagina.png","image/png",true,request,mode->evento(a,permit,"PAGINA_RESERVADA_SOLICITADA"),()->autorizar(a,acceso,"CONTENIDO",false));}
+    @RequestMapping(value={"/original","/representacion"},method={RequestMethod.GET,RequestMethod.HEAD}) public ResponseEntity<StreamingResponseBody> original(Authentication auth,@PathVariable UUID acceso,jakarta.servlet.http.HttpServletRequest request){var a=actor(auth);var permit=autorizar(a,acceso,"DESCARGA",true);var ref=referencia(permit);boolean inline=request.getRequestURI().endsWith("/representacion");if(inline&&!Set.of("AUDIO","VIDEO").contains(representacion(ref)))throw new FalloTecnico(404);java.nio.file.Path path;try{path=files.verificar(ref.clave(),ref.original());}catch(IOException failure){throw new FalloTecnico(409,"INTEGRIDAD_DOCUMENTAL_INVALIDA");}var d=ref.original();return TransferenciaDocumento.responder(path,d.tamanio(),d.sha256(),d.nombre(),d.tipo(),inline,request,mode->evento(a,permit,mode.equals("RANGO_INVALIDO")?mode:"ORIGINAL_RESERVADO_SOLICITADO"),()->autorizar(a,acceso,"DESCARGA",false));}
+}

@@ -1,6 +1,7 @@
 import {useRef,useState} from 'react';
 import * as api from './api';
 import {date} from './ui';
+import {PropuestaAccesoReservado} from './AccesosReservados';
 
 function useCommand(changed:()=>Promise<void>){
  const keys=useRef(new Map<string,string>());const [busy,B]=useState(false),[error,E]=useState('');
@@ -16,7 +17,8 @@ export function ProteccionDocumento({caso,documento,changed,soloRestringir=false
  const decisions=mode==='compartir'?(control?.comparticiones??[]):(control?.publicaciones??[]);
  const previous=decisions.find(p=>p.case_id===target);
  const targets=[...new Set([...(control?.contextos.map(c=>c.id)??[]),...decisions.map(p=>p.case_id)])];
- return <section className="card"><button onClick={()=>{void load().catch(e=>E(e.message));}}>{soloRestringir?'Restringir consulta documental':'Protección y permisos documentales'}</button>{(error||run.error)&&<p role="alert">{error||run.error}</p>}{control&&<><p>Clasificación: {control.clasificacion}. FIR conserva consulta del responsable y jefatura competente; las excepciones sensibles siguen cerradas.</p>
+ return <section className="card"><button onClick={()=>{void load().catch(e=>E(e.message));}}>{soloRestringir?'Restringir consulta documental':'Protección y permisos documentales'}</button>{(error||run.error)&&<p role="alert">{error||run.error}</p>}{control&&<><p>Clasificación: {control.clasificacion}. FIR conserva consulta del responsable y jefatura competente; los accesos excepcionales requieren respaldo independiente, alcance y vigencia.</p>
+ {!soloRestringir&&['FIR','ORDINARIO'].includes(control.clasificacion)&&<PropuestaAccesoReservado clasificacion={control.clasificacion} caso={caso} documento={documento} changed={changed}/>}
  <form onSubmit={e=>{e.preventDefault();void run.command(base,{revision:control.revision,clasificacion:classification,fundamento:reason});}}>
  <label>Protección del contenido<select required value={classification} onChange={e=>K(e.target.value)}><option value="">Seleccionar</option>{!['ORDINARIO','FIR','BLOQUEADO'].includes(classification)&&<option value={classification} disabled>{classification}</option>}{!soloRestringir&&<><option value="ORDINARIO">Ordinario</option><option value="FIR">Ficha Interna Reservada</option></>}<option value="BLOQUEADO">Consulta bloqueada</option></select></label>
  <label>Fundamento documental<textarea required maxLength={1000} value={reason} onChange={e=>R(e.target.value)}/></label><button disabled={run.busy||!['ORDINARIO','FIR','BLOQUEADO'].includes(classification)}>Registrar protección</button></form>

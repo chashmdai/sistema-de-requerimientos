@@ -154,7 +154,7 @@ public final class ContenidoInstitucional {
             UUID owner=uuid(p.get("owner_case"));boolean propio=propietario(a,owner);boolean head=areas.jefe(a,core.caseRow(owner));String kind=p.get("classification").toString();
             boolean restringir=propio&&Objects.equals(caso,owner);
             if(kind.equals("BLOQUEADO")){if(!propio)throw new FalloTecnico(404);return new Permisos(false,false,head&&Objects.equals(caso,owner),kind,restringir);}
-            if(kind.equals("FIR")){if(!propio)throw new FalloTecnico(404);return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);}
+            if(kind.equals("FIR")){if(!propio){var grant=core.accesosReservados().permiso(a,caso,doc);if(grant==null)throw new FalloTecnico(404);return grant;}return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);}
             if(managed&&(propio||Objects.equals(caso,owner)&&core.equipo().participa(a,owner)&&(kind.equals("ORDINARIO")||a.id().equals(d.get("created_by")))))return new Permisos(true,true,head&&Objects.equals(caso,owner),kind,restringir);
             if(caso==null)throw new FalloTecnico(404);
             var origin=core.caseRow(owner);String originArea=areas.area(origin);String originMatter=new PoliticaMaterias(db,clock).materia(owner);

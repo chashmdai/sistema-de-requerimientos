@@ -16,9 +16,9 @@ public final class NotificacionesInstitucionales {
  private List<Aviso> avisos(String stream,Map<String,Object> e){
   String code=e.get("code").toString();UUID resource=uuid(e.get(stream.equals("RECEPCION")?"aggregate_id":"resource_id"));
   if(stream.equals("RECEPCION"))return code.equals("COMUNICACION_REGISTRADA")?List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource)):List.of();
-  if(stream.equals("TAREA")&&"REV_CIERRE".equals(e.get("resource_type")))return List.of(new Aviso("CONTINUIDAD_DECIDIDA","REV_CIERRE",resource));
+  if(stream.equals("TAREA")&&Set.of("REV_CIERRE","RESERVA_DOC").contains(e.get("resource_type")))return List.of(new Aviso("CONTINUIDAD_DECIDIDA",e.get("resource_type").toString(),resource));
   if(stream.equals("TAREA"))return List.of(new Aviso(code,"SUBROGANCIA".equals(e.get("resource_type"))?"SUBROGANCIA":"SOLICITUD".equals(e.get("resource_type"))?"SOLICITUD":"TAREA",resource));
-  return switch(code){case "CIERRE_EXCEPCION_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","REV_CIERRE",resource));case "CIERRE_EXCEPCION_APROBAR","CIERRE_EXCEPCION_RECHAZAR","CIERRE_EXCEPCION_REVOCAR","CIERRE_EXCEPCION_RETIRAR","CIERRE_EXCEPCION_UTILIZADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","REV_CIERRE",resource));case "EQUIPO_PARTICIPACION_ACTUALIZADA"->List.of(new Aviso("EQUIPO_ACTUALIZADO","EQUIPO",resource));case "ESPERA_ANTECEDENTES_SOLICITADA"->List.of(new Aviso("ESPERA_PENDIENTE","CASO",resource));
+  return switch(code){case "RESERVA_PROPUESTA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","RESERVA_DOC",resource));case "RESERVA_APROBAR","RESERVA_RECHAZAR","RESERVA_RETIRAR","RESERVA_REVOCAR"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","RESERVA_DOC",resource));case "CIERRE_EXCEPCION_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","REV_CIERRE",resource));case "CIERRE_EXCEPCION_APROBAR","CIERRE_EXCEPCION_RECHAZAR","CIERRE_EXCEPCION_REVOCAR","CIERRE_EXCEPCION_RETIRAR","CIERRE_EXCEPCION_UTILIZADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","REV_CIERRE",resource));case "EQUIPO_PARTICIPACION_ACTUALIZADA"->List.of(new Aviso("EQUIPO_ACTUALIZADO","EQUIPO",resource));case "ESPERA_ANTECEDENTES_SOLICITADA"->List.of(new Aviso("ESPERA_PENDIENTE","CASO",resource));
    case "COLABORACION_TERMINO_SOLICITADO"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TERMINO_COLAB",resource));
    case "COLABORACION_TERMINO_ACEPTADA","COLABORACION_TERMINO_RECHAZADA","COLABORACION_TERMINO_RETIRADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","TERMINO_COLAB",resource));
    case "PRINCIPAL_TRANSFERENCIA_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TRASLADO_REQ_U2",resource));
@@ -42,7 +42,7 @@ public final class NotificacionesInstitucionales {
  private boolean autorizado(Operador a,String categoria,String tipo,UUID id,String eventKey,String stream){
   try{
    permisos.actor(a);
-   switch(tipo){case "REV_CIERRE"->{if(!permisos.nucleo().revisionesExcepcionales().autorizarAviso(a,id))return false;}case "TERMINO_COLAB"->permisos.terminoColaboracion(a,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
+   switch(tipo){case "RESERVA_DOC"->{if(!permisos.nucleo().accesosReservados().autorizarAviso(a,id))return false;}case "REV_CIERRE"->{if(!permisos.nucleo().revisionesExcepcionales().autorizarAviso(a,id))return false;}case "TERMINO_COLAB"->permisos.terminoColaboracion(a,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
     case "EQUIPO"->permisos.equipo(a,id);
     case "TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->permisos.continuidad(a,tipo,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
     case "SUBROGANCIA"->{permisos.recurso(a,tipo,id);}
