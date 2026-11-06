@@ -4,7 +4,8 @@ import java.time.*;import java.util.*;
 /** Proyección transaccional sin cursor de máximos: los commits tardíos no se pierden. */
 public final class NotificacionesInstitucionales {
  private final BaseJdbc db;private final CatalogoLaboratorio catalogo;private final RecursosNotificacion permisos;private final Clock clock;
- public static final Set<String> CORREO=Set.of("CASO_ASIGNADO","ANTECEDENTE_NUEVO","TAREA_RECORDATORIO","TAREA_VENCIDA");
+ // §16: cada Aviso emitido representa un evento funcional habilitado en ambos canales.
+ // Las consultas/auditorías sin señal no generan aviso; NO_APLICA histórico se conserva.
  public NotificacionesInstitucionales(BaseJdbc db,CatalogoLaboratorio catalogo,RecursosNotificacion permisos,Clock clock){this.db=db;this.catalogo=catalogo;this.permisos=permisos;this.clock=clock;if(!catalogo.individual())throw new IllegalStateException("Se requieren cuentas individuales");}
  public record Notificacion(long secuencia,UUID id,String tipo,String titulo,Instant fecha,boolean leida,String ruta,String estadoCorreo,String confirmacionCorreo,UUID correlacion){}
  public record Bandeja(List<Notificacion> items,long pendientes,long cursor){}
@@ -15,8 +16,9 @@ public final class NotificacionesInstitucionales {
  private List<Aviso> avisos(String stream,Map<String,Object> e){
   String code=e.get("code").toString();UUID resource=uuid(e.get(stream.equals("RECEPCION")?"aggregate_id":"resource_id"));
   if(stream.equals("RECEPCION"))return code.equals("COMUNICACION_REGISTRADA")?List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource)):List.of();
+  if(stream.equals("TAREA")&&"REV_CIERRE".equals(e.get("resource_type")))return List.of(new Aviso("CONTINUIDAD_DECIDIDA","REV_CIERRE",resource));
   if(stream.equals("TAREA"))return List.of(new Aviso(code,"SUBROGANCIA".equals(e.get("resource_type"))?"SUBROGANCIA":"SOLICITUD".equals(e.get("resource_type"))?"SOLICITUD":"TAREA",resource));
-  return switch(code){case "EQUIPO_PARTICIPACION_ACTUALIZADA"->List.of(new Aviso("EQUIPO_ACTUALIZADO","EQUIPO",resource));case "ESPERA_ANTECEDENTES_SOLICITADA"->List.of(new Aviso("ESPERA_PENDIENTE","CASO",resource));
+  return switch(code){case "CIERRE_EXCEPCION_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","REV_CIERRE",resource));case "CIERRE_EXCEPCION_APROBAR","CIERRE_EXCEPCION_RECHAZAR","CIERRE_EXCEPCION_REVOCAR","CIERRE_EXCEPCION_RETIRAR","CIERRE_EXCEPCION_UTILIZADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","REV_CIERRE",resource));case "EQUIPO_PARTICIPACION_ACTUALIZADA"->List.of(new Aviso("EQUIPO_ACTUALIZADO","EQUIPO",resource));case "ESPERA_ANTECEDENTES_SOLICITADA"->List.of(new Aviso("ESPERA_PENDIENTE","CASO",resource));
    case "COLABORACION_TERMINO_SOLICITADO"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TERMINO_COLAB",resource));
    case "COLABORACION_TERMINO_ACEPTADA","COLABORACION_TERMINO_RECHAZADA","COLABORACION_TERMINO_RETIRADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","TERMINO_COLAB",resource));
    case "PRINCIPAL_TRANSFERENCIA_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TRASLADO_REQ_U2",resource));
@@ -40,7 +42,7 @@ public final class NotificacionesInstitucionales {
  private boolean autorizado(Operador a,String categoria,String tipo,UUID id,String eventKey,String stream){
   try{
    permisos.actor(a);
-   switch(tipo){case "TERMINO_COLAB"->permisos.terminoColaboracion(a,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
+   switch(tipo){case "REV_CIERRE"->{if(!permisos.nucleo().revisionesExcepcionales().autorizarAviso(a,id))return false;}case "TERMINO_COLAB"->permisos.terminoColaboracion(a,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
     case "EQUIPO"->permisos.equipo(a,id);
     case "TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->permisos.continuidad(a,tipo,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
     case "SUBROGANCIA"->{permisos.recurso(a,tipo,id);}
@@ -96,7 +98,7 @@ public final class NotificacionesInstitucionales {
     if(!signals.isEmpty())for(var a:candidatos.obtener())for(var signal:signals)if(autorizado(a,signal.categoria(),signal.tipo(),signal.recurso(),event,stream)&&accionVigente(signal.categoria(),signal.tipo(),signal.recurso(),event)){
      if(signal.categoria().equals("COMUNICACION_NUEVA")&&(db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Integer.class,signal.recurso().toString())>0||db.sql.queryForObject("SELECT COUNT(*) FROM core_communication WHERE id=? AND state<>'ABIERTA'",Integer.class,signal.recurso().toString())>0))continue;
      String id=UUID.randomUUID().toString();db.sql.update("INSERT INTO institution_notification(id,stream_code,event_key,recipient_id,category,resource_type,resource_id,created_ms) VALUES(?,?,?,?,?,?,?,?)",id,stream,event,a.id(),signal.categoria(),signal.tipo(),signal.recurso().toString(),((Number)e.get("at_ms")).longValue());
-     db.sql.update("INSERT INTO notification_outbox(notification_id,correlation_id,state,human_state,attempt_count,next_attempt_ms) VALUES(?,?,?,'NO_ENVIADO',0,?)",id,UUID.randomUUID().toString(),CORREO.contains(signal.categoria())?"PENDIENTE":"NO_APLICA",clock.millis());recipients++;inserted++;
+     db.sql.update("INSERT INTO notification_outbox(notification_id,correlation_id,state,human_state,attempt_count,next_attempt_ms) VALUES(?,?,?,'NO_ENVIADO',0,?)",id,UUID.randomUUID().toString(),"PENDIENTE",clock.millis());recipients++;inserted++;
     }
     db.sql.update("INSERT INTO notification_source VALUES(?,?,?,?)",stream,event,clock.millis(),recipients==0?"SIN_DESTINATARIO_VIGENTE":"PROYECTADO");
   return inserted;

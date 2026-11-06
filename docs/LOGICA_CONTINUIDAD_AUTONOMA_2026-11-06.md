@@ -8,16 +8,28 @@ Worktree exclusivo C:\req\worktrees\siger-logica. Mantener identidad, autorizaci
 
 ## Git y evidencia publicada
 
-Rama actual codex/siger-subrogancias, base cdb176f2ea81ef66727c2077cbf271fdb05fa9e1. El commit de implementación conserva este checkpoint; consultar git log -1 para su SHA. Conservar todos los cambios locales de subrogancias: no reconstruir A/colaboraciones. PR #8 en borrador publicado, upstream sincronizado en adb7eeb. Corrección CI pendiente de commit y publicación; no reutilizar la CI de otro HEAD.
+Rama actual codex/siger-continuidad-excepcional, creada con árbol limpio desde adb7eebf8dabe59c5467d746be158a8326dba79c (codex/siger-subrogancias). Padre publicado en PR #8, commits1d69f0e + adb7eeb, upstream0/0. Conservar los cambios del hijo SUB-CONT/doble canal. Hijo todavía sin upstream/PR propio; publicar en base codex/siger-subrogancias tras la calificación.
 
-Cadena preservada: main → #2 → #3 → #4 → #5 → #6 → #7. Main remoto verificado95cf2ae; referencia U4.5 sin nuevas migraciones concurrentes observadas; no se modifica su directorio. Revisar refs antes de publicar.
+Cadena preservada: main → #2 → #3 → #4 → #5 → #6 → #7 → #8. Main remoto verificado95cf2ae; referencia U4.5 sin nuevas migraciones concurrentes observadas; no se modifica su directorio. Revisar refs antes de publicar.
 
 - PR #6 / codex/siger-equipos-agenda /396422d69c29ace39f65ce84a5552b1a45c066f1: CI42213485912 aprobada. Windows478/469 aprobadas/9 omitidas; Ubuntu478/454/24; frontend119/119, lint/build/package, cero fallos/errores. MySQL nativo descartable73/73 y proceso propio cerrado.
 - PR #7 / codex/siger-continuidad-funcional /cdb176f2ea81ef66727c2077cbf271fdb05fa9e1: CI42220441097 aprobada. Windows490/481/9, Ubuntu490/466/24; frontend123/123, lint/build/package; cero fallos/errores. Logs íntegros comprobados, Maven27:51/24:52 y acta PR actualizada. Local488/479/9 anterior a dos tests nuevos, más focal posterior2/2. MySQL82/82 no se reatribuye a esos dos métodos.
 
 No repetir esas regresiones por rutina ni atribuirlas a nuevos commits.
 
-## Incremento actual desarrollado, en calificación
+## Desarrollo actual y próxima acción
+
+SUB-CONT-01 desarrollado: Registro15/FacultadCierre explícitos, RevisionExcepcional/Controller, V15.13 H2/MySQL, UI por Caso y bandeja/paquete. Permiso exclusivo CONFIRM_CASE_CLOSURE por cuenta/Caso, con autoridad nominal independiente, vigencia/revocación, solicitud profesional/ámbito actuales, documentos necesarios por su propia política, huella/revisión y cierre transaccional EXCEPCIONAL. No concede jefatura, equipo o FIR. Conservar todas las modificaciones locales; confirmar el hijo antes de cambiar temporalmente al padre para corregir CI.
+
+H2: selección34 tuvo33 aprobados y un fixture que agregaba documento durante REVISION_TERMINO; corregido usando devolución/gestión autorizada/nueva solicitud. Corte6/6 y final8/8 aprobados (7 dominio+HTTP1). Migración15 y subrogancias13 del primer corte aprobadas. MySQL nativo descartable23/23 (7 dominio+16 migración/checksum), luego modalidad EXCEPCIONAL1/1; procesos propios ausentes. Doble canal corregido según §16: cada señal funcional nueva produce correo PENDIENTE; NO_APLICA histórico no se promueve. Graph siempre simulado/apagado. Focal final52/52 en revision-excepcional-doble-canal.log. Frontend133/133, lint/TypeScript acreditados según cortes; integral del hijo pendiente. Reglas compuestas/FIR sensible siguen parciales; no inventar autorizaciones.
+
+PR #8/adb7eeb: integral local506/497 aprobados/9 omitidos, frontend129/129, lint/build/package, Maven27:33, log subrogancias-integral.log y temporales0dcc28aedb4c4e72b0f7f34333014738. Compilación finalizó antes de compilar el hijo: no atribuir506 al hijo.
+
+CI #8 run42233659071: Ubuntu aprobado506/482/24, frontend129, Maven19:12. Windows CANCELADO por límite global30min:446 métodos, cero fallos/errores,9 omitidos, Maven28:16 antes de cancelación. Faltaron60 métodos. Logs completos obtenidos (jobs127945605549/127945605848); preservar intento. Diagnóstico: suite secuencial+preparación superó presupuesto; Áreas236.7s, Subrogancias163.4s, Materias146.6s frente a Ubuntu142.1/108.2/96.12. No aumentar presupuesto ni cambiar timeouts/exclusiones/aserciones.
+
+SIGUIENTE ACCIÓN: confirmar hijo recuperable con informe/matriz; cambiar al padre codex/siger-subrogancias con árbol limpio y corregir CI mediante particiones completas, disjuntas y verificadas por manifiestos (mismas clases/aserciones, tres stress heredadas), checkout HEAD exacto y presupuesto30 por job. Publicar nuevo HEAD padre/PR #8, conservar CI fallida, comprobar Windows/Ubuntu. Volver al hijo e incorporar solo ese cambio CI de forma controlada, sin reescribir historia ni modificar PR #2–#7. Después focales necesarios/integral, native de avisos pendiente si procede, publicar PR hijo/CI. Continuar C/D/E; no finalizar al aprobar el siguiente bloque.
+
+## Subrogancias del padre desarrolladas, en calificación
 
 Registro firmado explícito1.4, sin reinterpretar1.0–1.3. Función estable/ámbitos, rutas REGIONAL/Jefatura Sedes y CENTRAL/Jefatura Gestión, titular, candidatos, autoridades/delegados, respaldo y vigencias configurables. V15.12 H2/MySQL nuevas e idénticas. V1–V15.11 intactas. Sin datos nominales, backfill u outOfOrder.
 
@@ -47,14 +59,6 @@ SUB-CONT-01 y cierres excepcionales específicos; territorio acreditado y concil
 
 Rector SHA80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4 verificado. Cuestionario27 no encontrado localmente; rector suficiente para este circuito. Investigar y avanzar sin preguntas ordinarias.
 
+Corrección CI del padre publicada en feb9f01fdf46d5002cae8abb74b36d5c1ee7a06e (PR #8), run42267102474 en curso, sin presupuesto/exclusiones nuevas. Inventario compilado71 raíces, partición1 local243/234/9,33clases;frontend129/lint/build/package (Maven10:07), auxiliar6raíces/10rechazos. Ver LOGICA_CI_PARTICIONES_2026-11-06.md. Incorporada al hijo mediante merge propio controlado; únicamente se conciliaron checkpoint/matriz preservando el detalle del hijo. No merge a main/padres ajenos.
 
-
-## Recuperación y CI posterior al corte histórico
-
-Se completó la integral local del padre adb7eeb: 506/497 aprobadas/9 omitidas, frontend129/129, lint/build/package, Maven27:33. CI42233659071: Ubuntu506/482/24 aprobado; Windows cancelado a30min con446 métodos, cero fallos/errores y9 omitidos, faltaron60. Logs completos preservados. Ver LOGICA_CI_PARTICIONES_2026-11-06.md para diagnóstico y corrección sin ampliar presupuesto/exclusiones.
-
-Hijo codex/siger-continuidad-excepcional recuperable en commit60b25e9, todavía local: SUB-CONT-01 por Caso, Registro1.5/V15.13, UI real y doble canal funcional conforme§16. H2 focal8/8, doble canal52/52, MySQL nativo23/23 más focal modalidad1/1 (solapado), frontend133/133/lint/TypeScript. Integral/CI del hijo pendientes. Su checkpoint conserva el detalle; no sustituirlo por este corte del padre.
-
-Acción actual: calificar auxiliar CI (inventario compilado y diez rechazos negativos aprobados), terminar partición1 local, confirmar/publicar corrección del padre y comprobar el nuevo HEAD en Windows/Ubuntu. Después volver al hijo limpio, incorporar solo esta corrección propia sin reescribir historial, terminar su calificación/publicación y continuar C/D/E. No repetir A/B ni pedir validación funcional. Main/padres/entornos preservados.
-
-Partición1 local final:243/234/9,cero fallos/errores,33/71 raíces;129 frontend/lint/build/package. Auxiliar seis raíces sintéticas/diez rechazos aprobado. Publicar corrección CI y volver al hijo60b25e9; no atribuir esta selección al hijo.
+SIGUIENTE ACCIÓN ACTUALIZADA: ejecutar integral del hijo SUB-CONT/doble canal; revisar resultado nativo ya acreditado23/23 +1/1 solapado, y focal nativo nuevo de avisos si aporta evidencia. Actualizar informe/matriz/guion y confirmar/push normal/PR en borrador base codex/siger-subrogancias. Comprobar CI completa del HEAD propio y padre. Después completar acceso excepcional FIR por documento/Caso con respaldo independiente de Gestión y jefatura, vigente y revocable; no usar concesión de cierre como permiso documental, ni otorgar roles o accesos por TI. Continuar C/D/E sin repetir A/B.
