@@ -74,7 +74,7 @@ public final class TerminoColaboracion {
                 if("ACEPTADA".equals(r.decision())){
                     flow.abierto(q);if("CERRADO".equals(c.get("state")))throw new FalloTecnico(409,"CASO_CERRADO");
                     if(!Objects.equals(e.get("origin_destination"),q.get("principal_destination")))throw new FalloTecnico(409,"SOLICITUD_OBSOLETA");
-                    flow.jefatura(catalogo.operador(e.get("requested_by").toString()),q);
+                    core.jefaturaOrigen(catalogo.operador(e.get("requested_by").toString()),q,((Number)e.get("created_ms")).longValue());
                 }
             }
             db.sql.update("UPDATE institution_collaboration_end SET state=?,revision=revision+1,decided_by=?,decided_ms=?,decision_text=? WHERE id=?",r.decision(),a.id(),clock.millis(),r.fundamento(),id(request));

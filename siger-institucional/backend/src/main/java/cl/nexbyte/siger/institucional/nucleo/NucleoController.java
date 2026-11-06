@@ -45,6 +45,8 @@ public class NucleoController {
     @PostMapping("/casos/{id}/solicitar-termino") Resultado solicitar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.revisarCaso(actor(auth),key,id,body,"SOLICITUD_TERMINO");}
     @PostMapping("/casos/{id}/observar") Resultado observar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.revisarCaso(actor(auth),key,id,body,"DEVOLUCION");}
     @PostMapping("/casos/{id}/cerrar") Resultado cerrar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.revisarCaso(actor(auth),key,id,body,"CIERRE");}
+    @GetMapping("/casos/{id}/autocierre-regional") Map<String,Boolean> puedeAutocierre(Authentication auth,@PathVariable UUID id){return core.autocierreRegional(actor(auth),id);}
+    @PostMapping("/casos/{id}/autocierre-regional") Resultado autocierre(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Decision body){return core.autocierreRegional(actor(auth),key,id,body);}
     @PostMapping("/casos/{id}/reabrir") void pendiente(Authentication auth,@PathVariable UUID id){core.transicionPendiente(actor(auth),id);}
     @GetMapping("/avisos") List<Aviso> avisos(Authentication auth){return core.avisos(actor(auth));}
     @PostMapping("/casos/{id}/clasificar") Resultado clasificar(Authentication auth,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Clasificacion body){return core.clasificar(actor(auth),key,id,body);}

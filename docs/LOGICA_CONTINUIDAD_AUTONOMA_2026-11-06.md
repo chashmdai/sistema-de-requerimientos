@@ -1,51 +1,49 @@
 # Continuidad autónoma SIGER · 06/11/2026
 
-## Instrucción vigente
+## Precedencia y alcance
 
-La validación funcional fue confirmada por el responsable del proyecto el 06/11/2026. Ver DECISION_VALIDACION_FUNCIONAL_2026-11-06.md. Las 138 reglas conservan sus IDs/orden y registran esa decisión. No pedir nuevamente validación del levantamiento. Mantener identidad, aprobación independiente, ámbito, vigencia y segregación. Parámetros nominales reales ausentes se configuran; no se inventan. Validación funcional no autoriza despliegues.
+El responsable confirmó la validación funcional del levantamiento el 06/11/2026. Ver DECISION_VALIDACION_FUNCIONAL_2026-11-06.md. Las 138 reglas mantienen IDs/orden y esa decisión. No pedir otra validación funcional. Faltantes nominales se configuran, sin inventarlos. La validación no equivale a código terminado, prueba física o habilitación operacional.
 
-## Estado actual posterior al PR #6
+Worktree exclusivo C:\req\worktrees\siger-logica. Mantener identidad, autorización, ámbito, vigencia y segregación de personas/cuentas. No tocar padres/main/U4.4/U4.5/SMR/QA, COM-000001, históricos, JAR/servicios, Formulario/proveedores, originales/firmas/hashes o COMMIT→ACK. Sin merge/despliegue, correo real ni E2E físico.
 
-Rama actual codex/siger-continuidad-funcional, creada con árbol limpio desde 396422d69c29ace39f65ce84a5552b1a45c066f1. PR #6 en borrador, base PR #5; CI 42213485912 APROBADA en ambos jobs: Windows 478/469 aprobados/9 omitidos, Ubuntu 478/454 aprobados/24 omitidos, frontend 119/119, cero fallos/errores. Logs y acta del PR comprobados, Maven 26:12/20:52. No modificar ese HEAD.
+## Git y evidencia publicada
 
-Código posterior desarrollado de término de colaboración aceptada: TerminoColaboracion/Controller, V15.11 H2/MySQL, propuesta desde principal, decisión de destino y cierre separado por profesional/jefatura; retirada/rechazo, historial, paquete mínimo, avisos, bloqueo transaccional y protección de estado/revisión. UI en REQ/bandeja/Caso conectada con GET agregados. No descartar cambios posteriores al padre.
+Rama actual codex/siger-subrogancias, base cdb176f2ea81ef66727c2077cbf271fdb05fa9e1. El commit de implementación conserva este checkpoint; consultar git log -1 para su SHA. Conservar todos los cambios locales de subrogancias: no reconstruir A/colaboraciones. Todavía sin PR/upstream propio; crear PR dependiente de #7 tras calificación.
 
-Acreditado del corte: H2 25/25 (8 nuevos + 17 continuidad), HTTP/migración 15/15 (áreas y once rutas), MySQL nativo descartable 82/82; proceso propio cerrado y ausencia verificada. Frontend 123 tuvo un matcher no configurado: corregido conservando aserción, cuatro nuevas DOM aprobadas, lint/build correctos. Regresión local integral en curso en colaboracion-integral.log; no se atribuye resultado todavía. Se añadieron después dos tests de revocación y principal transferido: pendientes de focal/CI, sin atribuirlos a los 82 MySQL anteriores.
+Cadena preservada: main → #2 → #3 → #4 → #5 → #6 → #7. Main remoto verificado95cf2ae; referencia U4.5 sin nuevas migraciones concurrentes observadas; no se modifica su directorio. Revisar refs antes de publicar.
 
-Publicar este bloque en PR en borrador base codex/siger-equipos-agenda, verificar CI de su HEAD, completar evidencia local y esas dos pruebas. Continuar subrogancias/cierres específicos en rama dependiente limpia con registro firmado explícito 1.4 y migración posterior a V15.11. No detenerse tras aprobar un bloque. Fuentes/reglas validadas; faltantes son implementación y parámetros nominales, no otra validación funcional.
-## Git y dependencias
+- PR #6 / codex/siger-equipos-agenda /396422d69c29ace39f65ce84a5552b1a45c066f1: CI42213485912 aprobada. Windows478/469 aprobadas/9 omitidas; Ubuntu478/454/24; frontend119/119, lint/build/package, cero fallos/errores. MySQL nativo descartable73/73 y proceso propio cerrado.
+- PR #7 / codex/siger-continuidad-funcional /cdb176f2ea81ef66727c2077cbf271fdb05fa9e1: CI42220441097 aprobada. Windows490/481/9, Ubuntu490/466/24; frontend123/123, lint/build/package; cero fallos/errores. Logs íntegros comprobados, Maven27:51/24:52 y acta PR actualizada. Local488/479/9 anterior a dos tests nuevos, más focal posterior2/2. MySQL82/82 no se reatribuye a esos dos métodos.
 
-Worktree exclusivo C:\req\worktrees\siger-logica. Rama codex/siger-equipos-agenda, base ef4d378a4c5afb9e23d56b0d4fa93a1b7c2aade5 (PR #5). Cadena PR #2→#3→#4→#5→nuevo PR de equipos/agenda, base feature/siger-u2-continuidad-institucional. Código principal confirmado en 06cc2ec; commit de cierre documental/UI contiene esta versión del checkpoint. Consultar git log -1 para su SHA; no autocitar su propio hash. Sin merge/despliegue.
+No repetir esas regresiones por rutina ni atribuirlas a nuevos commits.
 
-Commits previos de esta campaña: 41c502d (validación funcional/matriz/checkpoint), 0985802 (checkpoint recuperable), 06cc2ec (equipo, agenda, V15.10, TAR-09, espera y pruebas). Padres/main/U4.5 conservados.
+## Incremento actual desarrollado, en calificación
 
-## Capacidades desarrolladas y focalmente acreditadas
+Registro firmado explícito1.4, sin reinterpretar1.0–1.3. Función estable/ámbitos, rutas REGIONAL/Jefatura Sedes y CENTRAL/Jefatura Gestión, titular, candidatos, autoridades/delegados, respaldo y vigencias configurables. V15.12 H2/MySQL nuevas e idénticas. V1–V15.11 intactas. Sin datos nominales, backfill u outOfOrder.
 
-Equipo local del Caso con facultad vigente de área, principal y colaboradores; retiro con resolución transaccional de pendientes; historia y revocación efectiva. Contenido ordinario autorizado sin acceso automático a COM raíz, otros Casos, FIR, documentos históricos sin acreditar o documentos ajenos sin clasificar. Alias de la misma persona no hereda pertenencia.
+SubroganciasInstitucionales/Controller, React/navegación, resolver efectivo en IdentidadInstitucional, integración de decisiones/cierres/avisos:
+- Candidato solicita su cuenta; autoridad canónica independiente aprueba; TI de tercera persona ejecuta. Sin autoactivación, autoelevación o reciprocidad mediante alias. Solicitud sellada por hash; no alterar período aprobado.
+- Inicio futuro, fin/revisión finito, prórroga nueva enlazada, retiro/rechazo, revocación/retorno, caducidad por predicado aunque no haya monitor. Fechas efectivas/registradas diferenciadas. Épocas de sesiones y permisos actuales.
+- Ámbitos persistentes mantienen denegación al omitir designaciones y tras reinicio. Suspensión bloquea función; autoridad acreditada puede revocar. Titular necesita concesión base exacta; subrogante solo cuenta solicitante. Facultades profesionales/lectura por materia independientes se conservan. Área no se hereda de sede/unidad; TI no obtiene expedientes.
+- Se transfieren decisiones funcionales temporalmente, no cartera/equipo/tareas. Auxiliar específico conserva actos legítimos de origen para transferencias/derivaciones/término de colaboración, sin permitir actos nuevos. Mantiene bajas ordinarias y contexto actual.
+- Autocierre regional titular por ruta específica: responsabilidad profesional actual, designación/ámbito, controles ordinarios y evento reforzado de ambas funciones. Subrogante no autocierra Caso propio; retorno exige revisión expresa.
+- Avisos internos mínimos, deduplicados y autorizados al consultar, sin correo adicional. TI ve instrucción mínima, sin relato de ausencia ni registro firmado completo.
 
-Agenda compartida V12/V13: ejecutor único, creador/asignador, campos opcionales, obligatoriedad, intentos, reprogramación, cancelación fundada y cumplimiento manual. TAR-09 transfiere todas las no terminales (también de colaboradores), conserva autor/fechas/ventanas/intentos, no duplica tareas y actualiza recordatorios. Acuse manual separado. Cierre comprueba obligatorias y revisión actual, conservando modalidad DERIVACION después de cambios de agenda. Pos cierre no admite alta/intentos nuevos; ordinarias previas se regularizan sin reabrir o fabricar actuaciones.
+Contrato funciones-subrogancias-institucionales-v1.md e informe LOGICA_SUBROGANCIAS_2026-11-06.md con guion manual por roles preparado, no ejecutado.
 
-Espera fundada con decisión de jefatura y reanudación expresa, sin suspender responsabilidades/relojes. Indicador y filtro EN_ESPERA con ámbito en listados/conteos/detalles. Interfaz real Equipo y agenda, historia visible y avisos internos recuperables sin correos reales.
+## Pruebas y siguiente acción precisa
 
-## Persistencia y pruebas
+Evidencia privada: LOCALAPPDATA/siger-build-4c652bfd9b7a41d5a8e0d659e180202d, logs subrogancias-*. Java25 explícito/Node24/Build-Siger.ps1 aislado; no Maven concurrente sobre target.
 
-V15.10 Java por dialecto H2/MySQL, DDL común/checksum explícito; sustituye exclusivamente CHECK personal histórico en CASO. Sin editar V1–V15.9, outOfOrder, backfill o datos nominales. Java 25 explícito, Node 24, Build-Siger aislado.
+1. MySQL en calificación: selección completa99 tuvo86 aprobados y13 bloqueados por guarda del nuevo esquema; corregida únicamente para el sufijo descartable subrog. Segundo intento ejecutó1/13 y falló12 por cuentas sintéticas no limpiadas entre métodos; se completó limpieza exclusiva del esquema validado. Intento final13 EN CURSO, sesión57962, log subrogancias-mysql-cierre.log. Auxiliar conserva datadir GUID privado y detiene solo su proceso. Comprobar resultado y ausencia del proceso propio. No declarar motor aprobado antes del resultado. No mostrar client.cnf/init.sql/credenciales.
+2. H2 primera6/6. Selección47 tuvo dos fallos de continuidad por mapa copiado que perdía lectura de columnas; corregido, continuidad posterior17/17. Selección28 tuvo dos fixtures sin fundamento territorial regional: completados sin eliminar gate. Intento4 falló compilación por argumento opcional faltante, sin tests. Intento5: migración14 y HTTP1 aprobadas, dominio13 con una expectativa403 frente a404 protegido; corregida, autocierre final focal1/1 aprobado. Intentos fallidos conservados.
+3. Frontend completo129/129. Selección previa13/13; lint/build aprobados antes de los dos últimos DOM/export del componente, se cubren de nuevo en integral. H2/MockMvc/DOM/MySQL no son E2E físico.
+4. Tras MySQL: corregir si corresponde, ejecutar Build-Siger integral una vez, actualizar resultados/matriz/informe, revisar diff/secreto/refs y confirmar bloques coherentes. Push normal, PR en borrador base codex/siger-continuidad-funcional. CI Windows/Ubuntu del HEAD publicado y logs comprobados; no reutilizar padres ni alterar exclusiones/timeouts por rutina.
+5. No detenerse al aprobar: rama dependiente limpia para SUB-CONT-01 por Caso, con autoridad configurable, revisor nominal independiente, acceso a antecedentes/reservas, vigencia/revocación, revisión actual y obligatorias. No dar jefatura global para sustituir ese circuito. Continuar C/D/E en cortes verificables.
 
-- H2 selección 43/43 intermedia. Integral local posterior: 474 métodos, 463 aprobados, dos fallos de expectativas HTTP históricas, nueve omitidos, cero errores; NO se presenta como verde.
-- Selección final ampliada: 63 métodos, 62 aprobados y una negativa que llegó primero al bloqueo de clave temporal. Se completó el cambio real de clave del nuevo fixture; HTTP final 8/8. Agenda 16/16, documentos finales 3/3, equipo HTTP/migración y continuidad/áreas/tareas aprobados en las selecciones correspondientes. No sumar solapamientos como métodos únicos.
-- Frontend final 119/119, lint y build TypeScript/Vite correctos. Se corrigieron dos tipos opcionales de pruebas/historia sin relajar aserciones.
-- MySQL nativo Windows 8.0.46 descartable FINAL 73/73, cero fallos/errores/omisiones; incluye V14/V15.1…V15.9→V15.10, conservación histórica, agenda 16 y rollback/concurrencia/espera/derivación. Proceso propio cerrado y ausencia verificada. Cortes 9/9 y 69/69 conservados.
-- Un intento MySQL no ejecutó tests por error de compilación al extraer un auxiliar de fixture; corregido antes de la ejecución final. Logs preservados.
-- CI Windows/Ubuntu del HEAD publicado: verificar/registrar en acta del PR. No reutilizar PR #5 ni éxitos de otro SHA. Presupuesto 30 minutos y exclusiones/omisiones históricas intactos.
+## Pendientes técnicos y parámetros
 
-Evidencia privada: siger-build-4c652bfd9b7a41d5a8e0d659e180202d y MySQL final siger-autoridad-mysql-cb2111e6377f4bb891d6a224bc74af4b bajo LOCALAPPDATA. Informe LOGICA_EQUIPO_AGENDA_2026-11-06.md identifica intentos, pruebas y límites. H2/MockMvc/DOM/MySQL no son E2E físico; AV/renderer con dobles declarados. Guion de navegador preparado, no ejecutado.
+SUB-CONT-01 y cierres excepcionales específicos; territorio acreditado y conciliación explícita/reversible; antecedentes/documentación adicional REQ, FIR/bitácoras/reservas; plazos/calendarios, búsqueda/reportes/exportaciones y demostración física. Son implementación o valores concretos no cargados, no falta de validación funcional. No declarar terminadas138 reglas ni U1–U9.
 
-## Siguiente acción precisa
+Rector SHA80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4 verificado. Cuestionario27 no encontrado localmente; rector suficiente para este circuito. Investigar y avanzar sin preguntas ordinarias.
 
-Confirmar documentación/matriz/UI final, push normal y crear PR en borrador dependiente de #5; verificar CI de su HEAD en Windows y Ubuntu. No detenerse al aprobar A: continuar en rama dependiente limpia con término de colaboración aceptada (EQU-03 pendiente técnica), cierres/subrogancias/continuidad excepcional (B) y después C/D/E.
-
-Para B: evolucionar explícitamente el registro firmado (nueva versión; no reinterpretar 1.0–1.3) con función/ámbitos explícitos, titular, candidatos y autoridades configurables. Solicitud de persona preidentificada, aprobación independiente, intervalos finitos/revisión, prórroga nueva, revocación/retorno, exclusión de facultad simultánea y conservación de cartera/tareas. Revisar integración de bandejas y autorizaciones pendientes ligadas a funciones, sin dar acceso global ni ejecutar TAR-09 al activar/terminar. SUB-CONT-01 por Caso y autocierre regional titular requieren circuitos específicos, no eliminar por atajo la independencia del cierre ordinario. Estos son pendientes técnicos de implementación, no de validación funcional.
-
-## Pendientes y preservación
-
-EQU-03 después de aceptación: circuito desarrollado y acreditado focalmente en la continuación actual; completar CI/informe del HEAD. Subrogancias/autocierre regional/continuidad excepcional, catálogo territorial acreditado, conciliación explícita, antecedentes REQ sin Caso, FIR de actuaciones/reservas adicionales, plazos, búsqueda/reportes/exportaciones generales y cierre E2E siguen pendientes técnicos. Cuentas/mandatos/cobertura reales no cargados. SMR, QA, U4.4/U4.5, COM-000001, bases históricas, JAR/servicios, Formulario, proveedores, contratos/firmas/originales y COMMIT→ACK intactos. Sin operaciones reales ni E2E físico. Árbol debe quedar limpio tras el commit de cierre; cualquier avance posterior se conserva y se recupera mediante status/diff.

@@ -25,6 +25,13 @@ public final class NucleoInstitucional {
     public EquipoCaso equipo(){return new EquipoCaso(db,this,catalogo,clock,mapper);}
     public cl.nexbyte.siger.institucional.notificaciones.TareasPersonales tareas(){return new cl.nexbyte.siger.institucional.notificaciones.TareasPersonales(db,new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(db,catalogo,this),mapper,clock);}
     public ContinuidadU2 continuidad(){return new ContinuidadU2(db,this,catalogo,clock,mapper);}
+    public boolean avisoSubrogancia(String actor,UUID id){return autoridad!=null&&autoridad.subrogancias().autorizarAviso(actor,id);}
+    void jefaturaOrigen(Operador a,Map<String,Object> contexto,long emitida){
+        String ar=areas.area(contexto);
+        if((ar==null||areas.vigente(ar,str(contexto,"unit_code"),str(contexto,"site_id")))&&a.jefeEn(str(contexto,"unit_code"),str(contexto,"site_id"),ar))return;
+        if(autoridad!=null&&autoridad.subrogancias().actoConservado(a.id(),str(contexto,"unit_code"),str(contexto,"site_id"),ar,emitida))return;
+        throw new FalloTecnico(404);
+    }
     /** Compatibilidad de transporte: solo reproduce un comando ya confirmado. La fila se
      * bloquea antes de delegar; el método original verifica acción, actor y hash del payload.
      * Una ruta provisional cerrada nunca puede ejecutar trabajo nuevo por esta vía. */
@@ -289,12 +296,21 @@ public final class NucleoInstitucional {
         });
     }
     public Resultado revisarCaso(Operador a,UUID key,UUID caseId,Decision request,String decision){
+        return revisarCaso(a,key,caseId,request,decision,false);
+    }
+    public Resultado autocierreRegional(Operador a,UUID key,UUID caseId,Decision request){return revisarCaso(a,key,caseId,request,"CIERRE",true);}
+    private void titularRegional(Operador a,Map<String,Object> c){
+        head(a,c);if(autoridad==null||!a.id().equals(c.get("responsible_id"))||!areas.profesional(a,c))throw new FalloTecnico(403,"TITULAR_REGIONAL_NO_ACREDITADO");
+        autoridad.subrogancias().titularRegional(a.id(),str(c,"unit_code"),str(c,"site_id"),areas.area(c));
+    }
+    public Map<String,Boolean> autocierreRegional(Operador a,UUID id){actor(a);var c=caseRow(id);if(!canCase(a,c))throw new FalloTecnico(404);try{titularRegional(a,c);return Map.of("permitido",true);}catch(FalloTecnico e){if(Set.of(401,403,404,409).contains(e.status))return Map.of("permitido",false);throw e;}}
+    private Resultado revisarCaso(Operador a,UUID key,UUID caseId,Decision request,String decision,boolean regional){
         actor(a);if(!Set.of("SOLICITUD_TERMINO","DEVOLUCION","CIERRE").contains(decision))throw new FalloTecnico(400);text(request.texto(),2000);
         var initial=caseRow(caseId);if(!canCase(a,initial))throw new FalloTecnico(404);var communication=uuid(initial.get("communication_id"));
-        confirmarIndependiente(a,initial,decision);
-        return execute(key,a,decision,List.of(caseId,request),()->{
+        if(regional)titularRegional(a,initial);else confirmarIndependiente(a,initial,decision);
+        return execute(key,a,regional?"AUTOCIERRE_REGIONAL_TITULAR":decision,List.of(caseId,request),()->{
             lock(communication);var c=caseRow(caseId);if(!canCase(a,c))throw new FalloTecnico(404);revision(c,request.revision());String state=str(c,"state"),next;String modality=null;
-            confirmarIndependiente(a,c,decision);
+            if(regional)titularRegional(a,c);else confirmarIndependiente(a,c,decision);
             if(decision.equals("CIERRE")&&terminoColaboracion().pendienteCaso(caseId))throw new FalloTecnico(409,"INTERVENCION_REQUIERE_DECISION_EXPLICITA");
             if(decision.equals("CIERRE")&&equipo().obligatorias(caseId))throw new FalloTecnico(409,"TAREAS_OBLIGATORIAS_PENDIENTES");
             if(!decision.equals("DEVOLUCION")&&equipo().esperaPendiente(caseId))throw new FalloTecnico(409,"ESPERA_REQUIERE_DECISION_EXPLICITA");
@@ -309,16 +325,18 @@ public final class NucleoInstitucional {
                 if(decision.equals("DEVOLUCION")){if(!state.equals("REVISION_TERMINO"))throw new FalloTecnico(409);next="EN_GESTION";}
                 else{
                     boolean personal=a.id().equals(c.get("responsible_id"))&&state.equals("EN_GESTION")&&db.sql.queryForObject("SELECT COUNT(*) FROM core_action WHERE case_id=? AND actor_id=?",Long.class,id(caseId),a.id())>0;
-                    if(!state.equals("REVISION_TERMINO")&&!personal)throw new FalloTecnico(409);next="CERRADO";modality="JEFATURA";
+                    if(regional?!Set.of("EN_GESTION","REVISION_TERMINO").contains(state):!state.equals("REVISION_TERMINO")&&!personal)throw new FalloTecnico(409);next="CERRADO";modality="JEFATURA";
                 }
             }
             db.sql.update("UPDATE core_case SET state=?,revision=revision+1,closed_ms=?,closed_by=? WHERE id=?",next,next.equals("CERRADO")?now():null,next.equals("CERRADO")?a.id():null,id(caseId));
             if(next.equals("CERRADO")){if(casoU2(caseId)&&db.sql.queryForObject("SELECT COUNT(*) FROM institution_case_closure_request WHERE case_id=? AND case_revision=?",Long.class,id(caseId),number(c,"revision"))>0)modality="DERIVACION";db.sql.update("UPDATE core_case SET closure_mode=? WHERE id=?",modality,id(caseId));if(casoU2(caseId))db.sql.update("INSERT INTO institution_case_closure VALUES(?,?,?,?,?)",id(caseId),number(c,"revision")+1,now(),a.id(),modality);}
             db.sql.update("INSERT INTO core_review VALUES(?,?,?,?,?,?)",id(UUID.randomUUID()),id(caseId),a.id(),now(),decision,request.texto());
+            if(regional){var f=autoridad.subrogancias().titularRegional(a.id(),str(c,"unit_code"),str(c,"site_id"),areas.area(c));u2().historia(communication,caseId,"CASO",number(c,"revision")+1,a,"CASO_AUTOCIERRE_REGIONAL_TITULAR",request.texto(),Map.of("funcionesEjercidas",List.of("PROFESIONAL_RESPONSABLE","COORDINACION_REGIONAL_TITULAR"),"designacion",f.id(),"referencia",f.referencia(),"sha256",f.sha256()));}
             bump(communication);reevaluate(communication,a);event(communication,"CASO",caseId,a,decision.equals("CIERRE")?("PROFESIONAL_BAJA".equals(modality)?"CASO_CERRADO_PROFESIONAL_BAJA":"CASO_CERRADO"):decision.equals("DEVOLUCION")?"TERMINO_DEVUELTO_CON_OBSERVACIONES":"TERMINO_SOLICITADO");return new Resultado(caseId,number(c,"revision")+1);
         });
     }
-    private void confirmarIndependiente(Operador a,Map<String,Object> c,String decision){if(casoU2(uuid(c.get("id")))&&decision.equals("CIERRE")){head(a,c);if(!"REVISION_TERMINO".equals(c.get("state"))||personaU2(a.id()).equals(personaU2(str(c,"responsible_id"))))throw new FalloTecnico(409,"CIERRE_REQUIERE_PERSONA_INDEPENDIENTE");}String ar=areas.area(c);if(ar!=null&&decision.equals("CIERRE")&&(!areas.jefe(a,c)||areas.persona(a.id(),ar).equals(areas.persona(str(c,"responsible_id"),ar))))throw new FalloTecnico(409,"CIERRE_REQUIERE_PERSONA_INDEPENDIENTE");}
+    private String personaCierre(String actor,String ar){return autoridad==null?areas.persona(actor,ar):autoridad.persona(actor);}
+    private void confirmarIndependiente(Operador a,Map<String,Object> c,String decision){if(casoU2(uuid(c.get("id")))&&decision.equals("CIERRE")){head(a,c);if(!"REVISION_TERMINO".equals(c.get("state"))||personaU2(a.id()).equals(personaU2(str(c,"responsible_id"))))throw new FalloTecnico(409,"CIERRE_REQUIERE_PERSONA_INDEPENDIENTE");}String ar=areas.area(c);if(ar!=null&&decision.equals("CIERRE")&&(!areas.jefe(a,c)||personaCierre(a.id(),ar).equals(personaCierre(str(c,"responsible_id"),ar))))throw new FalloTecnico(409,"CIERRE_REQUIERE_PERSONA_INDEPENDIENTE");}
     String personaU2(String actor){var rows=db.sql.queryForList("SELECT person_id FROM authority_binding WHERE actor_id=? AND batch_revision=(SELECT revision FROM authority_registry WHERE id=1) AND valid_from<=? AND valid_until>?",actor,now(),now());if(rows.size()!=1)throw new FalloTecnico(409,"IDENTIDAD_INSTITUCIONAL_NO_ACREDITADA");return str(rows.getFirst(),"person_id");}
     public Resultado vincular(Operador a,UUID key,UUID child,Vinculacion request){
         actor(a);distributor(a);if(child.equals(request.padre()))throw new FalloTecnico(400);id(request.padre());text(request.motivo(),1000);
