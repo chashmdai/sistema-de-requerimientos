@@ -1,4 +1,4 @@
-# Acceso documental FIR con doble respaldo · 06/11/2026
+# Acceso documental con doble respaldo y consulta aislada · 06/11/2026
 
 ## Resultado y alcance acreditado
 
@@ -8,7 +8,7 @@ Registro firmado explícito1.6, con facultad de Gestión distinta de cierre1.5; 
 
 `ContenidoInstitucional.permisos` conecta el permiso con listados/visores/originales/Range/historial permitido y reevaluación en streaming existentes. No se abre FIR por compartir REQ, Caso, materia o enlace. Nueva protección/área/materia invalida la decisión por revisión/secuencias, incluso al volver al valor previo. Se oculta por igual un documento inexistente y uno fuera del Caso autorizado.
 
-El acceso previo al Caso es precondición de este corte. **No implementa todavía la consulta de un documento aislado por TI sin acceso al expediente**, ni una ficha sectorial completa, nuevas clases de reserva, retención/purga o exportación irrestricta. Esa dependencia es técnica, no falta de validación funcional. Sí permite completar SUB-CONT-01 con antecedentes FIR cuando el revisor tiene consulta legítima del Caso y recibe este respaldo documental independiente.
+El acceso previo al Caso es precondición del corte C1/firma1.6. C2 agrega una consulta aislada explícita1.7 sin cambiar esa precondición ni las firmas anteriores. Ningún corte implementa una ficha sectorial completa, nuevas clases de reserva, retención/purga o exportación irrestricta. Son pendientes técnicos/configurables, no falta de validación funcional. C1 permite completar SUB-CONT-01 con antecedentes FIR cuando el revisor tiene consulta legítima del Caso y recibe respaldo documental independiente.
 
 ## Componentes y persistencia
 
@@ -25,7 +25,7 @@ Las decisiones se serializan con identidad→COM; autorización, persistencia, a
 - Corregido el login de la prueba, sin alterar autenticación/CSRF. Focal posterior **2/2**: recorrido HTTP y nuevo control contra oráculo documental entre Casos. No hubo bypass ni nueva exclusión.
 - **MySQL nativo Windows8.0.46 descartable:32/32**, cero fallos/errores/omisiones: dominio final14 + migraciones18. Incluye FIR→SUB-CONT→cierre EXCEPCIONAL del mismo Caso/REQ, aliases/multirrol, reciprocidad, revocación, suspensión/expiración, retirada/rechazo, manipulación de instrucción, concurrencia/idempotencia, metadatos/contenido/descarga, retiro del equipo y avisos dobles sin envío real. Proceso propio cerrado y ausencia verificada.
 - Frontend **137/137**, lint, TypeScript/Vite aprobados. Focal14/14 antes de la regresión completa. DOM con dobles no acredita navegador físico ni backend real.
-- Regresión integral del nuevo HEAD en CI Windows/Ubuntu pendiente de publicación/comprobación. No se reutilizan518 del padre como si calificaran este código. Se exige inventario JUnit completo y disjunto por OS. Presupuesto, aserciones, transacciones, timeouts y exclusiones históricas intactos.
+- C1/c767ab7: CI42273313757 aprobada, Windows535/526 aprobados/9 omitidos; Ubuntu535/511/24; cero fallos/errores,75 raíces JUnit completas/disjuntas y frontend137/lint/build/package. Seis jobs, logs consultados; no se reutilizan518 del padre. C2 requiere su propio HEAD/CI. Presupuesto, aserciones, transacciones, timeouts y exclusiones históricas intactos.
 
 Evidencia privada: campaña `siger-build-4c652bfd9b7a41d5a8e0d659e180202d`, logs `reservas-*`; MySQL `siger-autoridad-mysql-5662a875d9f5491ba6fc0b44eadefca3`/tests.log, Maven03:42. H2/MockMvc, MySQL, DOM y guion manual se distinguen; no se ejecutaron workers/E2E físicos ni envíos reales. No se considera la recepción técnica como revisión humana.
 
@@ -50,4 +50,30 @@ Rama C `codex/siger-reservas-documentales`, dependiente de #9; matriz138 mantien
 
 ## Siguiente capacidad
 
-Consulta documental aislada con doble respaldo, sin conceder expediente a TI u otra cuenta: requiere ámbito firmado explícito nuevo y ruta documental dedicada con los mismos controles de bytes/Range/revocación. Después, bitácora común con fecha efectiva/registro y rectificaciones inmutables para Caso y REQ sin Caso, territorio/conciliación y plazos/reportes. Son tareas de implementación y parámetros, no nuevas preguntas institucionales.
+C2 implementa la consulta aislada descrita a continuación. Se continúa con bitácora común, fecha efectiva/registro y rectificaciones inmutables para Caso y REQ sin Caso; después territorio/conciliación y plazos/reportes. Son tareas de implementación y parámetros, no nuevas preguntas institucionales.
+
+## C2: consulta aislada sin expediente
+
+Registro firmado1.7 con autorizantesDocumentoAislado separados de1.6; V15.15 nueva e idéntica H2/MySQL. Modo SOLO_DOCUMENTO con discriminador sellado, ruta/acción nuevas y preservación del DTO/hash/reintentos CASO_DOCUMENTO. La clasificación acreditada ORDINARIO o FIR admite propuesta de jefatura y aprobación independiente de Gestión. Original ciudadano no puede ser FIR: el test mantiene ese control y usa ORDINARIO con facultad1.7. No abre SIN_CLASIFICAR/BLOQUEADO, otro documento, COM, Caso, listas, equipo, bitácora o rutas documentales normales. Las personas canónicas y la cuenta nominal exacta se revalidan; alias no heredan el acceso. Se distinguen la unidad propietaria y la competencia funcional de materia mediante configuración explícita1.7, sin reinterpretar firmas anteriores.
+
+DocumentoReservadoController reutiliza custodia, visor y TransferenciaDocumento. DTO mínimo sin expediente/ruta privada; páginas y metadatos independientes de descarga; original/medios exigen permiso de descarga. Revalida antes de cabeceras y cada64KiB, incluyendo relación actual, política/secuencias, jefatura y Gestión. Revocar durante streaming impide el siguiente bloque. Range/HEAD/integridad/no-store conservados. React conectado a propuesta por ámbito, resolución de destinatario exacto auditada, bandeja con Caso oculto al beneficiario aislado y consulta dedicada. No hay nuevos roles ni servicios operativos.
+
+### Evidencia C2, cortes separados
+
+- H2 inicial2/2. Selección ampliada48:47 aprobadas/1fallo HTTP por código de auditoría superior a32 caracteres. Se corrigió el código, sin ensanchar la columna, omitir auditoría o debilitar aserciones.
+- Siguiente selección5: HTTP3/3 y actualización de concesión anterior1/1; un error de fixture de materia sin facultad regional legítima. Se completó el circuito real U1.5 para esa cuenta. Otro intento detectó revisión de protección obsoleta; el fixture consulta la revisión actual. Focal final de materia1/1. Estos intentos fallidos se conservan.
+- Cuarto HTTP de original ciudadano1.1: primer fixture rechazado correctamente por fechas distintas entre firma/prueba; segundo rechazado por intentar FIR sobre original ciudadano. Se corrigieron los datos sintéticos y se conservó la prohibición. Recorrido final ciudadano+ordinario2/2: firma Ed25519/recibo/original intactos, ACK pendiente, ingesta sin REQ, nacimiento real por SOL/asunción/CAS y descarga aislada sin COM legible. No se llamó ACK ni Formulario real.
+- HTTP usa login/CSRF reales de prueba, archivos sintéticos privados, Range206/HEAD/416, visor PNG y revocación tras65536 de200000 bytes. Antivirus/inspector son dobles: no E2E físico.
+- **MySQL nativo Windows8.0.46 descartable47/47**, cero fallos/errores/omisiones; dominio aislado12, compatibilidad de concesión anterior1, dominio C1 14 y migraciones20. Incluye15 rutas V14/V15.1…V15.14→15.15 y cinco comparaciones de DDL. Concesión creada realmente en15.14 conserva campos, hash, comando y firma al actualizar. Maven08:12; instancia privada70be9ec7705d49e8aa320e3f4c2a73e7 cerrada, ausencia de proceso propio verificada.
+- **Frontend146/146**, lint, TypeScript/Vite aprobados. Primer DOM22 tuvo21 aprobados/1consulta accesible de fixture demasiado exacta; corregida la consulta,22/22 y luego regresión completa. No se presenta DOM como navegador físico.
+- CI integral del HEAD C2 pendiente al escribir este corte;535/137 del C1 acredita exclusivamente c767ab7. La calificación final exigirá ambos OS y agregación del inventario completo, sin exclusiones nuevas.
+
+Logs privados documento-aislado-* en la campaña ya identificada; native tests.log bajo siger-autoridad-mysql-70be9ec7705d49e8aa320e3f4c2a73e7. No contienen evidencia operativa nueva ni se publican secretos. V15.14 permanece intacta; V15.15 añade únicamente modo/default/CHECK. Guion de aceptación preparado, todavía no ejecutado.
+
+### Extensión del guion manual por roles
+
+1. Configurar registro1.7 sintético con jefatura, Gestión y beneficiario de personas distintas y facultad exacta, concediendo perfiles por U1.5. Beneficiario sin lectura del Caso, alias sin concesión propia.
+2. Proteger un documento interno FIR y otro ORDINARIO. Desde Protección elegir Solo documento, resolver usuario exacto, indicar fechas/permisos/fundamento y proponer. Antes de aprobar no hay enlace utilizable. Gestión recibe instrucción mínima y no contenido.
+3. Aprobar de otra persona. Beneficiario consulta únicamente el documento desde Accesos reservados; no se expone Caso ni COM. Intentar Caso/hermano/ruta documental normal y cuenta alias: denegados. Probar metadatos sin contenido, contenido sin descarga y descarga expresa como decisiones separadas.
+4. Revocar/suspender/expirar y comprobar con la misma sesión. Cambiar área/materia/política o relación documental: permiso anterior deja de servir. Comprobar historial y notificaciones mínimas sin transportar correo real.
+5. En instalación nueva15.14 crear permiso Caso+FIR y conservar sus huellas; actualizar a15.15. Reintento antiguo y acceso previo conservan su semántica; la nueva ruta aislada no acepta esa concesión.

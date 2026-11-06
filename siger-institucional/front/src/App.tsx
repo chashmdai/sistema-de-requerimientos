@@ -12,6 +12,7 @@ import {Concesiones} from './Concesiones';
 import {Subrogancias} from './Subrogancias';
 import {RevisionesExcepcionales} from './RevisionExcepcional';
 import {AccesosReservados} from './AccesosReservados';
+import {DocumentoReservado} from './DocumentoReservado';
 import {Campana,Notificaciones,MisTareas} from './TareasNotificaciones';
 import {Solicitudes} from './Solicitudes';
 import {VinculoReqU2,AsumirIngresoPropioU2,BandejaU2,SolU2,RequerimientoU2,EncaminarU2,PrimeraAtencionU2} from './NucleoU2';
@@ -38,6 +39,7 @@ export default function App() {
  {section === 'notificaciones' && session?.notificacionesHabilitadas && <Notificaciones actor={actor}/>}
  {section === 'tareas' && session?.notificacionesHabilitadas && <MisTareas actor={actor} id={id}/>}
  {section === 'solicitudes' && session?.solicitudesHabilitadas && <Solicitudes key={id??'lista'} id={id} catalog={catalog}/>}
+ {section === 'documento-reservado' && id && <DocumentoReservado id={id} version={version}/>}
  {section === 'accesos-reservados' && <AccesosReservados run={run} busy={busy} version={version} id={id}/>}
  {section === 'revisiones-excepcionales' && <RevisionesExcepcionales actor={actor} run={run} busy={busy} version={version} id={id}/>}
  {section === 'subrogancias' && <Subrogancias actorId={actor.id} run={run} busy={busy} version={version}/>}

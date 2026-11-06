@@ -1,6 +1,6 @@
-# Acceso documental reservado · contrato 1.0
+# Acceso documental reservado · contrato 1.1
 
-Estado: desarrollo C en calificación. Requisitos funcionales confirmados el06/11/2026; la calificación técnica se acredita por separado. Fuente: rector §§05.5–05.6,13.5,15–16, ACC-05/09/10 y SUB-CONT-01.
+Estado: C1 acreditado por CI Windows/Ubuntu; ampliación C2 acreditada en pruebas focalizadas H2/MockMvc, MySQL aislado y DOM, pendiente de su CI propia. Requisitos funcionales confirmados el06/11/2026; la calificación técnica se acredita por separado. Fuente: rector §§05.5–05.6,13.5,15–16, ACC-05/09/10 y SUB-CONT-01. Los apartados de contrato firmado1.6 y consulta del Caso describen el alcance conservado de1.0; la ampliación1.1 tiene un contrato firmado1.7 explícito.
 
 ## Dos respaldos institucionales
 
@@ -43,3 +43,26 @@ Eventos mínimos por propuesta/decisión/expiración en SIGER y outbox de correo
 ## Límites explícitos
 
 Se habilita la excepción documental FIR necesaria para que SUB-CONT-01 pueda revisar un Caso con esos antecedentes, previa concesión independiente. No se crea una nueva clase de reserva, una ficha sectorial completa, una regla de retención/purga o una facultad de consulta transversal de auditoría/TI. Tipos/catálogos adicionales y documentación estructurada siguen como implementación/configuración técnica; no falta una nueva validación del levantamiento. Originales, firmas, contratos de transporte y COMMIT→ACK permanecen intactos.
+
+## Ampliación explícita: solo documento, firma1.7
+
+Registro1.7 añade `autorizantesDocumentoAislado`, independiente de `autorizantesReserva`. Mantiene los campos y facultades anteriores. Cada facultad especifica persona, unidad, sede, área y materia exactas, vigencia, referencia, hash y estado. La materia es una competencia funcional y no equivale a la unidad propietaria del Caso:1.7 permite acreditar expresamente esa combinación, sin cambiar la interpretación de1.0–1.6. Nulos no son comodines. Una firma1.6 que incluya el campo nuevo se rechaza. La instalación con facultades nuevas exige V15.15.
+
+El modo `CASO_DOCUMENTO` conserva la precondición de consulta del Caso, los comandos, el DTO y la huella anteriores. El nuevo `SOLO_DOCUMENTO` exige la facultad1.7, propuesta de jefatura y aprobación independiente de Gestión, con las mismas restricciones de personas canónicas, reciprocidad, ámbito, credencial, período, revocación e historial. Su sello añade un discriminador1.7; cambiar el modo en persistencia invalida la instrucción. No se reinterpreta una aprobación anterior ni se amplía su ámbito silenciosamente.
+
+`SOLO_DOCUMENTO` admite documentos clasificados como ORDINARIO o FIR por la jefatura competente; SIN_CLASIFICAR y BLOQUEADO siguen cerrados. FIR sigue limitada a documentación interna: un original ciudadano conserva su origen/clasificación y no se convierte en FIR para usar esta excepción. Compartir Caso/REQ/materia no abre el documento. El nuevo permiso tampoco habilita las rutas documentales ordinarias del Caso.
+
+La cuenta beneficiaria exacta puede consultar ese documento sin recibir el Caso, COM, equipo, bitácora o documentos hermanos. TI no tiene ninguna facultad por defecto; también necesita esta decisión nominal vigente. Su cuenta alternativa no hereda el permiso. Gestión recibe la instrucción mínima, nunca el contenido por el solo hecho de aprobarla. El destinatario solo se resuelve por usuario exacto desde una jefatura autorizada, con auditoría; no se publica un directorio institucional.
+
+## Rutas e interfaz de documento aislado
+
+- GET/POST `/nucleo/casos/{cas}/proteccion-documental/{doc}/acceso-reservado/solo-documento`: contexto y propuesta explícita1.7.
+- GET `/nucleo/casos/{cas}/proteccion-documental/{doc}/destinatario-aislado?usuario=...`: resolución exacta para la jefatura.
+- GET `/nucleo/accesos-reservados/{id}/documento`: DTO mínimo de nombre, tipo, tamaño, hash, representación y permisos; no incluye Caso/COM/ruta privada.
+- GET `/vista`, GET/HEAD `/paginas/{n}`, `/original` y `/representacion` bajo esa misma base: transporte documental existente, sin copiar originales. Original/representación de medios requieren descarga; páginas requieren consulta.
+
+Antes de entregar metadatos/cabeceras y en cada bloque de64KiB se comprueban sesión/identidad, instrucción, fecha, respaldos, política, secuencias y relación documental actual. Si se revoca durante una transferencia, no se entrega el siguiente bloque. Range/HEAD, integridad, custodia privada, CSP y no-store mantienen sus controles. Se distingue permiso para metadatos, contenido y descarga. Denegaciones documentales se presentan uniformemente como404, sin revelar el expediente asociado.
+
+La bandeja omite el identificador del Caso al beneficiario aislado sin facultad sobre él. Solo ofrece el enlace cuando el backend acredita el permiso efectivo. La página de consulta usa exclusivamente la ruta concedida; errores/cambios de autorización descartan la vista anterior. La protección ORDINARIO/FIR permite elegir expresamente el ámbito; ORDINARIO no ofrece el modo1.6 reservado a FIR. No hay controles ficticios ni acceso inferido desde el rol del navegador.
+
+V15.15 es aditiva y añade `scope_mode` con default CASO_DOCUMENTO y CHECK de los dos modos. Las constancias anteriores conservan campos, huellas, firmas, comandos y alcance; se prueba una concesión real creada en V15.14 antes de actualizar. No hay backfill institucional ni migración sobre datos preservados.
