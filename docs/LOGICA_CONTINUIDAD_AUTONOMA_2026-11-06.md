@@ -8,7 +8,7 @@ Worktree exclusivo C:\req\worktrees\siger-logica. Mantener identidad, autorizaci
 
 ## Git y evidencia publicada
 
-Rama actual codex/siger-subrogancias, base cdb176f2ea81ef66727c2077cbf271fdb05fa9e1. El commit de implementación conserva este checkpoint; consultar git log -1 para su SHA. Conservar todos los cambios locales de subrogancias: no reconstruir A/colaboraciones. Todavía sin PR/upstream propio; crear PR dependiente de #7 tras calificación.
+Rama actual codex/siger-subrogancias, base cdb176f2ea81ef66727c2077cbf271fdb05fa9e1. El commit de implementación conserva este checkpoint; consultar git log -1 para su SHA. Conservar todos los cambios locales de subrogancias: no reconstruir A/colaboraciones. Todavía sin PR/upstream propio; publicar PR dependiente de #7 tras la regresión integral.
 
 Cadena preservada: main → #2 → #3 → #4 → #5 → #6 → #7. Main remoto verificado95cf2ae; referencia U4.5 sin nuevas migraciones concurrentes observadas; no se modifica su directorio. Revisar refs antes de publicar.
 
@@ -35,10 +35,10 @@ Contrato funciones-subrogancias-institucionales-v1.md e informe LOGICA_SUBROGANC
 
 Evidencia privada: LOCALAPPDATA/siger-build-4c652bfd9b7a41d5a8e0d659e180202d, logs subrogancias-*. Java25 explícito/Node24/Build-Siger.ps1 aislado; no Maven concurrente sobre target.
 
-1. MySQL en calificación: selección completa99 tuvo86 aprobados y13 bloqueados por guarda del nuevo esquema; corregida únicamente para el sufijo descartable subrog. Segundo intento ejecutó1/13 y falló12 por cuentas sintéticas no limpiadas entre métodos; se completó limpieza exclusiva del esquema validado. Intento final13 EN CURSO, sesión57962, log subrogancias-mysql-cierre.log. Auxiliar conserva datadir GUID privado y detiene solo su proceso. Comprobar resultado y ausencia del proceso propio. No declarar motor aprobado antes del resultado. No mostrar client.cnf/init.sql/credenciales.
+1. MySQL en calificación: selección completa99 tuvo86 aprobados y13 bloqueados por guarda del nuevo esquema; corregida únicamente para el sufijo descartable subrog. Segundo intento ejecutó1/13 y falló12 por cuentas sintéticas no limpiadas entre métodos; se completó limpieza exclusiva del esquema validado. FINAL13/13 aprobado, log subrogancias-mysql-cierre.log, MySQL nativo8.0.46 aislado; datadir3351309216154cec8181bb1a2ecde0f5 y proceso propio ausente verificado. Otros86 métodos de la selección previa aprobados; no sumar como una única ejecución verde. Auxiliar conserva datadir GUID privado y detiene solo su proceso. Comprobar resultado y ausencia del proceso propio. No declarar motor aprobado antes del resultado. No mostrar client.cnf/init.sql/credenciales.
 2. H2 primera6/6. Selección47 tuvo dos fallos de continuidad por mapa copiado que perdía lectura de columnas; corregido, continuidad posterior17/17. Selección28 tuvo dos fixtures sin fundamento territorial regional: completados sin eliminar gate. Intento4 falló compilación por argumento opcional faltante, sin tests. Intento5: migración14 y HTTP1 aprobadas, dominio13 con una expectativa403 frente a404 protegido; corregida, autocierre final focal1/1 aprobado. Intentos fallidos conservados.
 3. Frontend completo129/129. Selección previa13/13; lint/build aprobados antes de los dos últimos DOM/export del componente, se cubren de nuevo en integral. H2/MockMvc/DOM/MySQL no son E2E físico.
-4. Tras MySQL: corregir si corresponde, ejecutar Build-Siger integral una vez, actualizar resultados/matriz/informe, revisar diff/secreto/refs y confirmar bloques coherentes. Push normal, PR en borrador base codex/siger-continuidad-funcional. CI Windows/Ubuntu del HEAD publicado y logs comprobados; no reutilizar padres ni alterar exclusiones/timeouts por rutina.
+4. MySQL focal final aprobado. Ejecutar Build-Siger integral una vez, actualizar resultados/matriz/informe, revisar diff/secreto/refs y confirmar bloques coherentes. Push normal, PR en borrador base codex/siger-continuidad-funcional. CI Windows/Ubuntu del HEAD publicado y logs comprobados; no reutilizar padres ni alterar exclusiones/timeouts por rutina.
 5. No detenerse al aprobar: rama dependiente limpia para SUB-CONT-01 por Caso, con autoridad configurable, revisor nominal independiente, acceso a antecedentes/reservas, vigencia/revocación, revisión actual y obligatorias. No dar jefatura global para sustituir ese circuito. Continuar C/D/E en cortes verificables.
 
 ## Pendientes técnicos y parámetros
@@ -46,4 +46,5 @@ Evidencia privada: LOCALAPPDATA/siger-build-4c652bfd9b7a41d5a8e0d659e180202d, lo
 SUB-CONT-01 y cierres excepcionales específicos; territorio acreditado y conciliación explícita/reversible; antecedentes/documentación adicional REQ, FIR/bitácoras/reservas; plazos/calendarios, búsqueda/reportes/exportaciones y demostración física. Son implementación o valores concretos no cargados, no falta de validación funcional. No declarar terminadas138 reglas ni U1–U9.
 
 Rector SHA80a8f09424d105eabb755a79e9523ac58fb55c731647cbbb57c3a1a357d5eed4 verificado. Cuestionario27 no encontrado localmente; rector suficiente para este circuito. Investigar y avanzar sin preguntas ordinarias.
+
 
