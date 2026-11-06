@@ -26,6 +26,7 @@ public final class NucleoInstitucional {
     public cl.nexbyte.siger.institucional.notificaciones.TareasPersonales tareas(){return new cl.nexbyte.siger.institucional.notificaciones.TareasPersonales(db,new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(db,catalogo,this),mapper,clock);}
     public ContinuidadU2 continuidad(){return new ContinuidadU2(db,this,catalogo,clock,mapper);}
     public RevisionExcepcional revisionesExcepcionales(){return new RevisionExcepcional(db,this,catalogo,autoridad,clock,mapper);}
+    public AccesoReservado accesosReservados(){return new AccesoReservado(db,this,catalogo,autoridad,clock,mapper);}
     public boolean avisoSubrogancia(String actor,UUID id){return autoridad!=null&&autoridad.subrogancias().autorizarAviso(actor,id);}
     void jefaturaOrigen(Operador a,Map<String,Object> contexto,long emitida){
         String ar=areas.area(contexto);
