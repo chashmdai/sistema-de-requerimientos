@@ -51,6 +51,7 @@ public final class ContinuidadU2 {
         UUID acceptedDestination=null;Long acceptedAuthority=null;
         if("ACEPTADA".equals(r.decision())){
             flow.abierto(q);if(!Objects.equals(p.get("origin_destination"),q.get("principal_destination")))throw new FalloTecnico(409,"SOLICITUD_OBSOLETA");flow.jefatura(vigente(s(p,"requested_by")),q);independiente(a,s(p,"requested_by"));var target=flow.destino(p,a.id());flow.ambito(target);UUID dest=flow.crearDestino(com,target,a);acceptedDestination=dest;acceptedAuthority=db.sql.queryForObject("SELECT revision FROM authority_registry WHERE id=1",Long.class);
+            if(db.sql.queryForObject("SELECT COUNT(*) FROM institution_req_attention WHERE requirement_id=?",Long.class,id(req))==0)db.sql.update("INSERT INTO institution_req_attention VALUES(?,?,?,?,?,?)",id(req),q.get("attention_actor"),q.get("unit_code"),q.get("site_id"),q.get("area_id"),id(proposal));
             db.sql.update("UPDATE institution_req SET principal_destination=?,unit_code=?,site_id=?,area_id=? WHERE requirement_id=?",id(dest),target.unidad(),target.sede(),target.area(),id(req));
             flow.historia(com,req,"REQ",n(q,"revision")+1,a,"REQ_PRINCIPAL_TRANSFERIDO",r.fundamento(),Map.of("solicitud",id(proposal),"principalAnterior",q.get("principal_destination"),"principalNuevo",id(dest)));
         }
@@ -59,7 +60,7 @@ public final class ContinuidadU2 {
 
     public Resultado derivar(Operador a,UUID key,UUID origin,Derivar r){if(r==null)throw new FalloTecnico(400);return core.execute(key,a,"U2_DERIVAR_CASO",List.of(origin,r),()->{
         flow.guard(a);var c=caso(a,origin);UUID com=uuid(c.get("communication_id"));core.lock(com);c=caso(a,origin);core.head(a,c);version(c,r.revision());flow.abierto(flow.req(uuid(c.get("requirement_id"))));if(!"EN_GESTION".equals(c.get("state"))||derivacionPendiente(origin))throw new FalloTecnico(409);
-        flow.ambito(r.destino());var context=new HashMap<>(c);context.put("area_id",areas.area(c));distinto(context,r.destino());texto(r.fundamento());texto(r.resumen());texto(r.objetivo());UUID p=UUID.randomUUID();
+        flow.ambito(r.destino());var context=new HashMap<String,Object>();context.put("unit_code",c.get("unit_code"));context.put("site_id",c.get("site_id"));context.put("area_id",areas.area(c));distinto(context,r.destino());texto(r.fundamento());texto(r.resumen());texto(r.objetivo());UUID p=UUID.randomUUID();
         db.sql.update("INSERT INTO institution_case_derivation(id,origin_case_id,requirement_id,origin_destination,origin_area,origin_responsible,unit_code,site_id,area_id,reason_text,summary_text,objective_text,state,revision,requested_by,created_ms,successor_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'PENDIENTE',0,?,?,NULL)",id(p),id(origin),c.get("requirement_id"),c.get("destination_id"),areas.area(c),c.get("responsible_id"),r.destino().unidad(),r.destino().sede(),r.destino().area(),r.fundamento(),r.resumen(),r.objetivo(),a.id(),clock.millis());
         db.sql.update("UPDATE institution_case_derivation SET matter_id=? WHERE id=?",materia(origin),id(p));
         historia(com,p,"DERIVACION",0,a,"DERIVACION_INSTITUCIONAL_SOLICITADA",r.fundamento(),r.destino());return new Resultado(p,0);

@@ -4,7 +4,7 @@ Guion preparado para una sesión posterior de navegador. **No se ha ejecutado co
 
 ## Preparación y datos sintéticos
 
-El operador registra URL privada, HEAD candidato, nombre/UUID de la base descartable, custodia nueva, responsables de preparación y fecha. Verifica migraciones hasta V15.8, proveedores/consumidor reales deshabilitados y ningún proceso/puerto/base compartido. La URL, contraseñas, claves y respaldos privados no se escriben en este guion ni en Git.
+El operador registra URL privada, HEAD candidato, nombre/UUID de la base descartable, custodia nueva, responsables de preparación y fecha. Verifica migraciones hasta V15.9, proveedores/consumidor reales deshabilitados y ningún proceso/puerto/base compartido. La URL, contraseñas, claves y respaldos privados no se escriben en este guion ni en Git.
 
 Preparar estas identidades **mediante cuentas individuales, cambio de clave temporal y el circuito solicitud → aprobación institucional independiente → ejecución TI**. Los nombres son sintéticos; no representan nombramientos reales. Los catálogos/mandatos de prueba se firman con una clave exclusiva del entorno, con huellas reales de las credenciales de esas cuentas, vigencias que cubran la sesión y las mismas estructuras versionadas de autoridad existentes. No insertar grants por SQL ni usar identidades `demo.*` heredadas como sustituto de aprobaciones. Si falta la acreditación firmada, detener la preparación; no abrir permisos.
 
@@ -39,6 +39,7 @@ La aplicación asigna UUID/folios; **no usar valores predeterminados**. Mantener
 4. Antes de aceptar, J_D ve solo el paquete en la bandeja institucional. Intentar abrir directamente un Caso AREA_A: acceso denegado. J_A sigue principal y no puede cerrar el REQ mientras hay intervención/decisión pendiente.
 5. J_D acepta principal. Verificar mismo REQ, COM y folio, principal UPD, dos Casos aún AREA_A/P_A, misma tarea/ejecutor/fechas, sin TAR-09 ni actuación copiada. J_D ve estados mínimos; abrir esos Casos/documentos sigue denegado. J_A conserva su competencia sobre los Casos y pierde la facultad principal del REQ.
 6. Repetir con otro ingreso: rechazar o retirar fundadamente antes de aceptar conserva principal y no crea Casos. Dos pestañas con aceptar/retirar sobre la misma revisión: solo una decisión prospera; la otra informa versión/estado vigente.
+7. Variante sin abrir Caso: transferir principal del REQ y comprobar que P_A conserva la atención en su ámbito original, mostrado separadamente en pantalla. Puede registrar atención y cierre explícito sin Caso; no adquiere gestión de AREA_B/UPD. Revocar la concesión original elimina su acceso a ese REQ aun si tiene otro rol en el destino. Una transferencia no sustituye la asignación profesional.
 
 ## B. Derivación con sucesor y cierre posterior
 
@@ -63,7 +64,7 @@ La aplicación asigna UUID/folios; **no usar valores predeterminados**. Mantener
 1. AREA_A y AREA_B: repetir detalle, búsquedas, bandejas/conteos, documentos, antecedentes y avisos desde P_B/J_B sin concesión al origen. Conocer UUID, compartir REQ o leer MAT_UPR no amplía permiso.
 2. J_A solicita transferencia a AREA_B; `acep.alias.a` intenta aceptar. Debe rechazarse por misma persona, aunque sean cuentas y roles distintos. J_B independiente sí puede decidir si sigue vigente.
 3. Autoridad revoca la concesión del solicitante/destino o deja expirar su vigencia. La sesión obsoleta pierde facultades; una aceptación no puede aprovechar la solicitud antigua para eludir revocación. TI no puede reponer el permiso sin aprobación independiente.
-4. Cambiar área/materia/responsable durante una derivación vuelve obsoleta su aceptación. Retirar/rechazar y formular una nueva decisión, sin borrar la anterior. Una actuación ordinaria del origen no es por sí sola un cambio de responsabilidad.
+4. Intentar cambiar área/materia/responsable durante una derivación: el circuito impide el cambio incompatible pendiente o exige resolver una solicitud obsoleta antes de aceptar. Retirar/rechazar y formular nueva decisión, sin borrar la anterior. Una actuación ordinaria del origen no es por sí sola un cambio de responsabilidad.
 5. Reasignar un Caso U2 con tarea no terminal: operación bloqueada por evolución TAR-09 pendiente. No modificar creador para forzarla ni marcar tarea cumplida ficticiamente. Sin tareas no terminales, reasignar crea una asignación y acuse nuevos; el anterior sigue visible.
 6. Recursos históricos sin principal/área acreditados: conservar evidencia y bloqueo de conciliación. No se usa primer Caso como principal, cobertura técnica como competencia territorial ni roles ordinarios como FIR/extraordinaria.
 

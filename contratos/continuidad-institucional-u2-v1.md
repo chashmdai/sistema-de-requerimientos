@@ -20,6 +20,8 @@ Prefijo `/nucleo/institucional/continuidad`. Sesión individual actual, CSRF par
 
 Decisiones terminales no se convierten retrospectivamente en retiradas. Rechazos y retiradas conservan historia. Una solicitud obsoleta puede rechazarse/retirarse y sustituirse mediante nueva decisión; no se borran filas. No se acreditan excepciones de autocierre, árbitros universales o facultades nominales.
 
+La atención profesional del REQ tiene ámbito propio. La primera transferencia conserva explícitamente la persona y contexto de atención ya asignados, sin reasignarlos al cambiar principal. El profesional puede seguir atendiendo un REQ sin Caso mientras conserve facultad en ese contexto original; no recibe permisos en el destino. Revocar su facultad original deniega detalle, listado, búsqueda y escritura, incluso si posee otro rol en el destino. Esta conservación nace del acto de transferencia, sin backfill de registros históricos.
+
 ## Lectura y documentos
 
 `GET` del prefijo devuelve paquetes de evaluación del ámbito de origen/destino, con historia de decisiones y bandera `puedeDecidirDestino`. Incluyen identificadores, motivo, materia informada y resumen expresamente escrito; no actuaciones, FIR, originales ni documentos automáticos. Cada lectura revalida ámbito actual, incluso para avisos y conteos. Conocer un UUID o compartir REQ no autoriza el recurso.
@@ -30,7 +32,7 @@ Los avisos internos usan la proyección recuperable existente; no contienen resu
 
 ## Persistencia y compatibilidad
 
-V15.8 añade solicitudes de transferencia y derivación, respaldo de reapertura/reactivación, cierres por revisión y acuses por asignación. Sin cambios de V1–V15.7, backfill, borrado, `outOfOrder` ni semillas nominales. Los datos de cierre previos permanecen; cada cierre nuevo U2 registra su instantánea. Una reapertura crea `core_management_period` reutilizando `core_reopen` como decisión, diferenciada por `institution_reopen`.
+V15.8 añade solicitudes de transferencia y derivación, respaldo de reapertura/reactivación, cierres por revisión y acuses por asignación. Sin cambios de V1–V15.7, backfill, borrado, `outOfOrder` ni semillas nominales. Los datos de cierre previos permanecen; cada cierre nuevo U2 registra su instantánea. Una reapertura crea `core_management_period` reutilizando `core_reopen` como decisión, diferenciada por `institution_reopen`. V15.9 añade el ámbito de atención conservado por transferencia, manteniendo V15.8 idéntica al primer commit probado.
 
 Asignaciones U2 previas a V15.8 no reciben acuses ni una asignación vigente inferida. La jefatura puede confirmar explícitamente la asignación mediante la operación existente; el acuse nuevo se asocia al acto nuevo. Los flujos históricos se conservan para evidencia; sus rutas incompatibles no ejecutan derivación o reapertura sobre nuevos agregados U2.
 
