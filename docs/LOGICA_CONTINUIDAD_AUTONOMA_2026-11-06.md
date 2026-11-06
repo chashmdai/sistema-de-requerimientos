@@ -2,32 +2,41 @@
 
 ## Instrucción vigente
 
-[Validación funcional confirmada](DECISION_VALIDACION_FUNCIONAL_2026-11-06.md): no reabrir aprobaciones funcionales ya confirmadas. Separar mecanismos pendientes de implementación de parámetros nominales aún no cargados y de habilitación operativa.
+La validación funcional fue confirmada por el responsable del proyecto el 06/11/2026. Ver DECISION_VALIDACION_FUNCIONAL_2026-11-06.md. Las 138 reglas conservan sus IDs/orden y registran esa decisión. No pedir nuevamente validación del levantamiento. Mantener identidad, aprobación independiente, ámbito, vigencia y segregación. Parámetros nominales reales ausentes se configuran; no se inventan. Validación funcional no autoriza despliegues.
 
 ## Git y dependencias
 
-Worktree exclusivo `C:\req\worktrees\siger-logica`. Rama `codex/siger-equipos-agenda`, creada desde PR #5/HEAD `ef4d378a4c5afb9e23d56b0d4fa93a1b7c2aade5`. Cadena PR #2→#3→#4→#5; siguiente PR en borrador tendrá base `feature/siger-u2-continuidad-institucional`. Sin merge/despliegue. HEAD y cambios pendientes se verifican con `git status`, `git log` y `git diff`; este archivo no intenta autocitar su propio SHA.
+Worktree exclusivo C:\req\worktrees\siger-logica. Rama codex/siger-equipos-agenda, base ef4d378a4c5afb9e23d56b0d4fa93a1b7c2aade5 (PR #5). Cadena PR #2→#3→#4→#5→nuevo PR de equipos/agenda, base feature/siger-u2-continuidad-institucional. Código principal confirmado en 06cc2ec; commit de cierre documental/UI contiene esta versión del checkpoint. Consultar git log -1 para su SHA; no autocitar su propio hash. Sin merge/despliegue.
 
-## Estado al iniciar
+Commits previos de esta campaña: 41c502d (validación funcional/matriz/checkpoint), 0985802 (checkpoint recuperable), 06cc2ec (equipo, agenda, V15.10, TAR-09, espera y pruebas). Padres/main/U4.5 conservados.
 
-U0–U1 y núcleo/continuidad U2 acreditados, sin reconstruirlos. PR #5: CI Windows/Ubuntu 454 métodos, frontend 109; H2 focal 51 y MySQL descartable 54. Son evidencia del corte anterior, no de código nuevo.
+## Capacidades desarrolladas y focalmente acreditadas
 
-Bloque A en implementación: equipo local, agenda compartida del Caso, obligatoriedad, intentos, TAR-09, retiro con resolución de pendientes y espera de antecedentes. Migración conocida última V15.9; se inspeccionaron main y referencias publicadas y no hay versión posterior publicada observada ni referencia remota U4.5. No se accede a su worktree ni a SMR/QA.
+Equipo local del Caso con facultad vigente de área, principal y colaboradores; retiro con resolución transaccional de pendientes; historia y revocación efectiva. Contenido ordinario autorizado sin acceso automático a COM raíz, otros Casos, FIR, documentos históricos sin acreditar o documentos ajenos sin clasificar. Alias de la misma persona no hereda pertenencia.
+
+Agenda compartida V12/V13: ejecutor único, creador/asignador, campos opcionales, obligatoriedad, intentos, reprogramación, cancelación fundada y cumplimiento manual. TAR-09 transfiere todas las no terminales (también de colaboradores), conserva autor/fechas/ventanas/intentos, no duplica tareas y actualiza recordatorios. Acuse manual separado. Cierre comprueba obligatorias y revisión actual, conservando modalidad DERIVACION después de cambios de agenda. Pos cierre no admite alta/intentos nuevos; ordinarias previas se regularizan sin reabrir o fabricar actuaciones.
+
+Espera fundada con decisión de jefatura y reanudación expresa, sin suspender responsabilidades/relojes. Indicador y filtro EN_ESPERA con ámbito en listados/conteos/detalles. Interfaz real Equipo y agenda, historia visible y avisos internos recuperables sin correos reales.
+
+## Persistencia y pruebas
+
+V15.10 Java por dialecto H2/MySQL, DDL común/checksum explícito; sustituye exclusivamente CHECK personal histórico en CASO. Sin editar V1–V15.9, outOfOrder, backfill o datos nominales. Java 25 explícito, Node 24, Build-Siger aislado.
+
+- H2 selección 43/43 intermedia. Integral local posterior: 474 métodos, 463 aprobados, dos fallos de expectativas HTTP históricas, nueve omitidos, cero errores; NO se presenta como verde.
+- Selección final ampliada: 63 métodos, 62 aprobados y una negativa que llegó primero al bloqueo de clave temporal. Se completó el cambio real de clave del nuevo fixture; HTTP final 8/8. Agenda 16/16, documentos finales 3/3, equipo HTTP/migración y continuidad/áreas/tareas aprobados en las selecciones correspondientes. No sumar solapamientos como métodos únicos.
+- Frontend final 119/119, lint y build TypeScript/Vite correctos. Se corrigieron dos tipos opcionales de pruebas/historia sin relajar aserciones.
+- MySQL nativo Windows 8.0.46 descartable FINAL 73/73, cero fallos/errores/omisiones; incluye V14/V15.1…V15.9→V15.10, conservación histórica, agenda 16 y rollback/concurrencia/espera/derivación. Proceso propio cerrado y ausencia verificada. Cortes 9/9 y 69/69 conservados.
+- Un intento MySQL no ejecutó tests por error de compilación al extraer un auxiliar de fixture; corregido antes de la ejecución final. Logs preservados.
+- CI Windows/Ubuntu del HEAD publicado: verificar/registrar en acta del PR. No reutilizar PR #5 ni éxitos de otro SHA. Presupuesto 30 minutos y exclusiones/omisiones históricas intactos.
+
+Evidencia privada: siger-build-4c652bfd9b7a41d5a8e0d659e180202d y MySQL final siger-autoridad-mysql-cb2111e6377f4bb891d6a224bc74af4b bajo LOCALAPPDATA. Informe LOGICA_EQUIPO_AGENDA_2026-11-06.md identifica intentos, pruebas y límites. H2/MockMvc/DOM/MySQL no son E2E físico; AV/renderer con dobles declarados. Guion de navegador preparado, no ejecutado.
 
 ## Siguiente acción precisa
 
-Implementar evolución aditiva de agenda V12/V13 y equipo; reutilizar autorización del núcleo, cerrojos identidad/COM y proyección durable existente. Ejecutar focales durante desarrollo, después MySQL nuevo/descartable y regresión integral/CI del HEAD publicado. Actualizar aquí migraciones, resultados, commits, defectos reales y siguiente bloque. No detenerse solo por completar A si queda capacidad para B/C/D/E.
+Confirmar documentación/matriz/UI final, push normal y crear PR en borrador dependiente de #5; verificar CI de su HEAD en Windows y Ubuntu. No detenerse al aprobar A: continuar en rama dependiente limpia con término de colaboración aceptada (EQU-03 pendiente técnica), cierres/subrogancias/continuidad excepcional (B) y después C/D/E.
 
-## Checkpoint de implementación A
+Para B: evolucionar explícitamente el registro firmado (nueva versión; no reinterpretar 1.0–1.3) con función/ámbitos explícitos, titular, candidatos y autoridades configurables. Solicitud de persona preidentificada, aprobación independiente, intervalos finitos/revisión, prórroga nueva, revocación/retorno, exclusión de facultad simultánea y conservación de cartera/tareas. Revisar integración de bandejas y autorizaciones pendientes ligadas a funciones, sin dar acceso global ni ejecutar TAR-09 al activar/terminar. SUB-CONT-01 por Caso y autocierre regional titular requieren circuitos específicos, no eliminar por atajo la independencia del cierre ordinario. Estos son pendientes técnicos de implementación, no de validación funcional.
 
-Commit documental de entrada `41c502d`; código posterior todavía sin commit. V15.10 en desarrollo usa una migración Java por dialecto, con DDL común y checksum explícito: identifica únicamente el CHECK creador=ejecutor histórico, lo sustituye por contexto CASO y mantiene las demás restricciones. Añade equipo/historia de pertenencia, obligatoriedad/asignador/generación de recordatorio, intentos y solicitudes de espera. No edita V1–V15.9.
+## Pendientes y preservación
 
-Implementado localmente: `EquipoCaso`/controlador, ampliación de `TareasPersonales`, autorización de colaboradores en listas/detalles/gestión ordinaria, TAR-09 transaccional, cierre con obligatorias y espera explícita, UI `EquipoAgenda` conectada. Continúan pendientes de cierre los avisos específicos, pruebas documentales/HTTP/DOM, adaptación de expectativas históricas y validación integral/MySQL/CI.
-
-Pruebas acreditadas en este corte: migración H2 2/2; compilación backend correcta; `EquipoAgendaTest` 9/9. Selección conjunta de 23 métodos: dos fallos y dos errores en `TareasNotificacionesTest` por expectativas personales/revisiones antiguas; no es una selección aprobada. Se están adaptando a asignación de equipo, lectura por jefatura y TAR-09, conservando negativas TI/ámbito y versiones actuales. Frontend lint/build iniciados; comprobar su resultado antes de atribuir éxito.
-
-Evidencia privada de desarrollo: carpeta `siger-build-4c652bfd9b7a41d5a8e0d659e180202d` bajo LOCALAPPDATA, sin secretos versionados. Siguiente acción: terminar avisos de equipo/espera y UI global de tareas, añadir pruebas de documentos/áreas, HTTP, recordatorios y revocación; ejecutar focales y MySQL con esquema nuevo; corregir antes de commit/publicación de código. Recuperar con `git status` y diffs; no descartar los archivos locales nuevos.
-
-## Parámetros y preservación
-
-No se cargaron identidades/mandatos/coberturas reales. No confundir esos valores ausentes con falta de validación del diseño. QA histórica, U4.4/U4.5, SMR, servicios/JAR, Formulario, contratos/firmas/originales y proveedores reales no intervenidos. Las pruebas usarán datos sintéticos y recursos nuevos; no hay autorización de despliegue, migración real ni correo real.
+EQU-03 después de aceptación: solicitar término de intervención y decisión de destino sin cierre unilateral. Subrogancias/autocierre regional/continuidad excepcional, catálogo territorial acreditado, conciliación explícita, antecedentes REQ sin Caso, FIR de actuaciones/reservas adicionales, plazos, búsqueda/reportes/exportaciones generales y cierre E2E siguen pendientes técnicos. Cuentas/mandatos/cobertura reales no cargados. SMR, QA, U4.4/U4.5, COM-000001, bases históricas, JAR/servicios, Formulario, proveedores, contratos/firmas/originales y COMMIT→ACK intactos. Sin operaciones reales ni E2E físico. Árbol debe quedar limpio tras el commit de cierre; cualquier avance posterior se conserva y se recupera mediante status/diff.
