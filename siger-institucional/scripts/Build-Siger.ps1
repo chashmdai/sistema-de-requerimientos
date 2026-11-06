@@ -1,6 +1,7 @@
 #Requires -Version 7.4
 [CmdletBinding()]
-param([string]$JavaHome=$env:JAVA_HOME,[string]$Maven='',[string]$TestDirectory='')
+param([string]$JavaHome=$env:JAVA_HOME,[string]$Maven='',[string]$TestDirectory='',
+      [ValidateRange(0,8)][int]$TestPart=0,[ValidateRange(1,8)][int]$TestParts=2,[string]$CoverageDirectory='')
 $ErrorActionPreference='Stop'
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if(Get-ChildItem Env:|Where-Object {$_.Name -like 'ROBUST_DB_*' -or $_.Name -like 'DOCUMENTAL_REAL_*'}){throw 'Build aislado H2: retirar del proceso las variables de MySQL/workers reales; no utilizar la QA integrada.'}
@@ -28,7 +29,20 @@ try{
  Push-Location (Join-Path $PSScriptRoot '../backend')
  try{
   $argLine='--enable-native-access=ALL-UNNAMED -Xmx256m -XX:-UsePerfData -Djava.io.tmpdir="'+$TestDirectory+'"'
-  & $Maven -B -ntp ('-DargLine='+$argLine) ('-Djava.io.tmpdir='+$TestDirectory) clean verify
+  if($TestPart){
+   if($TestPart -gt $TestParts){throw 'Partición inválida'}
+   & $Maven -B -ntp ('-DargLine='+$argLine) ('-Djava.io.tmpdir='+$TestDirectory) clean test-compile
+   if($LASTEXITCODE){throw 'Compilación previa al inventario no completada'}
+   if(-not $CoverageDirectory){$CoverageDirectory=Join-Path $TestDirectory 'coverage'}
+   $coverageScript=Join-Path $PSScriptRoot 'Test-CiCoverage.ps1'
+   $plan=& $coverageScript -Mode Plan -Directory $CoverageDirectory -Part $TestPart -Parts $TestParts -JavaHome $JavaHome
+   $selectors=@($plan.selected|ForEach-Object {$_.Replace('.','/')+'.java'}) -join ','
+   Write-Output "Ejecutando partición $TestPart/${TestParts}: $($plan.selected.Count) de $($plan.all.Count) clases JUnit."
+   & $Maven -B -ntp ('-DargLine='+$argLine) ('-Djava.io.tmpdir='+$TestDirectory) ('-Dtest='+$selectors) verify
+   $buildExit=$LASTEXITCODE
+   & $coverageScript -Mode Validate -Directory $CoverageDirectory -Part $TestPart -Parts $TestParts
+   if($buildExit){throw 'Pruebas de partición no completadas; consultar Surefire'}
+  }else{& $Maven -B -ntp ('-DargLine='+$argLine) ('-Djava.io.tmpdir='+$TestDirectory) clean verify}
   if($LASTEXITCODE){throw 'Build H2 no correcto; consultar Surefire. No reintentar sobre MySQL integrado.'}
  }finally{Pop-Location}
  Write-Output ('Compilación terminada. Temporales de prueba conservados: '+$TestDirectory)
