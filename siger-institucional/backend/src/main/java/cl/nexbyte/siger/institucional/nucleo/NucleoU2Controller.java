@@ -12,7 +12,8 @@ public class NucleoU2Controller {
  private final NucleoInstitucional core;private final NucleoU2 flow;private final CatalogoLaboratorio cat;
  public NucleoU2Controller(NucleoInstitucional core,CatalogoLaboratorio cat){this.core=core;this.flow=core.u2();this.cat=cat;}
  private CatalogoLaboratorio.Operador a(Authentication a){return SesionFuncionario.actual(a,cat);}
- @PostMapping("/primera-atencion") Resultado primera(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@RequestBody PrimeraAtencion r){return flow.primeraAtencion(a(a),key,r);}
+ @PostMapping("/primera-atencion") Resultado primera(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@RequestBody PrimeraAtencion r){var actor=a(a);return core.soloReintentoGestion(actor,key,()->flow.primeraAtencion(actor,key,r));}
+ @PostMapping("/primera-atencion/gestion") Resultado primeraGestion(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@RequestBody PrimeraGestion r){return flow.primeraGestion(a(a),key,r);}
  @PostMapping("/comunicaciones/{id}/asumir-propia") Resultado propia(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody AsumirPropia r){return flow.asumirPropia(a(a),key,id,r);}
  @PostMapping("/comunicaciones/{id}/distribuir") Resultado distribuir(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Encaminar r){return flow.distribuir(a(a),key,id,r);}
  @GetMapping("/solicitudes") List<Map<String,Object>> solicitudes(Authentication a){return flow.solicitudes(a(a));}
