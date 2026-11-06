@@ -17,6 +17,8 @@ public final class NotificacionesInstitucionales {
   if(stream.equals("RECEPCION"))return code.equals("COMUNICACION_REGISTRADA")?List.of(new Aviso("COMUNICACION_NUEVA","COMUNICACION",resource)):List.of();
   if(stream.equals("TAREA"))return List.of(new Aviso(code,"SOLICITUD".equals(e.get("resource_type"))?"SOLICITUD":"TAREA",resource));
   return switch(code){case "EQUIPO_PARTICIPACION_ACTUALIZADA"->List.of(new Aviso("EQUIPO_ACTUALIZADO","EQUIPO",resource));case "ESPERA_ANTECEDENTES_SOLICITADA"->List.of(new Aviso("ESPERA_PENDIENTE","CASO",resource));
+   case "COLABORACION_TERMINO_SOLICITADO"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TERMINO_COLAB",resource));
+   case "COLABORACION_TERMINO_ACEPTADA","COLABORACION_TERMINO_RECHAZADA","COLABORACION_TERMINO_RETIRADA"->List.of(new Aviso("CONTINUIDAD_DECIDIDA","TERMINO_COLAB",resource));
    case "PRINCIPAL_TRANSFERENCIA_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","TRASLADO_REQ_U2",resource));
    case "DERIVACION_INSTITUCIONAL_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","DERIVACION_U2",resource));
    case "REAPERTURA_INSTITUCIONAL_SOLICITADA"->List.of(new Aviso("CONTINUIDAD_SOLICITADA","REAPERTURA_U2",resource));
@@ -38,7 +40,8 @@ public final class NotificacionesInstitucionales {
  private boolean autorizado(Operador a,String categoria,String tipo,UUID id,String eventKey,String stream){
   try{
    permisos.actor(a);
-   switch(tipo){case "EQUIPO"->permisos.equipo(a,id);
+   switch(tipo){case "TERMINO_COLAB"->permisos.terminoColaboracion(a,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
+    case "EQUIPO"->permisos.equipo(a,id);
     case "TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->permisos.continuidad(a,tipo,id,categoria.equals("CONTINUIDAD_SOLICITADA"));
     case "COMUNICACION"->{var rows=db.sql.queryForList("SELECT site_id,state FROM core_communication WHERE id=?",id.toString());String site=rows.isEmpty()?null:(String)rows.getFirst().get("site_id");if(!a.distribuyeSede(site))return false;permisos.recurso(a,tipo,id);}
     case "DESTINO"->{var d=permisos.fila("core_destination",id.toString());permisos.destino(a,d);}

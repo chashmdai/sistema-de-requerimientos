@@ -4,6 +4,15 @@
 
 La validación funcional fue confirmada por el responsable del proyecto el 06/11/2026. Ver DECISION_VALIDACION_FUNCIONAL_2026-11-06.md. Las 138 reglas conservan sus IDs/orden y registran esa decisión. No pedir nuevamente validación del levantamiento. Mantener identidad, aprobación independiente, ámbito, vigencia y segregación. Parámetros nominales reales ausentes se configuran; no se inventan. Validación funcional no autoriza despliegues.
 
+## Estado actual posterior al PR #6
+
+Rama actual codex/siger-continuidad-funcional, creada con árbol limpio desde 396422d69c29ace39f65ce84a5552b1a45c066f1. PR #6 en borrador, base PR #5; CI 42213485912 APROBADA en ambos jobs: Windows 478/469 aprobados/9 omitidos, Ubuntu 478/454 aprobados/24 omitidos, frontend 119/119, cero fallos/errores. Logs y acta del PR comprobados, Maven 26:12/20:52. No modificar ese HEAD.
+
+Código posterior desarrollado de término de colaboración aceptada: TerminoColaboracion/Controller, V15.11 H2/MySQL, propuesta desde principal, decisión de destino y cierre separado por profesional/jefatura; retirada/rechazo, historial, paquete mínimo, avisos, bloqueo transaccional y protección de estado/revisión. UI en REQ/bandeja/Caso conectada con GET agregados. No descartar cambios posteriores al padre.
+
+Acreditado del corte: H2 25/25 (8 nuevos + 17 continuidad), HTTP/migración 15/15 (áreas y once rutas), MySQL nativo descartable 82/82; proceso propio cerrado y ausencia verificada. Frontend 123 tuvo un matcher no configurado: corregido conservando aserción, cuatro nuevas DOM aprobadas, lint/build correctos. Regresión local integral en curso en colaboracion-integral.log; no se atribuye resultado todavía. Se añadieron después dos tests de revocación y principal transferido: pendientes de focal/CI, sin atribuirlos a los 82 MySQL anteriores.
+
+Publicar este bloque en PR en borrador base codex/siger-equipos-agenda, verificar CI de su HEAD, completar evidencia local y esas dos pruebas. Continuar subrogancias/cierres específicos en rama dependiente limpia con registro firmado explícito 1.4 y migración posterior a V15.11. No detenerse tras aprobar un bloque. Fuentes/reglas validadas; faltantes son implementación y parámetros nominales, no otra validación funcional.
 ## Git y dependencias
 
 Worktree exclusivo C:\req\worktrees\siger-logica. Rama codex/siger-equipos-agenda, base ef4d378a4c5afb9e23d56b0d4fa93a1b7c2aade5 (PR #5). Cadena PR #2→#3→#4→#5→nuevo PR de equipos/agenda, base feature/siger-u2-continuidad-institucional. Código principal confirmado en 06cc2ec; commit de cierre documental/UI contiene esta versión del checkpoint. Consultar git log -1 para su SHA; no autocitar su propio hash. Sin merge/despliegue.
@@ -39,4 +48,4 @@ Para B: evolucionar explícitamente el registro firmado (nueva versión; no rein
 
 ## Pendientes y preservación
 
-EQU-03 después de aceptación: solicitar término de intervención y decisión de destino sin cierre unilateral. Subrogancias/autocierre regional/continuidad excepcional, catálogo territorial acreditado, conciliación explícita, antecedentes REQ sin Caso, FIR de actuaciones/reservas adicionales, plazos, búsqueda/reportes/exportaciones generales y cierre E2E siguen pendientes técnicos. Cuentas/mandatos/cobertura reales no cargados. SMR, QA, U4.4/U4.5, COM-000001, bases históricas, JAR/servicios, Formulario, proveedores, contratos/firmas/originales y COMMIT→ACK intactos. Sin operaciones reales ni E2E físico. Árbol debe quedar limpio tras el commit de cierre; cualquier avance posterior se conserva y se recupera mediante status/diff.
+EQU-03 después de aceptación: circuito desarrollado y acreditado focalmente en la continuación actual; completar CI/informe del HEAD. Subrogancias/autocierre regional/continuidad excepcional, catálogo territorial acreditado, conciliación explícita, antecedentes REQ sin Caso, FIR de actuaciones/reservas adicionales, plazos, búsqueda/reportes/exportaciones generales y cierre E2E siguen pendientes técnicos. Cuentas/mandatos/cobertura reales no cargados. SMR, QA, U4.4/U4.5, COM-000001, bases históricas, JAR/servicios, Formulario, proveedores, contratos/firmas/originales y COMMIT→ACK intactos. Sin operaciones reales ni E2E físico. Árbol debe quedar limpio tras el commit de cierre; cualquier avance posterior se conserva y se recupera mediante status/diff.

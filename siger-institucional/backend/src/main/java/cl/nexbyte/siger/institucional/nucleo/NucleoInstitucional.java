@@ -20,6 +20,7 @@ public final class NucleoInstitucional {
         if(prefix==null||!prefix.matches("[A-Z][A-Z0-9]{1,15}")||width<1||width>18)throw new IllegalArgumentException("Folio inválido");
         this.materias=new PoliticaMaterias(db,clock);this.autoridad=autoridad;this.areas=new PoliticaAreas(db,clock);this.lectura=new org.springframework.transaction.support.TransactionTemplate(db.tx.getTransactionManager());this.lectura.setIsolationLevelName("ISOLATION_REPEATABLE_READ");this.lectura.setReadOnly(true);this.lectura.setTimeout(5);this.db=db;this.catalogo=catalogo;this.recepcion=recepcion;this.mapper=mapper;this.clock=clock;this.prefix=prefix;this.width=width;
     }
+    public TerminoColaboracion terminoColaboracion(){return new TerminoColaboracion(db,this,catalogo,clock);}
     public NucleoU2 u2(){return new NucleoU2(db,this,catalogo,clock,mapper);}
     public EquipoCaso equipo(){return new EquipoCaso(db,this,catalogo,clock,mapper);}
     public cl.nexbyte.siger.institucional.notificaciones.TareasPersonales tareas(){return new cl.nexbyte.siger.institucional.notificaciones.TareasPersonales(db,new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(db,catalogo,this),mapper,clock);}
@@ -294,6 +295,7 @@ public final class NucleoInstitucional {
         return execute(key,a,decision,List.of(caseId,request),()->{
             lock(communication);var c=caseRow(caseId);if(!canCase(a,c))throw new FalloTecnico(404);revision(c,request.revision());String state=str(c,"state"),next;String modality=null;
             confirmarIndependiente(a,c,decision);
+            if(decision.equals("CIERRE")&&terminoColaboracion().pendienteCaso(caseId))throw new FalloTecnico(409,"INTERVENCION_REQUIERE_DECISION_EXPLICITA");
             if(decision.equals("CIERRE")&&equipo().obligatorias(caseId))throw new FalloTecnico(409,"TAREAS_OBLIGATORIAS_PENDIENTES");
             if(!decision.equals("DEVOLUCION")&&equipo().esperaPendiente(caseId))throw new FalloTecnico(409,"ESPERA_REQUIERE_DECISION_EXPLICITA");
             if(!decision.equals("DEVOLUCION")&&pendiente(caseId))throw new FalloTecnico(409);
