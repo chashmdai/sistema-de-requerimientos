@@ -25,3 +25,13 @@ Selección local del padre: inventario limpio de 71 raíces, partición 1 con 33
 El hijo `codex/siger-continuidad-excepcional`, commit `60b25e9`, conserva SUB-CONT-01, V15.13 y la corrección de doble canal funcional. Su calificación integral/CI se realiza separadamente. El padre todavía conserva la emisión solo interna de algunos avisos: la corrección del hijo responde a §16, cuya última columna indica acuse, no dispensa de correo. No se enviaron correos reales ni se promovieron filas históricas.
 
 Sin migraciones por esta corrección de CI. Sin cambios de main, padres #2–#7, U4.4/U4.5, QA, servicios, proveedores, bases preservadas o contratos de transporte. Los PR siguen en borrador; no hay merge ni despliegue.
+
+## Evolución comprobada a tres particiones
+
+PR #10/2d98e2122f7bfdf08e102eaf84d7aa496a703371, CI42283881844: ambos OS aprobados con554 métodos/78raíces, frontend146/lint/build/package. Windows247+307 métodos, Maven11:34/26:40; Ubuntu09:21/23:47. El presupuesto30min no falló, pero la segunda partición quedó cerca de él. Se conservan ese éxito y sus logs; no se presenta como fallo.
+
+Al continuar en la rama hija bitácora, se agruparon los78 tiempos reales de clases Windows por el mismo SHA-256, sin cambiar el algoritmo de selección. Suma por dos particiones11,47/26,56min; distribución tres17,99/11,90/8,15min; cuatro7,31/7,29/4,16/19,27min. Se eligen tres por menor máximo previsto y menor costo de preparación que cuatro. Son estimaciones sobre ese corte, no tiempos acreditados del nuevo HEAD.
+
+Workflow declara tres particiones por OS y agregación obligatoria de las tres; presupuesto30min inalterado. Inventario, XML reales, HEAD/run, unión completa/disjunta, aserciones, transacciones y exclusiones permanecen iguales. Frontend se repite en cada parte sin sumarlo como cobertura única. La compilación integral ordinaria de Build-Siger sigue disponible.
+
+Harness local aprobado: conserva6raíces/dos partes/diez controles negativos y agrega7raíces/tres partes, rechazo de cantidad de partes incompatible y tercer manifiesto ausente;12controles negativos acumulados. Fixtures de bytecode/XML privados, no E2E ni nuevas pruebas físicas. El nuevo HEAD requiere su propia CI de ocho jobs (seis partes+dos agregados).

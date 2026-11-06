@@ -8,7 +8,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest]
-        part: [1, 2]
+        part: [1, 2, 3]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -30,7 +30,7 @@ jobs:
         run: ./siger-institucional/scripts/Test-CiCoverageHarness.ps1 -JavaHome "$env:JAVA_HOME"
       - name: React y Spring Boot (partición completa H2, sin proveedores)
         shell: pwsh
-        run: ./siger-institucional/scripts/Build-Siger.ps1 -TestPart ${{ matrix.part }} -TestParts 2 -CoverageDirectory "${{ runner.temp }}/siger-coverage-${{ matrix.os }}-${{ matrix.part }}"
+        run: ./siger-institucional/scripts/Build-Siger.ps1 -TestPart ${{ matrix.part }} -TestParts 3 -CoverageDirectory "${{ runner.temp }}/siger-coverage-${{ matrix.os }}-${{ matrix.part }}"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -56,4 +56,4 @@ jobs:
           merge-multiple: true
       - name: Acreditar unión disjunta de todas las clases
         shell: pwsh
-        run: ./siger-institucional/scripts/Test-CiCoverage.ps1 -Mode Aggregate -Directory "${{ runner.temp }}/siger-coverage-total" -Parts 2
+        run: ./siger-institucional/scripts/Test-CiCoverage.ps1 -Mode Aggregate -Directory "${{ runner.temp }}/siger-coverage-total" -Parts 3
