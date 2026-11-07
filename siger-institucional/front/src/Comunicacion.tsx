@@ -1,3 +1,4 @@
+import {PlazosRegistroVista} from './PlazosRegistro';
 import {RectificacionesIngreso} from "./RectificacionesIngreso";
 import {SolicitudesDeComunicacion} from './Solicitudes';
 import {FormularioRecibido} from './FormularioRecibido';
@@ -19,5 +20,5 @@ export function Comunicacion({ id, actor, catalog, busy, version, navigate, soli
  {tab === 'rectificaciones' && c.canal==='REGISTRO_FUNCIONARIO' && <RectificacionesIngreso comunicacion={id} catalog={catalog} version={version+refreshVersion} changed={refresh} externBusy={busy}/>}
  {tab === 'solicitudes' && solicitudesHabilitadas && <SolicitudesDeComunicacion comunicacion={id}/>}
  {tab === 'historial' && <><h2>Historial institucional</h2><ol className="timeline">{d.historial.map(e => <li key={e.secuencia}><strong>{e.codigo.replaceAll('_', ' ')}</strong><small>{e.autor} · {date(e.fecha)}</small></li>)}</ol><h3>Vínculos documentales visibles</h3>{d.vinculos.map(v => <p key={v.hija}>{v.motivo} · {v.autor} · {date(v.fecha)}<br /><TechnicalId kind="Hija" value={v.hija} /> → <TechnicalId kind="Origen" value={v.padre} /></p>)}{d.pendientes.map(p => <p className="muted" key={p}>{p}</p>)}</>}
- </section></>;
+ </section><PlazosRegistroVista actorId={actor.id} contexto="comunicaciones" recurso={id} version={version+refreshVersion}/></>;
 }

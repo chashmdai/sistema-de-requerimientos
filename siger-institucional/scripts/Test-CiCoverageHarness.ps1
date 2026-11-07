@@ -26,7 +26,7 @@ foreach($part in 1..2){
  $plan=& $script -Mode Plan -Directory $coverage -Part $part -Parts 2 -JavaHome $JavaHome -ClassesDirectory $classes
  $plans+=,$plan
  foreach($name in $plan.selected){$suite=if($name -eq 'fixtures.NestedTest'){$name+'$Inside'}else{$name};[IO.File]::WriteAllText((Join-Path $reports "TEST-$name.xml"),"<testsuite name='$suite' tests='1' failures='0' errors='0' skipped='0'/>")}
- & $script -Mode Validate -Directory $coverage -Part $part -Parts 2 -ReportsDirectory $reports|Out-Null
+ & $script -Mode Validate -Directory $coverage -Part $part -Parts 2 -ReportsDirectory $reports -JavaHome $JavaHome -ClassesDirectory $classes|Out-Null
  # Each partition gets an independent report directory; never reuse stale reports.
  $reports=Join-Path $directory "reports-$part-next";[IO.Directory]::CreateDirectory($reports)|Out-Null
  $saved[$part]=Get-Content -LiteralPath (Join-Path $coverage "coverage-$part.json") -Raw
@@ -38,7 +38,7 @@ function Restore-Manifests {foreach($part in 1..2){[IO.File]::WriteAllText((Join
 function Change-Manifest([int]$part,[scriptblock]$change){$file=Join-Path $coverage "coverage-$part.json";$value=Get-Content -LiteralPath $file -Raw|ConvertFrom-Json -AsHashtable;& $change $value;$value|ConvertTo-Json -Depth 12|Set-Content -LiteralPath $file}
 $checks=0
 function Denied([string]$name,[scriptblock]$action){$denied=$false;try{& $action|Out-Null}catch{$denied=$true};if(-not $denied){throw "Control aceptó evidencia inválida: $name"};$script:checks++}
-foreach($field in @('head','run','schema','status','platform')){
+foreach($field in @('head','run','schema','status','platform','allocation_algorithm','allocation_sha256')){
  Restore-Manifests;Change-Manifest 1 {$args[0][$field]='INVALID'}
  Denied $field {& $script -Mode Aggregate -Directory $coverage -Parts 2}
 }
@@ -62,7 +62,7 @@ foreach($part in 1..3){
  if(Compare-Object @($plan.all) @($expected+'fixtures.ExtraTest')){throw 'Inventario de tres particiones incompleto'}
  $reports3=Join-Path $directory "reports-three-$part";[IO.Directory]::CreateDirectory($reports3)|Out-Null
  foreach($name in $plan.selected){$suite=if($name -eq 'fixtures.NestedTest'){$name+'$Inside'}else{$name};[IO.File]::WriteAllText((Join-Path $reports3 "TEST-$name.xml"),"<testsuite name='$suite' tests='1' failures='0' errors='0' skipped='0'/>")}
- & $script -Mode Validate -Directory $coverage3 -Part $part -Parts 3 -ReportsDirectory $reports3|Out-Null
+ & $script -Mode Validate -Directory $coverage3 -Part $part -Parts 3 -ReportsDirectory $reports3 -JavaHome $JavaHome -ClassesDirectory $classes|Out-Null
 }
 & $script -Mode Aggregate -Directory $coverage3 -Parts 3|Out-Null
 Denied 'tres manifiestos con cantidad declarada incorrecta' {& $script -Mode Aggregate -Directory $coverage3 -Parts 2}

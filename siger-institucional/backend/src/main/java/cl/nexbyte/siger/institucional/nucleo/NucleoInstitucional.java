@@ -239,6 +239,7 @@ public final class NucleoInstitucional {
             db.sql.update("INSERT INTO core_communication(id,state,revision,site_id) VALUES(?,'ABIERTA',0,?)",id(cid),request.sede());
             db.sql.update("INSERT INTO core_manual VALUES(?,?,?,?,?)",id(cid),request.recibidaEnDeclarada().toEpochMilli(),request.canalDeclarado(),request.texto(),a.id());
             db.sql.update("INSERT INTO communication_origin VALUES(?,'REGISTRO_FUNCIONARIO',?,?)",id(cid),request.sede(),request.regionAsunto());
+            FuentesRegistro.registrar(db,"COM:"+cid,cid,"COM",cid,"REGISTRO_ATENCION","MANUAL",null,request.sede(),null,request.recibidaEnDeclarada().toEpochMilli(),registered,registered,a.id(),null);
             event(cid,"COMUNICACION",cid,a,"COMUNICACION_MANUAL_REGISTRADA");
             if(request.respuestaYaEntregada()!=null){db.sql.update("UPDATE core_communication SET state='RESPONDIDA',decision_text=?,decided_by=?,decided_ms=?,revision=1 WHERE id=?",request.respuestaYaEntregada(),a.id(),registered,id(cid));event(cid,"COMUNICACION",cid,a,"RESPUESTA_YA_ENTREGADA_REGISTRADA");}
             return result(cid,cid);

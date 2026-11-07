@@ -115,6 +115,8 @@ public final class NucleoU2 {
             guard(a);var result=primeraAtencion(a,sub(key,"PRIMERA_GESTION"),new PrimeraAtencion(r.comunicacion(),r.ambito(),r.respuesta()));
             var q=req(result.id());long seq=db.sql.queryForObject("SELECT seq FROM institution_flow_history WHERE resource_id=? AND action_code='PRIMERA_ATENCION_RESUELTA'",Long.class,id(result.id()));
             db.sql.update("INSERT INTO institution_req_action(history_seq,requirement_id,schema_version,effective_ms,rectifies_seq,correction_reason) VALUES(?,?,'1.0',?,NULL,NULL)",seq,id(result.id()),r.realizadaEn().toEpochMilli());
+            long registrada=db.sql.queryForObject("SELECT at_ms FROM institution_flow_history WHERE seq=?",Long.class,seq);
+            FuentesRegistro.registrar(db,"REQ:"+seq,uuid(q.get("communication_id")),"REQ",result.id(),"REGISTRO_GESTION","GESTION_REQ",s(q,"unit_code"),s(q,"site_id"),s(q,"area_id"),r.realizadaEn().toEpochMilli(),registrada,registrada,a.id(),null);
             historia(uuid(q.get("communication_id")),result.id(),"REQ",result.revision(),a,"PRIMERA_GESTION_ACREDITADA",r.tipoResultado(),new ResultadoPrimeraGestion("1.0",r.tipoResultado(),Instant.ofEpochMilli(r.realizadaEn().toEpochMilli()),Instant.ofEpochMilli(r.comunicacion().recibidaEnDeclarada().toEpochMilli())));core.avisosGestion().terminoReq(a,result.id(),"REQ_TERMINADO");
             return result;
         });

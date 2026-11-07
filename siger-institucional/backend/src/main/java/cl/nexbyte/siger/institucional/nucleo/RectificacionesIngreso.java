@@ -57,6 +57,7 @@ public final class RectificacionesIngreso {
             try{DeclaracionNna.relato(r.motivo());}catch(IllegalArgumentException e){throw new FalloTecnico(400);}
             var read=leer(com);var nuevo=validar(r.datos(),com);if(read.vigente().equals(nuevo))throw new FalloTecnico(400,"RECTIFICACION_SIN_CAMBIOS");
             core.u2().historia(com,com,"COM",r.revision()+1,a,ACCION,r.motivo(),new Cambio("1.0",read.vigente(),nuevo));core.u2().bumpCom(com);
+            FuentesRegistro.correccionManual(db,com,r.revision()+1,nuevo.recibidaEnDeclarada().toEpochMilli(),clock.millis(),a.id());
             return new ContratosNucleo.Resultado(com,r.revision()+1);
         });
     }

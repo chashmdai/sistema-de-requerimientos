@@ -48,6 +48,7 @@ public final class RecepcionInstitucionalJdbc {
                 db.sql.update("INSERT INTO institutional_inbox(source,id,content_hash,body,receipt,ack_pending,created_ms) VALUES(?,?,?,?,?,TRUE,?)",SOURCE,id.toString(),fingerprint(entrega),mapper.writeValueAsString(entrega),"{}",registered.toEpochMilli());
             }
             var result=emitir(id,communicationId,registered,entrega.comunicacion().canal(),entrega.comunicacion().sha256(),provenance);
+            cl.nexbyte.siger.institucional.nucleo.FuentesRegistro.registrar(db,"COM:"+communicationId,communicationId,"COM",communicationId,"REGISTRO_ATENCION","FORMULARIO",null,null,null,entrega.comunicacion().recibidaEn().toEpochMilli(),registered.toEpochMilli(),registered.toEpochMilli(),null,null);
             result.validar(institutionTrust,mapper,entrega);
             db.sql.update("UPDATE institutional_inbox SET receipt=?,ack_pending=TRUE WHERE source=? AND id=?",mapper.writeValueAsString(result),SOURCE,id.toString());
             db.event("COMUNICACION",communicationId.toString(),"COMUNICACION_REGISTRADA");
@@ -162,6 +163,7 @@ public final class RecepcionInstitucionalJdbc {
             var at=clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);var com=UUID.randomUUID();
             db.sql.update("INSERT INTO institutional_inbox(source,id,content_hash,body,receipt,ack_pending,created_ms,document_kind) VALUES(?,?,?,?,?,TRUE,?,'FORMULARIO_COMPLETO')",SOURCE,entrega.id().toString(),fingerprint(entrega),mapper.writeValueAsString(entrega),"{}",at.toEpochMilli());
             var receipt=emitir(entrega.id(),com,at,entrega.canal(),entrega.sha256(),entrega.huellaProcedencia());entrega.validarRegistro(receipt,institutionTrust,mapper);
+            cl.nexbyte.siger.institucional.nucleo.FuentesRegistro.registrar(db,"COM:"+com,com,"COM",com,"REGISTRO_ATENCION","FORMULARIO",null,null,null,Instant.parse(entrega.comunicacion().path("recibidaEn").asString()).toEpochMilli(),at.toEpochMilli(),at.toEpochMilli(),null,null);
             for(var a:entrega.adjuntos())db.sql.update("INSERT INTO institution_document(id,communication_id,operation_id,attachment_id,origin,name,size_bytes,sha256,media_type,storage_key,created_ms) VALUES(?,?,?,?,'INGRESO_CIUDADANO',?,?,?,?,?,?)",UUID.randomUUID().toString(),com.toString(),entrega.id().toString(),a.id().toString(),a.nombre(),a.tamanio(),a.sha256(),a.tipo(),files.key(entrega.id(),a.id()),at.toEpochMilli());
             db.sql.update("UPDATE institutional_inbox SET receipt=? WHERE source=? AND id=?",mapper.writeValueAsString(receipt),SOURCE,entrega.id().toString());
             db.event("COMUNICACION",com.toString(),"COMUNICACION_REGISTRADA");return receipt;

@@ -115,6 +115,7 @@ public final class BitacoraGestion {
             UUID accion=UUID.randomUUID();long recorded=clock.millis();
             var result=core.insertarActuacion(a,caso,new Decision(r.revision(),r.descripcion()),accion,recorded,"ACTUACION_REGISTRADA");
             db.sql.update("INSERT INTO institution_case_action(action_id,case_id,schema_version,effective_ms,rectifies_id,correction_reason) VALUES(?,?,'1.0',?,?,?)",accion.toString(),caso.toString(),r.realizadaEn().toEpochMilli(),original==null?null:original.toString(),r.motivo());
+            FuentesRegistro.registrar(db,"CASO:"+accion,uuid(c.get("communication_id")),"CASO",caso,"REGISTRO_GESTION","GESTION_CASO",c.get("unit_code").toString(),c.get("site_id").toString(),new PoliticaAreas(db,clock).area(c),r.realizadaEn().toEpochMilli(),recorded,recorded,a.id(),original==null?null:"CASO:"+original);
             if(original!=null)core.event(uuid(c.get("communication_id")),"CASO",caso,a,"ACTUACION_RECTIFICADA");
             return result;
         });
@@ -134,6 +135,8 @@ public final class BitacoraGestion {
             flow.historia(com,req,"REQ",r.revision()+1,a,"REQ_ATENCION_SIN_CASO",r.descripcion(),Map.of("casos",0,"versionGestion","1.0"));
             long seq=db.sql.queryForObject("SELECT seq FROM institution_flow_history WHERE resource_id=? AND revision=? AND action_code='REQ_ATENCION_SIN_CASO'",Long.class,req.toString(),r.revision()+1);
             db.sql.update("INSERT INTO institution_req_action(history_seq,requirement_id,schema_version,effective_ms,rectifies_seq,correction_reason) VALUES(?,?,'1.0',?,?,?)",seq,req.toString(),r.realizadaEn().toEpochMilli(),original,r.motivo());
+            long registrada=db.sql.queryForObject("SELECT at_ms FROM institution_flow_history WHERE seq=?",Long.class,seq);
+            FuentesRegistro.registrar(db,"REQ:"+seq,com,"REQ",req,"REGISTRO_GESTION","GESTION_REQ",row.get("unit_code").toString(),row.get("site_id").toString(),(String)row.get("area_id"),r.realizadaEn().toEpochMilli(),registrada,registrada,a.id(),original==null?null:"REQ:"+original);
             flow.bumpCom(com);
             if(original!=null)core.event(com,"REQ",req,a,"ACTUACION_RECTIFICADA");
             return new Resultado(req,r.revision()+1);
