@@ -1,3 +1,4 @@
+import {AsociacionDocumento} from './AsociacionDocumento';
 import {VersionDocumento} from './VersionDocumento';
 import {useEffect,useRef,useState} from 'react';
 import * as api from './api';
@@ -17,7 +18,7 @@ export function DocumentosRequerimiento({requerimiento,version}:{requerimiento:s
   return()=>{abort.abort();generation.current++;};
  },[requerimiento,version,refresh]);
  useEffect(()=>{
-  if(!data?.editable)return;let live=true;G([]);
+  if(!data||!data.editable&&!data.documentos.some(d=>d.restringible))return;let live=true;G([]);
   void api.gestionGet<VistaBitacora>(`/nucleo/institucional/requerimientos/${encodeURIComponent(requerimiento)}/bitacora?pagina=${page}&tamanio=25`).then(v=>{if(live){G(v.entradas);T(v.total);}}).catch(e=>{if(live){D(null);R(null);E(e.message);}});
   return()=>{live=false;};
  },[requerimiento,data,page]);
@@ -46,17 +47,18 @@ export function DocumentosRequerimiento({requerimiento,version}:{requerimiento:s
   </form>}
   {data&&!data.editable&&<p>La consulta conserva los antecedentes anteriores. Las nuevas cargas requieren atención activa sin Casos.</p>}
   {data&&!data.documentos.length&&<p>Sin documentos autorizados en este Requerimiento.</p>}
-  {data?.documentos.map(d=><article className="card" key={`${d.id}:${d.revision}`}><h3>{d.nombre}</h3>{d.cuarentena&&<p role="status">Archivo aislado técnicamente. Se conserva el original; consulta y descarga temporalmente cerradas.</p>}<p>{d.autor} · {date(d.fecha)} · {d.tamanio.toLocaleString('es-CL')} bytes · {d.proteccion}</p>
+  {data&&!data.editable&&data.documentos.some(d=>d.restringible)&&<p><button disabled={page===0} onClick={()=>N(v=>v-1)}>Gestiones anteriores del REQ</button><button disabled={(page+1)*25>=total} onClick={()=>N(v=>v+1)}>Gestiones siguientes del REQ</button></p>}
+  {data?.documentos.map(d=><article className="card" key={`${d.id}:${d.revision}`}><h3>{d.nombre}</h3>{d.asociacionRetirada&&<p role="status">Asociación retirada. El original se conserva y no está disponible para consulta.</p>}{d.cuarentena&&<p role="status">Archivo aislado técnicamente. Se conserva el original; consulta y descarga temporalmente cerradas.</p>}<p>{d.autor} · {date(d.fecha)} · {d.tamanio.toLocaleString('es-CL')} bytes · {d.proteccion}</p>
    <ul>{d.contextos.map(c=><li key={c.gestionSeq??'REQ'}>{c.gestionSeq?`Gestión REQ:${c.gestionSeq}`:'Antecedente general del REQ'}</li>)}</ul>
    <details><summary>Integridad del original</summary><code>{d.sha256}</code></details>
-   {!d.cuarentena&&d.consultable===true&&d.representacion==='PAGINAS'&&<button onClick={()=>R(d)}>Previsualizar {d.nombre}</button>}
-   {!d.cuarentena&&d.consultable===true&&d.descargable===true&&d.representacion==='AUDIO'&&<audio controls preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
-   {!d.cuarentena&&d.consultable===true&&d.descargable===true&&d.representacion==='VIDEO'&&<video controls playsInline preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
-   {!d.cuarentena&&d.descargable===true&&<a href={`${api.baseDocumentosReq(requerimiento)}/${d.id}/original`}>Descargar {d.nombre}</a>}
-   {!d.cuarentena&&d.consultable===true&&<VersionDocumento base={`${api.baseDocumentosReq(requerimiento)}/${d.id}`} documento={d} documentos={data.documentos} version={`${version}:${refresh}:${d.revision}`} denegado={()=>{D(null);R(null);}}/>}
-   {!d.cuarentena&&d.consultable===true&&<Historia req={requerimiento} doc={d.id} denegado={()=>{D(null);R(null);}}/>}
-   {(d.administrable||d.restringible)&&<Proteger req={requerimiento} doc={d} changed={changed} denegado={()=>{D(null);R(null);}}/>}
-   {data.editable&&!d.cuarentena&&d.descargable===true&&<Asociar req={requerimiento} doc={d.id} entries={entries} changed={changed} denegado={()=>{D(null);R(null);}}/>}
+   {!d.asociacionRetirada&&!d.cuarentena&&d.consultable===true&&d.representacion==='PAGINAS'&&<button onClick={()=>R(d)}>Previsualizar {d.nombre}</button>}
+   {!d.asociacionRetirada&&!d.cuarentena&&d.consultable===true&&d.descargable===true&&d.representacion==='AUDIO'&&<audio controls preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
+   {!d.asociacionRetirada&&!d.cuarentena&&d.consultable===true&&d.descargable===true&&d.representacion==='VIDEO'&&<video controls playsInline preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
+   {!d.asociacionRetirada&&!d.cuarentena&&d.descargable===true&&<a href={`${api.baseDocumentosReq(requerimiento)}/${d.id}/original`}>Descargar {d.nombre}</a>}
+   {!d.asociacionRetirada&&!d.cuarentena&&d.consultable===true&&<VersionDocumento base={`${api.baseDocumentosReq(requerimiento)}/${d.id}`} documento={d} documentos={data.documentos} version={`${version}:${refresh}:${d.revision}`} denegado={()=>{D(null);R(null);}}/>}
+   {!d.asociacionRetirada&&!d.cuarentena&&d.consultable===true&&<Historia req={requerimiento} doc={d.id} denegado={()=>{D(null);R(null);}}/>}
+   {d.restringible&&<AsociacionDocumento base={`${api.baseDocumentosReq(requerimiento)}/${d.id}`} nombre={d.nombre} raiz="REQ" opciones={entries.map(e=>({id:e.id.slice(4),nombre:`Gestión · ${e.descripcion.slice(0,100)}`}))} version={`${version}:${refresh}:${d.revision}`} changed={()=>{R(null);changed();}} denegado={()=>{D(null);R(null);}}/>}{(d.administrable||d.restringible)&&<Proteger req={requerimiento} doc={d} changed={changed} denegado={()=>{D(null);R(null);}}/>}
+
   </article>)}
   {preview&&<VisorDocumento key={preview.id} nombre={preview.nombre} descargable={preview.descargable} base={`${api.baseDocumentosReq(requerimiento)}/${preview.id}`} cerrar={()=>R(null)}/>}
   <button disabled={busy||pending} onClick={changed}>Actualizar documentos autorizados del REQ</button>
@@ -72,9 +74,4 @@ function Proteger({req,doc,changed,denegado}:{req:string;doc:api.DocumentoReq;ch
  const [value,V]=useState(doc.proteccion),[reason,R]=useState(''),[busy,B]=useState(false),[error,E]=useState('');const attempt=useRef<{body:object;key:string}|null>(null);
  async function send(){if(busy||!reason.trim())return;B(true);try{attempt.current??={body:{revision:doc.revision,clasificacion:doc.administrable?value:'BLOQUEADO',fundamento:reason},key:crypto.randomUUID()};await api.command(`${api.baseDocumentosReq(req)}/${doc.id}/proteccion`,attempt.current.body,attempt.current.key);changed();}catch(e){E((e as Error).message);if(e instanceof api.ApiError&&e.status<500){attempt.current=null;if(e.status===403||e.status===404)denegado();}}finally{B(false);}}
  return <form onSubmit={e=>{e.preventDefault();void send();}}><fieldset disabled={busy||!!attempt.current}><legend>Protección de {doc.nombre}</legend><label>Clasificación documental<select value={doc.administrable?value:'BLOQUEADO'} onChange={e=>V(e.target.value)}>{doc.administrable&&<><option value="SIN_CLASIFICAR" disabled>Sin clasificar</option><option value="ORDINARIO">Ordinario</option><option value="FIR">Ficha Interna Reservada</option></>}<option value="BLOQUEADO">Bloqueado</option></select></label><label>Fundamento documental<textarea value={reason} onChange={e=>R(e.target.value)} required maxLength={2000}/></label></fieldset>{error&&<p role="alert">{error}</p>}<button disabled={busy||!reason.trim()||doc.administrable&&value==='SIN_CLASIFICAR'}>Confirmar protección documental</button></form>;
-}
-function Asociar({req,doc,entries,changed,denegado}:{req:string;doc:string;entries:EntradaGestion[];changed:()=>void;denegado:()=>void}){
- const [seq,S]=useState(''),[busy,B]=useState(false),[error,E]=useState('');const attempt=useRef<{body:object;key:string}|null>(null);
- async function send(){if(!seq||busy)return;B(true);try{attempt.current??={body:{gestionSeq:Number(seq)},key:crypto.randomUUID()};await api.command(`${api.baseDocumentosReq(req)}/${doc}/vinculos`,attempt.current.body,attempt.current.key);changed();}catch(e){E((e as Error).message);if(e instanceof api.ApiError&&e.status<500){attempt.current=null;if(e.status===403||e.status===404)denegado();}}finally{B(false);}}
- return <form onSubmit={e=>{e.preventDefault();void send();}}><label>Vincular {doc} a una gestión existente<select value={seq} disabled={busy||!!attempt.current} onChange={e=>S(e.target.value)}><option value="">Seleccionar gestión del REQ</option>{entries.map(e=><option key={e.id} value={e.id.slice(4)}>{e.id} · {e.descripcion.slice(0,100)}</option>)}</select></label>{error&&<p role="alert">{error}</p>}<button disabled={busy||!seq}>Confirmar referencia del original</button></form>;
 }

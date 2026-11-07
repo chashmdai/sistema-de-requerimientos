@@ -17,7 +17,7 @@ public final class DocumentosRequerimiento {
     public record Contexto(UUID requerimiento,Long gestionSeq){}
     public record Documento(UUID id,String nombre,long tamanio,String sha256,String tipo,String autor,Instant fecha,
                             List<Contexto> contextos,String representacion,boolean consultable,boolean descargable,
-                            boolean administrable,boolean restringible,String proteccion,long revision,boolean cuarentena){}
+                            boolean administrable,boolean restringible,String proteccion,long revision,boolean cuarentena,boolean asociacionRetirada){}
     public record Lista(boolean editable,List<Documento> documentos){}
     public record Proteccion(long revision,String clasificacion,String fundamento){}
     public record Vinculo(Long gestionSeq){}
@@ -39,6 +39,7 @@ public final class DocumentosRequerimiento {
     }
     private Map<String,Object> permitir(Operador a,UUID req,UUID doc,String accion){
         var c=contexto(a,req,false);var p=politica(c,doc);boolean bloqueado="BLOQUEADO".equals(p.get("classification"));
+        if(AsociacionesVigentes.retirada(db,"REQ",req,doc)&&(!accion.equals("METADATOS")||!c.jefatura()&&!c.profesional()))throw new FalloTecnico(404);
         if(bloqueado&&!(accion.equals("METADATOS")&&c.jefatura()))throw new FalloTecnico(404);
         // FIR exige responsabilidad profesional o jefatura efectiva; ningún rol administrativo, técnico o de consulta la hereda.
         if("FIR".equals(p.get("classification"))&&!c.jefatura()&&!c.profesional())throw new FalloTecnico(404);
@@ -49,7 +50,7 @@ public final class DocumentosRequerimiento {
     private UUID anterior(Operador a,UUID key,UUID req,String op,String digest){var rows=db.sql.queryForList("SELECT * FROM requirement_document_command WHERE id=?",id(key));if(rows.isEmpty())return null;var r=rows.getFirst();if(!a.id().equals(r.get("actor_id"))||!id(req).equals(r.get("requirement_id"))||!op.equals(r.get("operation_code"))||!digest.equals(r.get("request_hash")))throw new FalloTecnico(409);return UUID.fromString(s(r,"document_id"));}
     private void comando(Operador a,UUID key,UUID req,String op,String digest,UUID doc){db.sql.update("INSERT INTO requirement_document_command VALUES(?,?,?,?,?,?,?)",id(key),a.id(),id(req),op,digest,id(doc),clock.millis());}
     private void historia(Operador a,ContextoDocumentoReq c,UUID doc,long revision,String tipo,String fundamento,Map<String,Object> data){db.sql.update("INSERT INTO institution_flow_history(communication_id,resource_id,resource_kind,revision,actor_id,at_ms,action_code,reason_text,snapshot_doc) VALUES(?,?,'REQ_DOCUMENTO',?,?,?,?,?,?)",id(c.comunicacion()),id(doc),revision,a.id(),clock.millis(),tipo,fundamento,EntregaCompleta.lector().writeValueAsString(data));}
-    private void vinculo(Operador a,UUID req,UUID doc,Long seq){long key=seq==null?0:seq;if(db.sql.queryForObject("SELECT COUNT(*) FROM requirement_document_link WHERE document_id=? AND requirement_id=? AND context_key=?",Long.class,id(doc),id(req),key)==0)db.sql.update("INSERT INTO requirement_document_link VALUES(?,?,?,?,?,?)",id(doc),id(req),seq,key,a.id(),clock.millis());}
+    private void vinculo(Operador a,UUID req,UUID doc,Long seq){AsociacionesVigentes.nuevoVinculo(db,"REQ",req,doc,seq==null?"REQ":Long.toString(seq));long key=seq==null?0:seq;if(db.sql.queryForObject("SELECT COUNT(*) FROM requirement_document_link WHERE document_id=? AND requirement_id=? AND context_key=?",Long.class,id(doc),id(req),key)==0)db.sql.update("INSERT INTO requirement_document_link VALUES(?,?,?,?,?,?)",id(doc),id(req),seq,key,a.id(),clock.millis());}
     public Documento cargar(Operador a,UUID key,UUID req,Long seq,String nombre,InputStream input){
         db.transaction(()->contexto(a,req,false));
         try(var temp=originales.preparar(nombre,input)){
@@ -76,10 +77,10 @@ public final class DocumentosRequerimiento {
     });}
     public Documento documento(Operador a,UUID req,UUID doc){return db.transaction(()->documentoActual(a,req,doc));}
     private Documento documentoActual(Operador a,UUID req,UUID doc){
-        var p=permitir(a,req,doc,"METADATOS");var c=contexto(a,req,false);var d=original(doc);boolean held=DisponibilidadDocumental.retenido(db,doc),contenido=!held&&!"BLOQUEADO".equals(p.get("classification"));var x=d.original();
-        var links=db.sql.queryForList("SELECT activity_seq FROM requirement_document_link WHERE document_id=? AND requirement_id=? ORDER BY context_key",id(doc),id(req)).stream().map(r->new Contexto(req,r.get("activity_seq")==null?null:n(r,"activity_seq"))).toList();
+        var p=permitir(a,req,doc,"METADATOS");var c=contexto(a,req,false);var d=original(doc);boolean held=DisponibilidadDocumental.retenido(db,doc),contenido=!held&&!AsociacionesVigentes.retirada(db,"REQ",req,doc)&&!"BLOQUEADO".equals(p.get("classification"));var x=d.original();
+        var links=AsociacionesVigentes.contextos(db,"REQ",req,doc).stream().map(k->new Contexto(req,k.equals("REQ")?null:Long.valueOf(k))).toList();
         String view=FormatosDocumento.paginable(x.tipo())?"PAGINAS":x.tipo().startsWith("audio/")?"AUDIO":x.tipo().startsWith("video/")?"VIDEO":"DESCARGA";
-        return new Documento(doc,x.nombre(),x.tamanio(),x.sha256(),x.tipo(),d.autor(),d.fecha(),links,view,contenido,contenido,c.jefatura(),c.jefatura()||c.profesional(),s(p,"classification"),n(p,"revision"),held);
+        return new Documento(doc,x.nombre(),x.tamanio(),x.sha256(),x.tipo(),d.autor(),d.fecha(),links,view,contenido,contenido,c.jefatura(),c.jefatura()||c.profesional(),s(p,"classification"),n(p,"revision"),held,AsociacionesVigentes.retirada(db,"REQ",req,doc));
     }
     private DocumentoPrivado original(UUID doc){var rows=db.sql.queryForList("SELECT * FROM institution_document WHERE id=? AND owner_context='REQ' AND origin='GESTION_INSTITUCIONAL'",id(doc));if(rows.size()!=1)throw new FalloTecnico(404);var r=rows.getFirst();if(!("gestion/"+doc).equals(r.get("storage_key"))||r.get("created_by")==null)throw new FalloTecnico(409);return new DocumentoPrivado(doc,UUID.fromString(s(r,"communication_id")),"GESTION_INSTITUCIONAL",s(r,"storage_key"),new EntregaCompleta.Adjunto(doc,s(r,"name"),n(r,"size_bytes"),s(r,"sha256"),s(r,"media_type"),"VALIDADO"),s(r,"created_by"),Instant.ofEpochMilli(n(r,"created_ms")));}
     public DocumentoPrivado referencia(Operador a,UUID req,UUID doc,String accion){return db.transaction(()->{permitir(a,req,doc,accion);return original(doc);});}
