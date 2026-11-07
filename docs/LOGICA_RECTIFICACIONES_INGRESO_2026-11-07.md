@@ -41,3 +41,7 @@ PR #12/a3d74eb CI42319144670: Ubuntu3 falló frontend162/163 en App.test.tsx al 
 ## Pendientes reales
 
 ING-05 sigue parcial para formularios públicos, contactos/campos sectoriales y fuentes históricas no conciliadas. Falta consumo de datos rectificados en búsqueda/motor temporal, sin reescribir mediciones o originales pasados. Documentos/antecedentesREQsinCaso, notificaciones U2 pendientes, calendarios/plazos, clasificación/invalidaciones/duplicados/conciliación y reportería/exportación continúan programables; ninguna nueva validación funcional necesaria. Matriz138 conserva IDs/orden y distingue evidencia local de CI. Revisión transversal/candidata cuando todas estén implementadas/verificadas o limitadas concretamente, no antes.
+
+## Integración de corrección del padre
+
+El corte funcionald379298 quedó confirmado localmente antes de volver al padre. PR12 publicó61accdb (frontendApp18/18,integral164/lint/build); espera revisión real antes de evaluar antecedente, protege submit y cancela respuesta tardía de contexto previo. Su CI42348399598 sigue pendiente; el fallo anteriora3d74eb y su hash se conservan. Merge propio controlado incorpora el fix sin modificar Java/persistencia de rectificaciones, no repetir MySQL10 por un cambio de interfaz. Recalificación frontend del hijo171/lint/build pendiente al escribir. Cadena#2→...→#11→#12→hijo, todos borradores, sinmergeamain/despliegue.
