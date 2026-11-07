@@ -10,7 +10,7 @@ Continuar bloques independientes mientras haya capacidad. Cuando las138 estén i
 
 ## Estado actual exacto y próxima acción
 
-Rama `codex/siger-correos-trazables`, creada con árbol limpio desde PR #15 / **5d9d3872427c6d7fdbbcc2f177fc304618329af2**. Sin commit/upstream propio al preparar este corte. Todos los cambios locales D3 se conservan y revisaron. Padres y main intactos.
+Rama `codex/siger-correos-trazables`, creada con árbol limpio desde PR #15 / **5d9d3872427c6d7fdbbcc2f177fc304618329af2**. Primer commit publicado **b062a40aa6a3a92c0ddfe48d9bcce4e582d0749a**, upstream sincronizado; corrección de prueba histórica posterior se confirma en este corte. Todos los cambios locales D3 se conservan y revisaron. Padres y main intactos.
 
 PR #15 está cerrado técnicamente: CI **42353760616**, ocho jobs aprobados,90 raíces/642 métodos por OS; Windows633 aprobados/9 omitidos, Ubuntu618/24, cero fallos/errores. Frontend180/180, lint/TypeScript/Vite/package. Particiones completas/disjuntas del mismo HEAD/run, acta PR e informe verificados. PR #14 /395a7b0: CI42351175167,ochojobs/626métodos por OS,FE176. No atribuir estas CI al hijo.
 
@@ -30,7 +30,9 @@ Pruebas D3 acreditadas (cortes separados, no sumar repeticiones):
 
 Contrato `correo-interno-materializado-v1.md`, informe `LOGICA_CORREO_MATERIALIZADO_2026-11-07.md` y matriz138 actualizados. COR-07 parcial de correo interno, no plantilla/aprobación externa ni oficio implementados. NOT-01/07,COR-03/05,AUD-03/04 evidencia específica; IDs/orden/validación06/11 preservados.
 
-**Siguiente acción exacta:** revisar diff final, confirmar y push normal D3; crear PR en borrador con base `codex/siger-avisos-continuidad` (PR #15). Exigir CI propia ocho jobs del HEAD exacto y cerrar acta con logs/contadores. Ningún Maven/MySQL local sigue activo. Mientras CI corre, continuar bloque funcional independiente en nuevo hijo con árbol limpio; no repetir estas pruebas sin cambio/fallo relevante.
+Corrección de AutoridadMigracionTest: expectativa final explícita15.17, incluye partida15.16 y DDL idéntico; **24/24 H2 y24/24 MySQL**,instancia04f1dc8e075d40ec933397480f9308f9 cerrada/proceso0. Conserva todas las comprobaciones de historial/concurrencia/revocación. No se repiten pruebas de producción no afectadas.
+
+**Siguiente acción exacta:** confirmar ajuste de prueba/auxiliar y push normal D3; crear PR en borrador con base `codex/siger-avisos-continuidad` (PR #15). Exigir CI propia ocho jobs del HEAD exacto y cerrar acta con logs/contadores. Ningún Maven/MySQL local sigue activo. Mientras CI corre, continuar bloque funcional independiente en nuevo hijo con árbol limpio; no repetir estas pruebas sin cambio/fallo relevante.
 
 Próximos pendientes programables: toma/supervisión de clasificación y EV-02; documentos/antecedentes REQ sin Caso; ingreso flexible/invalidación/duplicados;48h de registro y calendarios; búsqueda/reportes/exportación; conciliación histórica explícita. No nueva validación funcional ni candidata138 prematura. Mantener checkpoint recuperable; al cumplir criterio138, revisión transversal/retirada de provisionales y candidata compilable integrada antes de cerrar.
 
