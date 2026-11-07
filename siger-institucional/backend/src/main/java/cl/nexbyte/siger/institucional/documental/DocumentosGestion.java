@@ -9,7 +9,7 @@ import org.springframework.dao.DuplicateKeyException;
 /** Originales de gestión inmutables; los vínculos y su autorización son independientes de la custodia ciudadana. */
 public final class DocumentosGestion {
     public record Contexto(UUID caso,UUID actuacion){}
-    public record Documento(UUID id,String origen,String nombre,long tamanio,String sha256,String tipo,String autor,Instant fecha,List<Contexto> contextos,String representacion,boolean consultable,boolean descargable,boolean administrable,String proteccion,boolean restringible,boolean referenciable){}
+    public record Documento(UUID id,String origen,String nombre,long tamanio,String sha256,String tipo,String autor,Instant fecha,List<Contexto> contextos,String representacion,boolean consultable,boolean descargable,boolean administrable,String proteccion,boolean restringible,boolean referenciable,boolean cuarentena){}
     private final BaseJdbc db;private final ArchivoInstitucional files;private final AutorizacionDocumental policy;
     private final OriginalesGestion originales;private final Clock clock;
     public DocumentosGestion(BaseJdbc db,ArchivoInstitucional files,AutorizacionDocumental policy,ProcesamientoDocumental.Antivirus antivirus,ProcesamientoDocumental.Inspector inspector,Clock clock){this.db=db;this.files=files;this.policy=policy;this.originales=new OriginalesGestion(files,antivirus,inspector);this.clock=clock;}
@@ -27,13 +27,13 @@ public final class DocumentosGestion {
         policy.leerCaso(actor,caso);
         try(var temp=originales.preparar(nombre,input)){
             String tipo=temp.tipo();var digest=hash(List.of("GESTION_CARGA_1",actor.id(),caso,Objects.toString(action,""),nombre,temp.tamanio(),temp.sha256(),tipo));
-            var old=anterior(key,actor,caso,"CARGAR",digest);if(old!=null){verificarArchivo(referencia(actor,caso,old));return documento(actor,caso,old);}
-            var initial=db.transaction(()->{var c=policy.gestionarCaso(actor,caso);actuacion(caso,action);return c;});
+            var old=anterior(key,actor,caso,"CARGAR",digest);if(old!=null){verificarArchivo(referencia(actor,caso,old,"METADATOS"));return documento(actor,caso,old);}
+            var initial=db.transaction(()->{var c=policy.gestionarCaso(actor,caso);DisponibilidadDocumental.huella(db,temp.sha256());actuacion(caso,action);return c;});
             try{temp.validar();}catch(OriginalesGestion.Rechazo rejected){evento(actor,null,caso,null,rejected.codigo);throw new FalloTecnico(422,"DOCUMENTO_RECHAZADO");}
             var id=UUID.nameUUIDFromBytes(("GESTION_DOC_1:"+actor.id()+":"+key).getBytes(StandardCharsets.UTF_8));String storage=temp.conservar(id);
             try{return db.transaction(()->{
                 var same=anterior(key,actor,caso,"CARGAR",digest);if(same!=null)return documento(actor,caso,same);
-                var current=policy.gestionarCaso(actor,caso);actuacion(caso,action);if(!current.comunicacionId().equals(initial.comunicacionId()))throw new FalloTecnico(409);
+                var current=policy.gestionarCaso(actor,caso);DisponibilidadDocumental.huella(db,temp.sha256());actuacion(caso,action);if(!current.comunicacionId().equals(initial.comunicacionId()))throw new FalloTecnico(409);
                 db.sql.update("INSERT INTO institution_document(id,communication_id,origin,name,size_bytes,sha256,media_type,storage_key,created_ms,created_by) VALUES(?,?,'GESTION_INSTITUCIONAL',?,?,?,?,?,?,?)",sid(id),sid(current.comunicacionId()),nombre,temp.tamanio(),temp.sha256(),tipo,storage,clock.millis(),actor.id());
                 vinculo(id,caso,action,actor);policy.registrarDocumento(actor,caso,id);comando(key,actor,caso,"CARGAR",digest,id);evento(actor,id,caso,action,"DOCUMENTO_CREADO");return documento(actor,caso,id);
             });}catch(DuplicateKeyException race){var winner=anterior(key,actor,caso,"CARGAR",digest);if(winner==null)throw new FalloTecnico(409);return documento(actor,caso,winner);}
@@ -56,17 +56,17 @@ public final class DocumentosGestion {
     }
     private Documento resultadoVinculo(Operador actor,UUID origen,UUID destino,UUID action,UUID id){
         try{return documento(actor,destino,id);}catch(FalloTecnico e){if(e.status!=404)throw e;}
-        var d=documento(actor,origen,id);return new Documento(d.id(),d.origen(),d.nombre(),d.tamanio(),d.sha256(),d.tipo(),d.autor(),d.fecha(),List.of(new Contexto(destino,action)),d.representacion(),false,false,false,d.proteccion(),false,false);
+        var d=documento(actor,origen,id);return new Documento(d.id(),d.origen(),d.nombre(),d.tamanio(),d.sha256(),d.tipo(),d.autor(),d.fecha(),List.of(new Contexto(destino,action)),d.representacion(),false,false,false,d.proteccion(),false,false,d.cuarentena());
     }
     private boolean referenciable(Operador actor,UUID caso,boolean descarga){if(!descarga)return false;try{policy.leerCaso(actor,caso);return true;}catch(FalloTecnico e){if(e.status==404)return false;throw e;}}
     public List<Documento> listar(Operador actor,UUID caso){return db.transaction(()->{policy.contextoDocumento(actor,caso);var result=new ArrayList<Documento>();for(var r:db.sql.queryForList("SELECT DISTINCT d.id,d.created_ms FROM institution_document d JOIN management_document_link l ON l.document_id=d.id WHERE l.case_id=? AND d.origin='GESTION_INSTITUCIONAL' ORDER BY d.created_ms,d.id",sid(caso))){try{result.add(documento(actor,caso,UUID.fromString(r.get("id").toString())));}catch(FalloTecnico e){if(e.status!=404)throw e;}}return result;});}
-    public Documento documento(Operador actor,UUID caso,UUID id){var d=referencia(actor,caso,id,"METADATOS");var permisos=policy.permisos(actor,caso,id);var links=db.sql.queryForList("SELECT action_id FROM management_document_link WHERE document_id=? AND case_id=? ORDER BY context_id",sid(id),sid(caso)).stream().map(r->new Contexto(caso,r.get("action_id")==null?null:UUID.fromString(r.get("action_id").toString()))).toList();String view=FormatosDocumento.paginable(d.original().tipo())?"PAGINAS":d.original().tipo().startsWith("audio/")?"AUDIO":d.original().tipo().startsWith("video/")?"VIDEO":"DESCARGA";var a=d.original();return new Documento(id,d.origen(),a.nombre(),a.tamanio(),a.sha256(),a.tipo(),d.autor(),d.fecha(),links,view,permisos.contenido(),permisos.descarga(),permisos.administrar(),permisos.clasificacion(),permisos.restringir(),referenciable(actor,caso,permisos.descarga()));}
+    public Documento documento(Operador actor,UUID caso,UUID id){var d=referencia(actor,caso,id,"METADATOS");var permisos=policy.permisos(actor,caso,id);var links=db.sql.queryForList("SELECT action_id FROM management_document_link WHERE document_id=? AND case_id=? ORDER BY context_id",sid(id),sid(caso)).stream().map(r->new Contexto(caso,r.get("action_id")==null?null:UUID.fromString(r.get("action_id").toString()))).toList();String view=FormatosDocumento.paginable(d.original().tipo())?"PAGINAS":d.original().tipo().startsWith("audio/")?"AUDIO":d.original().tipo().startsWith("video/")?"VIDEO":"DESCARGA";var a=d.original();boolean held=DisponibilidadDocumental.retenido(db,id);return new Documento(id,d.origen(),a.nombre(),a.tamanio(),a.sha256(),a.tipo(),d.autor(),d.fecha(),links,view,permisos.contenido()&&!held,permisos.descarga()&&!held,permisos.administrar(),permisos.clasificacion(),permisos.restringir(),referenciable(actor,caso,permisos.descarga()&&!held),held);}
     public DocumentoPrivado referencia(Operador actor,UUID caso,UUID id){
         return referencia(actor,caso,id,"CONTENIDO");
     }
-    public void revalidar(Operador actor,UUID caso,UUID id,String accion){policy.revalidarDocumento(actor,caso,id,accion);}
+    public void revalidar(Operador actor,UUID caso,UUID id,String accion){policy.revalidarDocumento(actor,caso,id,accion);if(!accion.equals("METADATOS"))DisponibilidadDocumental.contenido(db,id);}
     public DocumentoPrivado referencia(Operador actor,UUID caso,UUID id,String accion){
-        policy.documento(actor,caso,id,accion);var rows=db.sql.queryForList("SELECT d.* FROM institution_document d WHERE d.id=? AND d.origin='GESTION_INSTITUCIONAL' AND EXISTS(SELECT 1 FROM management_document_link l WHERE l.document_id=d.id AND l.case_id=?)",sid(id),sid(caso));if(rows.isEmpty())throw new FalloTecnico(404);var r=rows.getFirst();
+        policy.documento(actor,caso,id,accion);if(!accion.equals("METADATOS"))DisponibilidadDocumental.contenido(db,id);var rows=db.sql.queryForList("SELECT d.* FROM institution_document d WHERE d.id=? AND d.origin='GESTION_INSTITUCIONAL' AND EXISTS(SELECT 1 FROM management_document_link l WHERE l.document_id=d.id AND l.case_id=?)",sid(id),sid(caso));if(rows.isEmpty())throw new FalloTecnico(404);var r=rows.getFirst();
         if(!("gestion/"+id).equals(r.get("storage_key"))||r.get("created_by")==null)throw new FalloTecnico(409);
         var a=new EntregaCompleta.Adjunto(id,r.get("name").toString(),((Number)r.get("size_bytes")).longValue(),r.get("sha256").toString(),r.get("media_type").toString(),"VALIDADO");
         return new DocumentoPrivado(id,UUID.fromString(r.get("communication_id").toString()),"GESTION_INSTITUCIONAL",r.get("storage_key").toString(),a,r.get("created_by").toString(),Instant.ofEpochMilli(((Number)r.get("created_ms")).longValue()));

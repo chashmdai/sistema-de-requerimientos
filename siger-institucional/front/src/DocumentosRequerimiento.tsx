@@ -46,17 +46,17 @@ export function DocumentosRequerimiento({requerimiento,version}:{requerimiento:s
   </form>}
   {data&&!data.editable&&<p>La consulta conserva los antecedentes anteriores. Las nuevas cargas requieren atención activa sin Casos.</p>}
   {data&&!data.documentos.length&&<p>Sin documentos autorizados en este Requerimiento.</p>}
-  {data?.documentos.map(d=><article className="card" key={`${d.id}:${d.revision}`}><h3>{d.nombre}</h3><p>{d.autor} · {date(d.fecha)} · {d.tamanio.toLocaleString('es-CL')} bytes · {d.proteccion}</p>
+  {data?.documentos.map(d=><article className="card" key={`${d.id}:${d.revision}`}><h3>{d.nombre}</h3>{d.cuarentena&&<p role="status">Archivo aislado técnicamente. Se conserva el original; consulta y descarga temporalmente cerradas.</p>}<p>{d.autor} · {date(d.fecha)} · {d.tamanio.toLocaleString('es-CL')} bytes · {d.proteccion}</p>
    <ul>{d.contextos.map(c=><li key={c.gestionSeq??'REQ'}>{c.gestionSeq?`Gestión REQ:${c.gestionSeq}`:'Antecedente general del REQ'}</li>)}</ul>
    <details><summary>Integridad del original</summary><code>{d.sha256}</code></details>
-   {d.consultable===true&&d.representacion==='PAGINAS'&&<button onClick={()=>R(d)}>Previsualizar {d.nombre}</button>}
-   {d.consultable===true&&d.descargable===true&&d.representacion==='AUDIO'&&<audio controls preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
-   {d.consultable===true&&d.descargable===true&&d.representacion==='VIDEO'&&<video controls playsInline preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
-   {d.descargable===true&&<a href={`${api.baseDocumentosReq(requerimiento)}/${d.id}/original`}>Descargar {d.nombre}</a>}
-   {d.consultable===true&&<VersionDocumento base={`${api.baseDocumentosReq(requerimiento)}/${d.id}`} documento={d} documentos={data.documentos} version={`${version}:${refresh}:${d.revision}`} denegado={()=>{D(null);R(null);}}/>}
-   {d.consultable===true&&<Historia req={requerimiento} doc={d.id} denegado={()=>{D(null);R(null);}}/>}
+   {!d.cuarentena&&d.consultable===true&&d.representacion==='PAGINAS'&&<button onClick={()=>R(d)}>Previsualizar {d.nombre}</button>}
+   {!d.cuarentena&&d.consultable===true&&d.descargable===true&&d.representacion==='AUDIO'&&<audio controls preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
+   {!d.cuarentena&&d.consultable===true&&d.descargable===true&&d.representacion==='VIDEO'&&<video controls playsInline preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
+   {!d.cuarentena&&d.descargable===true&&<a href={`${api.baseDocumentosReq(requerimiento)}/${d.id}/original`}>Descargar {d.nombre}</a>}
+   {!d.cuarentena&&d.consultable===true&&<VersionDocumento base={`${api.baseDocumentosReq(requerimiento)}/${d.id}`} documento={d} documentos={data.documentos} version={`${version}:${refresh}:${d.revision}`} denegado={()=>{D(null);R(null);}}/>}
+   {!d.cuarentena&&d.consultable===true&&<Historia req={requerimiento} doc={d.id} denegado={()=>{D(null);R(null);}}/>}
    {(d.administrable||d.restringible)&&<Proteger req={requerimiento} doc={d} changed={changed} denegado={()=>{D(null);R(null);}}/>}
-   {data.editable&&d.descargable===true&&<Asociar req={requerimiento} doc={d.id} entries={entries} changed={changed} denegado={()=>{D(null);R(null);}}/>}
+   {data.editable&&!d.cuarentena&&d.descargable===true&&<Asociar req={requerimiento} doc={d.id} entries={entries} changed={changed} denegado={()=>{D(null);R(null);}}/>}
   </article>)}
   {preview&&<VisorDocumento key={preview.id} nombre={preview.nombre} descargable={preview.descargable} base={`${api.baseDocumentosReq(requerimiento)}/${preview.id}`} cerrar={()=>R(null)}/>}
   <button disabled={busy||pending} onClick={changed}>Actualizar documentos autorizados del REQ</button>
