@@ -38,7 +38,7 @@ function Restore-Manifests {foreach($part in 1..2){[IO.File]::WriteAllText((Join
 function Change-Manifest([int]$part,[scriptblock]$change){$file=Join-Path $coverage "coverage-$part.json";$value=Get-Content -LiteralPath $file -Raw|ConvertFrom-Json -AsHashtable;& $change $value;$value|ConvertTo-Json -Depth 12|Set-Content -LiteralPath $file}
 $checks=0
 function Denied([string]$name,[scriptblock]$action){$denied=$false;try{& $action|Out-Null}catch{$denied=$true};if(-not $denied){throw "Control aceptó evidencia inválida: $name"};$script:checks++}
-foreach($field in @('head','run','schema','status')){
+foreach($field in @('head','run','schema','status','platform')){
  Restore-Manifests;Change-Manifest 1 {$args[0][$field]='INVALID'}
  Denied $field {& $script -Mode Aggregate -Directory $coverage -Parts 2}
 }

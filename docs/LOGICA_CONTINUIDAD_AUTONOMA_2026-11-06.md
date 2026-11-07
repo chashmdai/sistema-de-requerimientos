@@ -10,6 +10,14 @@ Continuar bloques independientes mientras haya capacidad. Cuando las138 estén i
 
 ## Estado actual exacto y próxima acción
 
+Rama actual **codex/siger-ci-sin-duplicacion**, creada con árbol limpio desde PR #16 / **efdceed922ad5e85099419ee06298fa64c479bde**, dos commits b062a40+efdceed publicados y sincronizados. PR #16 borrador base PR #15; CI propia **42372030854** en curso (seis partes, aún no cerrar correos). No modificar padres mientras se verifica.
+
+Hijo CI sin commit: push solo main + pull_request/manual, ocho jobs conservados. Frontend completo pasa de seis repeticiones a una por OS en agregaciones; backend conserva tres particiones/OS sin Node. Integración solo tras manifiestos completos del mismo HEAD/run/OS, nuevo esquema coverage2; Maven compile+jar+repackage sin repetir tests/excluirlos. Build normal local integral intacto. Control real SHA256 dist/JAR, cuatro negativos sintéticos; harness cobertura13negativos y parser correctos. Ensamblado local real9.5s correcto y3archivosdist/JAR idénticosSHA256; integración sin manifiestos y selección incompatible rechazadas antes de frontend/Maven. Logs ci17-*. Informe LOGICA_CI_SIN_DUPLICACION_2026-11-07.md.
+
+**Próxima acción:** commit/push/PR hijo basePR16 y CI ochojobs exacta que acredite equivalencia. Vigilar CI16 y conservar cualquier fallo. No repetir H2/DOM/MySQL no afectados por este cambio de flujo. Luego avanzar otra capacidad independiente con árbol limpio.
+
+### Corte de correos preservado
+
 Rama `codex/siger-correos-trazables`, creada con árbol limpio desde PR #15 / **5d9d3872427c6d7fdbbcc2f177fc304618329af2**. Primer commit publicado **b062a40aa6a3a92c0ddfe48d9bcce4e582d0749a**, upstream sincronizado; corrección de prueba histórica posterior se confirma en este corte. Todos los cambios locales D3 se conservan y revisaron. Padres y main intactos.
 
 PR #15 está cerrado técnicamente: CI **42353760616**, ocho jobs aprobados,90 raíces/642 métodos por OS; Windows633 aprobados/9 omitidos, Ubuntu618/24, cero fallos/errores. Frontend180/180, lint/TypeScript/Vite/package. Particiones completas/disjuntas del mismo HEAD/run, acta PR e informe verificados. PR #14 /395a7b0: CI42351175167,ochojobs/626métodos por OS,FE176. No atribuir estas CI al hijo.
