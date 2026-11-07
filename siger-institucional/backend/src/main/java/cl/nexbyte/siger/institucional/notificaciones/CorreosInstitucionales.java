@@ -21,7 +21,7 @@ public final class CorreosInstitucionales {
    if(!Set.of("PENDIENTE","REINTENTABLE").contains(old))return null;
    if(((Number)out.get("next_attempt_ms")).longValue()>clock.millis())throw new FalloTecnico(409,"ESPERAR_REINTENTO");
    if(!notices.enviable(a,n)){state(id,"SUPRIMIDO_CONTEXTO");return null;}
-   boolean institucional="AVISO_U2".equals(n.get("resource_type"));if(institucional&&transporte.real()&&enlaceBase==null)throw new FalloTecnico(409,"ENLACE_INSTITUCIONAL_NO_CONFIGURADO");
+   boolean institucional=Set.of("AVISO_U2","AVISO_GESTION").contains(n.get("resource_type"));if(institucional&&transporte.real()&&enlaceBase==null)throw new FalloTecnico(409,"ENLACE_INSTITUCIONAL_NO_CONFIGURADO");
    // Solo filas PENDIENTE/REINTENTABLE emitidas por la proyección funcional.
    // NO_APLICA previo no se promueve ni se envía retrospectivamente.
    var account=db.sql.queryForMap("SELECT email,enabled FROM staff_account WHERE actor_id=?",a.id());if(!Boolean.TRUE.equals(account.get("enabled")))throw new FalloTecnico(401);

@@ -20,27 +20,32 @@ public final class AvisosNucleo {
     static Contexto contexto(ContratosNucleo.NuevoDestino d){return new Contexto(d.unidad(),d.sede(),d.area());}
     static Contexto contexto(Map<String,Object> r){return new Contexto(str(r,"unit_code"),str(r,"site_id"),str(r,"area_id"));}
     private static String str(Map<String,Object> r,String k){return r.get(k)==null?null:r.get(k).toString();}
-    long programar(Operador a,UUID com,UUID recurso,String kind,long revision,Datos datos){
+    long programar(Operador a,UUID com,UUID recurso,String kind,long revision,Datos datos){return guardar(a,com,recurso,kind,revision,ACTION,"AVISO_U2",datos.tipo(),datos);}
+    long guardar(Operador a,UUID com,UUID recurso,String kind,long revision,String action,String tipoRecurso,String tipo,Object datos){
         if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("Transacción de negocio requerida");
         var key=new GeneratedKeyHolder();db.sql.update(connection->{var s=connection.prepareStatement("INSERT INTO institution_flow_history(communication_id,resource_id,resource_kind,revision,actor_id,at_ms,action_code,reason_text,snapshot_doc) VALUES(?,?,?,?,?,?,?,?,?)",Statement.RETURN_GENERATED_KEYS);
-            s.setString(1,com.toString());s.setString(2,recurso.toString());s.setString(3,kind);s.setLong(4,revision);s.setString(5,a.id());s.setLong(6,clock.millis());s.setString(7,ACTION);s.setString(8,"Intención durable de aviso institucional");s.setString(9,json.writeValueAsString(datos));return s;},key);
+            s.setString(1,com.toString());s.setString(2,recurso.toString());s.setString(3,kind);s.setLong(4,revision);s.setString(5,a.id());s.setLong(6,clock.millis());s.setString(7,action);s.setString(8,"Intención durable de aviso institucional");s.setString(9,json.writeValueAsString(datos));return s;},key);
         if(key.getKey()==null)throw new FalloTecnico(503);long seq=key.getKey().longValue();
-        db.sql.update("INSERT INTO workflow_event(event_key,code,resource_type,resource_id,at_ms) VALUES(?,?,'AVISO_U2',?,?)","AVISO_U2:"+seq,datos.tipo(),recurso.toString(),clock.millis());return seq;
+        db.sql.update("INSERT INTO workflow_event(event_key,code,resource_type,resource_id,at_ms) VALUES(?,?,?,?,?)","AVISO_U2:"+seq,tipo,tipoRecurso,recurso.toString(),clock.millis());return seq;
     }
     private static long seq(String value){try{long n=Long.parseLong(value);if(n<1)throw new IllegalArgumentException();return n;}catch(IllegalArgumentException e){throw new FalloTecnico(404);}}
-    private static boolean contextoValido(Contexto c){return c!=null&&c.unidad()!=null&&c.unidad().matches("[A-Z0-9_]{1,8}")&&c.sede()!=null&&c.sede().matches("[A-Za-z0-9_.-]{1,40}")&&(c.area()==null||c.area().matches("[A-Za-z0-9_.-]{1,64}"));}
-    private Fuente fuente(UUID recurso,String evento){
+    static boolean contextoValido(Contexto c){return c!=null&&c.unidad()!=null&&c.unidad().matches("[A-Z0-9_]{1,8}")&&c.sede()!=null&&c.sede().matches("[A-Za-z0-9_.-]{1,40}")&&(c.area()==null||c.area().matches("[A-Za-z0-9_.-]{1,64}"));}
+    record Registro(Map<String,Object> historia,String tipo){}
+    Registro registro(UUID recurso,String evento,String action,String tipoRecurso){
         if(evento==null||!evento.matches("[1-9][0-9]{0,18}"))throw new FalloTecnico(404);
-        var events=db.sql.queryForList("SELECT * FROM workflow_event WHERE seq=? AND resource_type='AVISO_U2' AND resource_id=?",seq(evento),recurso.toString());if(events.size()!=1)throw new FalloTecnico(404);var e=events.getFirst();String ref=str(e,"event_key");if(ref==null||!ref.matches("AVISO_U2:[1-9][0-9]{0,18}"))throw new FalloTecnico(404);
-        var rows=db.sql.queryForList("SELECT * FROM institution_flow_history WHERE seq=? AND resource_id=? AND action_code=?",seq(ref.substring(9)),recurso.toString(),ACTION);if(rows.size()!=1)throw new FalloTecnico(404);var row=rows.getFirst();
+        var events=db.sql.queryForList("SELECT * FROM workflow_event WHERE seq=? AND resource_type=? AND resource_id=?",seq(evento),tipoRecurso,recurso.toString());if(events.size()!=1)throw new FalloTecnico(404);var e=events.getFirst();String ref=str(e,"event_key");if(ref==null||!ref.matches("AVISO_U2:[1-9][0-9]{0,18}"))throw new FalloTecnico(404);
+        var rows=db.sql.queryForList("SELECT * FROM institution_flow_history WHERE seq=? AND resource_id=? AND action_code=?",seq(ref.substring(9)),recurso.toString(),action);if(rows.size()!=1)throw new FalloTecnico(404);return new Registro(rows.getFirst(),str(e,"code"));
+    }
+    private Fuente fuente(UUID recurso,String evento){
+        var ref=registro(recurso,evento,ACTION,"AVISO_U2");var row=ref.historia();
         try{
             var p=AutoridadesInstitucionales.lectorPrivado().readValue(str(row,"snapshot_doc"),Datos.class);
-            if(!"1.0".equals(p.version())||!Set.of("SOL_DISTRIBUIDA","SOL_REDIRIGIDA","REQ_ASIGNADO").contains(p.tipo())||!p.tipo().equals(e.get("code"))||p.destinoActual()==null||(!contextoValido(p.destino()))||p.solicitud()==null||p.asignador()==null||p.capturaRegional()==null||p.capturaRegional()&&p.sedeCaptura()==null||p.tipo().equals("SOL_REDIRIGIDA")&&!contextoValido(p.origen()))throw new IllegalArgumentException();
+            if(!"1.0".equals(p.version())||!Set.of("SOL_DISTRIBUIDA","SOL_REDIRIGIDA","REQ_ASIGNADO").contains(p.tipo())||!p.tipo().equals(ref.tipo())||p.destinoActual()==null||(!contextoValido(p.destino()))||p.solicitud()==null||p.asignador()==null||p.capturaRegional()==null||p.capturaRegional()&&p.sedeCaptura()==null||p.tipo().equals("SOL_REDIRIGIDA")&&!contextoValido(p.origen()))throw new IllegalArgumentException();
             boolean req=p.tipo().equals("REQ_ASIGNADO");if(req?(p.requerimiento()==null||!recurso.equals(p.requerimiento())||!"REQ".equals(row.get("resource_kind"))||p.encargado()==null):(!recurso.equals(p.solicitud())||p.requerimiento()!=null||!"SOL".equals(row.get("resource_kind"))))throw new IllegalArgumentException();
             return new Fuente(p,UUID.fromString(str(row,"communication_id")),Instant.ofEpochMilli(((Number)row.get("at_ms")).longValue()));
         }catch(RuntimeException invalid){throw new FalloTecnico(404);}
     }
-    private boolean jefatura(Operador a,Contexto c){
+    boolean jefatura(Operador a,Contexto c){
         if(c==null||!a.jefeEn(c.unidad(),c.sede(),c.area()))return false;
         if(c.area()!=null)return new PoliticaAreas(db,clock).vigente(c.area(),c.unidad(),c.sede());
         return db.sql.queryForObject("SELECT COUNT(*) FROM institution_area WHERE unit_code=? AND site_id=?",Long.class,c.unidad(),c.sede())==0;

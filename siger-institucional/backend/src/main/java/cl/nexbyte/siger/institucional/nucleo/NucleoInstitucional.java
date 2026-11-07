@@ -22,6 +22,8 @@ public final class NucleoInstitucional {
     }
     public TerminoColaboracion terminoColaboracion(){return new TerminoColaboracion(db,this,catalogo,clock);}
     public AvisosNucleo avisosNucleo(){return new AvisosNucleo(db,this,catalogo,mapper,clock);}
+    public AvisosGestion avisosGestion(){return new AvisosGestion(db,this,catalogo,clock);}
+    void identidadParaAviso(Operador a){if(autoridad==null)throw new FalloTecnico(409,"AUTORIDAD_NO_ACREDITADA");autoridad.identidadParaAviso(a.id());}
     public RectificacionesIngreso rectificacionesIngreso(){return new RectificacionesIngreso(db,this,mapper,clock);}
     public BitacoraGestion bitacora(){return new BitacoraGestion(db,this,clock);}
     public cl.nexbyte.siger.institucional.identidad.CatalogoTerritorial territorio(){return new cl.nexbyte.siger.institucional.identidad.CatalogoTerritorial(db,autoridad,mapper,clock);}
@@ -35,7 +37,10 @@ public final class NucleoInstitucional {
     void jefaturaOrigen(Operador a,Map<String,Object> contexto,long emitida){
         String ar=areas.area(contexto);
         if((ar==null||areas.vigente(ar,str(contexto,"unit_code"),str(contexto,"site_id")))&&a.jefeEn(str(contexto,"unit_code"),str(contexto,"site_id"),ar))return;
-        if(autoridad!=null&&autoridad.subrogancias().actoConservado(a.id(),str(contexto,"unit_code"),str(contexto,"site_id"),ar,emitida))return;
+        if(autoridad!=null){
+            try{if(autoridad.subrogancias().actoConservado(a.id(),str(contexto,"unit_code"),str(contexto,"site_id"),ar,emitida))return;}
+            catch(FalloTecnico denied){if(!Set.of(401,403,404,409).contains(denied.status))throw denied;}
+        }
         throw new FalloTecnico(404);
     }
     /** Compatibilidad de transporte: solo reproduce un comando ya confirmado. La fila se
@@ -282,7 +287,8 @@ public final class NucleoInstitucional {
             // Reasignar un cerrado permite encaminar antecedentes; nunca lo reabre.
             if("CERRADO".equals(c.get("state"))&&!Objects.equals(request.complejidadProvisional(),c.get("complexity_text")))throw new FalloTecnico(409);
             boolean reasigna=!request.responsable().equals(c.get("responsible_id"));
-            db.sql.update("UPDATE core_case SET responsible_id=?,complexity_text=?,revision=revision+1 WHERE id=?",request.responsable(),request.complejidadProvisional(),id(caseId));assignment(caseId,a,request);if(reasigna){equipo().asumirPrincipal(a,caseId,request.responsable());tareas().transferir(a,caseId,request.responsable(),null,"TAR09_TRASPASO_PENDIENTES");}bump(communication);event(communication,"CASO",caseId,a,"RESPONSABLE_Y_COMPLEJIDAD_REGISTRADOS");return new Resultado(caseId,number(c,"revision")+1);
+            UUID anterior=null;if(reasigna&&casoU2(caseId)){var prev=db.sql.queryForList("SELECT assignment_id FROM institution_assignment_current WHERE case_id=?",id(caseId));if(prev.size()!=1)throw new FalloTecnico(409,"ASIGNACION_NO_ACREDITADA");anterior=uuid(prev.getFirst().get("assignment_id"));}
+            db.sql.update("UPDATE core_case SET responsible_id=?,complexity_text=?,revision=revision+1 WHERE id=?",request.responsable(),request.complejidadProvisional(),id(caseId));assignment(caseId,a,request);if(reasigna){equipo().asumirPrincipal(a,caseId,request.responsable());tareas().transferir(a,caseId,request.responsable(),null,"TAR09_TRASPASO_PENDIENTES");}bump(communication);event(communication,"CASO",caseId,a,"RESPONSABLE_Y_COMPLEJIDAD_REGISTRADOS");if(reasigna&&casoU2(caseId))avisosGestion().asignacion(a,caseId,anterior,str(c,"responsible_id"));return new Resultado(caseId,number(c,"revision")+1);
         });
     }
     public Resultado resolverDestino(Operador a,UUID key,UUID destination,Decision request,boolean sinCaso){
@@ -349,7 +355,7 @@ public final class NucleoInstitucional {
             db.sql.update("INSERT INTO core_review VALUES(?,?,?,?,?,?)",id(UUID.randomUUID()),id(caseId),a.id(),now(),decision,request.texto());
             if(excepcion!=null){revisionesExcepcionales().consumir(a,excepcion,request.texto());u2().historia(communication,caseId,"CASO",number(c,"revision")+1,a,"CASO_CIERRE_EXCEPCIONAL",request.texto(),Map.of("autorizacion",id(excepcion),"permiso","CONFIRM_CASE_CLOSURE"));}
             if(regional){var f=autoridad.subrogancias().titularRegional(a.id(),str(c,"unit_code"),str(c,"site_id"),areas.area(c));u2().historia(communication,caseId,"CASO",number(c,"revision")+1,a,"CASO_AUTOCIERRE_REGIONAL_TITULAR",request.texto(),Map.of("funcionesEjercidas",List.of("PROFESIONAL_RESPONSABLE","COORDINACION_REGIONAL_TITULAR"),"designacion",f.id(),"referencia",f.referencia(),"sha256",f.sha256()));}
-            bump(communication);reevaluate(communication,a);event(communication,"CASO",caseId,a,decision.equals("CIERRE")?("PROFESIONAL_BAJA".equals(modality)?"CASO_CERRADO_PROFESIONAL_BAJA":"CASO_CERRADO"):decision.equals("DEVOLUCION")?"TERMINO_DEVUELTO_CON_OBSERVACIONES":"TERMINO_SOLICITADO");return new Resultado(caseId,number(c,"revision")+1);
+            bump(communication);reevaluate(communication,a);event(communication,"CASO",caseId,a,decision.equals("CIERRE")?("PROFESIONAL_BAJA".equals(modality)?"CASO_CERRADO_PROFESIONAL_BAJA":"CASO_CERRADO"):decision.equals("DEVOLUCION")?"TERMINO_DEVUELTO_CON_OBSERVACIONES":"TERMINO_SOLICITADO");if(casoU2(caseId)&&!decision.equals("SOLICITUD_TERMINO"))avisosGestion().terminoCaso(a,caseId,decision.equals("CIERRE")?"CASO_CERRADO":"CASO_TERMINO_DEVUELTO");return new Resultado(caseId,number(c,"revision")+1);
         });
     }
     private String personaCierre(String actor,String ar){return autoridad==null?areas.persona(actor,ar):autoridad.persona(actor);}

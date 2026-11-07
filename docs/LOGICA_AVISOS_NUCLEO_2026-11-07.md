@@ -1,5 +1,7 @@
 # Avisos institucionales SOL y REQ · 07/11/2026
 
+**Cierre acreditado:** PR14/395a7b0bce9da208738c7a356ce41976da970e56, CI42351175167 con ocho jobsWindows/Ubuntu aprobados.89raíces/626métodos porOS:Win617aprobados/9omitidos,Ub602/24,cero fallos/errores; particiones completas/disjuntas del HEADexacto y mismo run. Front176/lint/TypeScript/Vite/package correctos. Logs de agregaciones y actaPR14 verificados. Los cortes locales anteriores se conservan abajo; no se atribuyen al hijoD2.
+
 ## Capacidad desarrollada
 
 EV-03/04/05 conectan distribución, redirección y asunción con referencia interna y outbox de correo. Las decisiones conservan intención y contexto mínimo en la propia transacción; no dependen de disponibilidad de Graph. Bandeja, contador, consulta individual, enlace, lectura y correo revalidan cuenta y autorización por ámbito. Origen de redirección ve una referencia de coordinación sin recuperar SOL del destino. Lectura no es asignación, acuse ni gestión.
