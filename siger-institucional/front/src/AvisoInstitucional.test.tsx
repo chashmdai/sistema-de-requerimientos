@@ -22,3 +22,9 @@ test('enrutamiento distingue pendiente de destinatario y aviso creado de envío 
 test('ruta de la aplicación conecta notificación propia con paquete institucional',async()=>{
  window.location.hash='#aviso-institucional/notice';render(<App/>);await screen.findByText('Solicitud institucional redirigida');expect(api.gestionGet).toHaveBeenCalledWith('/nucleo/notificaciones/notice/contexto-institucional');expect(screen.getByRole('heading',{name:'Aviso institucional'})).toBeTruthy();
 });
+test('saliente consulta constancia de asignación sin vínculo a Caso ni acuse automático',async()=>{
+ vi.mocked(api.gestionGet).mockResolvedValue({...data,tipo:'CASO_ASIGNADO',origen:null,ruta:null,pendienteActual:false});render(<AvisoInstitucional id="aviso-saliente" version={0} catalog={catalog}/>);await screen.findByText('Caso asignado o reasignado');expect(screen.queryByText('Consultar recurso autorizado')).toBeNull();expect(screen.queryByText('Acusar mi asignación actual')).toBeNull();fireEvent.click(screen.getByText('Marcar aviso como leído'));await screen.findByText('Lectura del aviso registrada.');expect(api.leerNotificacion).toHaveBeenCalledWith('aviso-saliente');expect(api.command).not.toHaveBeenCalled();
+});
+test('cierre de REQ se consulta como decisión registrada sin inventar una reapertura',async()=>{
+ vi.mocked(api.gestionGet).mockResolvedValue({...data,tipo:'REQ_TERMINADO',origen:null,ruta:'requerimiento/req-cerrado',pendienteActual:false});render(<AvisoInstitucional id="cierre" version={0} catalog={catalog}/>);await screen.findByText('Cierre explícito de Requerimiento registrado');expect(screen.getByText('Referencia histórica conservada.')).toBeTruthy();expect(screen.getByText('Consultar recurso autorizado').getAttribute('href')).toBe('#requerimiento/req-cerrado');expect(screen.queryByText('Aprobar reapertura del mismo Caso')).toBeNull();expect(api.command).not.toHaveBeenCalled();
+});

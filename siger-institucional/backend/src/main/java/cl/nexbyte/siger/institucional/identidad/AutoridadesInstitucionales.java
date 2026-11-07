@@ -301,6 +301,13 @@ public final class AutoridadesInstitucionales {
     public String persona(String actor){
         return persona(actor,vigente());
     }
+    /** Referencia nominativa mínima: la cuenta sigue vinculada a la credencial acreditada. No concede roles ni expediente. */
+    public void identidadParaAviso(String actor){
+        ids.exigirCuentaHabilitada(actor);var r=vigente();persona(actor,r);
+        var hash=db.sql.queryForObject("SELECT password_hash FROM staff_account WHERE actor_id=?",String.class,actor);
+        String huella=sha(hash.getBytes(StandardCharsets.UTF_8));
+        if(r.vinculos().stream().noneMatch(v->v.actor().equals(actor)&&!v.desde().isAfter(clock.instant())&&v.hasta().isAfter(clock.instant())&&v.autenticacion().equals(huella)))throw new FalloTecnico(409,"ACREDITACION_CREDENCIAL_OBSOLETA");
+    }
     List<Map<String,Object>> mandatos(String actor){
         var expanded=vigenteCompleto();var r=expanded.base();String person=persona(actor,r);
         // TI administra contraseñas locales, pero no puede heredar la autoridad del funcionario al restablecerla.

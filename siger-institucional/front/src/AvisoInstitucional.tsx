@@ -5,7 +5,7 @@ import type {Catalog} from './api';
 type Contexto={unidad:string;sede:string;area:string|null};
 type Vista={tipo:string;fecha:string;folio:string;origen:Contexto|null;destino:Contexto;ruta:string|null;pendienteActual:boolean};
 export type EnrutamientoAviso={tipo:string;fecha:string;estado:string};
-const titulo=(tipo:string)=>({SOL_DISTRIBUIDA:'Solicitud institucional distribuida',SOL_REDIRIGIDA:'Solicitud institucional redirigida',REQ_ASIGNADO:'Atención de Requerimiento asignada'}[tipo]??'Aviso institucional');
+const titulo=(tipo:string)=>({CASO_ASIGNADO:'Caso asignado o reasignado',CASO_TERMINO_DEVUELTO:'Revisión de término devuelta',CASO_CERRADO:'Cierre de Caso registrado',REQ_TERMINADO:'Cierre explícito de Requerimiento registrado',REQ_REACTIVADO:'Requerimiento reactivado por acto autorizado',SOL_DISTRIBUIDA:'Solicitud institucional distribuida',SOL_REDIRIGIDA:'Solicitud institucional redirigida',REQ_ASIGNADO:'Atención de Requerimiento asignada'}[tipo]??'Aviso institucional');
 function Ambito({contexto:c,catalog}:{contexto:Contexto;catalog:Catalog}){return <span>{c.unidad} · {catalog.sedes.find(s=>s.id===c.sede)?.nombre??c.sede} · {c.area?(catalog.areas?.find(a=>a.id===c.area)?.nombre??c.area):'Sin área formal'}</span>;}
 export function EnrutamientoAvisos({avisos}:{avisos?:EnrutamientoAviso[]}){
  if(!avisos?.length)return null;
