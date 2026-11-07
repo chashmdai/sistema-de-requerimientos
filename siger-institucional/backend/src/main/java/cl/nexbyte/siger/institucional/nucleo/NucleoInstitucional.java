@@ -23,6 +23,7 @@ public final class NucleoInstitucional {
     public TerminoColaboracion terminoColaboracion(){return new TerminoColaboracion(db,this,catalogo,clock);}
     public AvisosNucleo avisosNucleo(){return new AvisosNucleo(db,this,catalogo,mapper,clock);}
     public AvisosGestion avisosGestion(){return new AvisosGestion(db,this,catalogo,clock);}
+    public ClasificacionComunicaciones clasificacion(){return new ClasificacionComunicaciones(db,this,catalogo,clock);}
     void identidadParaAviso(Operador a){if(autoridad==null)throw new FalloTecnico(409,"AUTORIDAD_NO_ACREDITADA");autoridad.identidadParaAviso(a.id());}
     public RectificacionesIngreso rectificacionesIngreso(){return new RectificacionesIngreso(db,this,mapper,clock);}
     public BitacoraGestion bitacora(){return new BitacoraGestion(db,this,clock);}
@@ -245,21 +246,21 @@ public final class NucleoInstitucional {
     public Resultado decidirComunicacion(Operador a,UUID key,UUID communication,Decision request,boolean discard){
         actor(a);distributor(a);text(request.texto(),2000);
         return execute(key,a,discard?"DESCARTAR_COMUNICACION":"RESPONDER_COMUNICACION",List.of(communication,request),()->{
-            var row=lock(communication);revision(row,request.revision());openCommunication(communication,row);
+            var row=lock(communication);revision(row,request.revision());openCommunication(communication,row);clasificacion().exigirDisponible(a,communication);
             if(db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Long.class,id(communication))>0)throw new FalloTecnico(409);
             db.sql.update("UPDATE core_communication SET state=?,decision_text=?,decided_by=?,decided_ms=?,revision=revision+1 WHERE id=?",discard?"DESCARTADA":"RESPONDIDA",request.texto(),a.id(),now(),id(communication));
-            event(communication,"COMUNICACION",communication,a,discard?"COMUNICACION_DESCARTADA":"RESPUESTA_DIRECTA_REGISTRADA");return result(communication,communication);
+            clasificacion().finalizar(a,communication,"Decisión histórica conservada");event(communication,"COMUNICACION",communication,a,discard?"COMUNICACION_DESCARTADA":"RESPUESTA_DIRECTA_REGISTRADA");return result(communication,communication);
         });
     }
     public Resultado distribuir(Operador a,UUID key,UUID communication,Distribucion request){
         actor(a);distributionTargetsAllowed(a,communication,request);
         Object payload=request.destinos().stream().allMatch(d->d.area()==null)?new Distribucion10(request.revision(),request.destinos().stream().map(d->new Destino10(d.unidad(),d.sede(),d.evaluador())).toList()):request;
         return execute(key,a,"DISTRIBUIR",List.of(communication,payload),()->{
-            var row=lock(communication);distributionTargetsAllowed(a,communication,request);revision(row,request.revision());openCommunication(communication,row);
+            var row=lock(communication);distributionTargetsAllowed(a,communication,request);revision(row,request.revision());openCommunication(communication,row);clasificacion().exigirDisponible(a,communication);
             for(var d:request.destinos())areas.exigirAreaParaAlta(d.area(),d.unidad(),d.sede());
             var pairs=new HashSet<String>();for(var d:request.destinos())if(catalogo.individual()&&(!pairs.add(d.unidad()+"|"+d.sede())||db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=? AND unit_code=? AND site_id=?",Integer.class,id(communication),d.unidad(),d.sede())>0))throw new FalloTecnico(409);
             for(var d:request.destinos()){var did=UUID.randomUUID();db.sql.update("INSERT INTO core_destination(id,communication_id,unit_code,site_id,evaluator_id,state,revision,created_ms,created_by) VALUES(?,?,?,?,?,'EVALUANDO',0,?,?)",id(did),id(communication),d.unidad(),d.sede(),d.evaluador(),now(),a.id());db.sql.update("INSERT INTO distribution_event VALUES(?,?,?,?,?,?,?)",id(did),id(communication),a.id(),row.get("site_id"),d.unidad(),d.sede(),now());if(d.area()!=null)db.sql.update("INSERT INTO destination_area VALUES(?,?)",id(did),d.area());event(communication,"DESTINO",did,a,"DESTINO_DISTRIBUIDO");}
-            bump(communication);return result(communication,communication);
+            clasificacion().finalizar(a,communication,"Distribución histórica conservada");bump(communication);return result(communication,communication);
         });
     }
     private record Destino10(String unidad,String sede,String evaluador){}
@@ -366,6 +367,7 @@ public final class NucleoInstitucional {
         return execute(key,a,"VINCULAR_COMUNICACION",List.of(child,request),()->{
             db.sql.queryForObject("SELECT id FROM core_link_guard WHERE id=1 FOR UPDATE",Integer.class);
             var ids=new ArrayList<>(List.of(child,request.padre()));ids.sort(Comparator.comparing(UUID::toString));for(var cid:ids)lock(cid);
+            clasificacion().exigirDisponible(a,child);
             if(!db.sql.queryForList("SELECT child_id FROM core_link WHERE child_id=?",id(child)).isEmpty())throw new FalloTecnico(409);
             UUID cursor=request.padre();for(int step=0;cursor!=null;step++){
                 if(step>=100||cursor.equals(child))throw new FalloTecnico(409);
@@ -379,7 +381,7 @@ public final class NucleoInstitucional {
             db.sql.update("INSERT INTO core_link(child_id,parent_id,case_reference,actor_id,at_ms,reason_text,requirement_reference,revision) VALUES(?,?,?,?,?,?,?,0)",id(child),id(request.padre()),request.casoReferencia()==null?null:id(request.casoReferencia()),a.id(),now(),request.motivo(),requirements.getFirst().get("id"));
             if(request.casoReferencia()!=null)db.sql.update("UPDATE core_case SET revision=revision+1 WHERE id=?",id(request.casoReferencia()));
             db.sql.update("INSERT INTO core_notice VALUES(?,?,?,?,?,NULL)",id(UUID.randomUUID()),id(child),id(request.padre()),recipient,now());
-            bump(child);bump(request.padre());event(child,"VINCULO",request.padre(),a,"VINCULO_DOCUMENTAL_CREADO");event(request.padre(),"VINCULO",child,a,recipient==null?"AVISO_PENDIENTE_DE_RESPONSABLE":"AVISO_INTERNO_PENDIENTE");return result(child,child);
+            clasificacion().finalizar(a,child,"Vinculación propuesta como antecedente");bump(child);bump(request.padre());event(child,"VINCULO",request.padre(),a,"VINCULO_DOCUMENTAL_CREADO");event(request.padre(),"VINCULO",child,a,recipient==null?"AVISO_PENDIENTE_DE_RESPONSABLE":"AVISO_INTERNO_PENDIENTE");return result(child,child);
         });
     }
     public List<Aviso> avisos(Operador a){actor(a);return db.sql.queryForList("SELECT n.* FROM core_notice n JOIN core_link l ON l.child_id=n.child_id JOIN core_case c ON c.id=l.case_reference JOIN core_destination d ON d.id=c.destination_id WHERE n.recipient_id=? AND c.responsible_id=? AND NOT EXISTS(SELECT 1 FROM communication_pertinence p WHERE p.child_id=l.child_id) AND "+caseScope(a)+" ORDER BY n.at_ms DESC,n.id LIMIT 100",a.id(),a.id()).stream().map(r->new Aviso(uuid(r.get("id")),uuid(r.get("child_id")),uuid(r.get("parent_id")),date(r,"at_ms"),r.get("read_ms")!=null)).toList();}

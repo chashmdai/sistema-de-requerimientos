@@ -1,5 +1,7 @@
 # Correo interno trazable por intento · 07/11/2026
 
+**Cierre acreditado:** PR #16 / efdceed922ad5e85099419ee06298fa64c479bde,CI42372030854,ocho jobs aprobados.92raíces/661métodos porOS,Windows652aprobados/9omitidos,Ubuntu637/24,cero fallos/errores; cobertura completa/disjunta del mismo HEAD/run. Frontend187/187,lint/TypeScript/Vite/package,logs verificados y actaPR actualizada. No atribuir al hijo posterior.
+
 ## Capacidad implementada y límites
 
 MensajesCorreo conserva versión, copia exacta y huella de cada intento antes de red. CorreosInstitucionales reusa outbox/guardas/ambigüedad y entrega al transporte el mensaje persistido verificado. Solicitud manual y procesamiento automático quedan diferenciados; no se atribuye preparación automática a un funcionario ni se fabrica una aprobación humana. Los intentos antiguos sin copia permanecen desconocidos, sin retroconstrucción de asunto/texto/enlace/plantilla enviados.
@@ -31,11 +33,19 @@ Nuevo código separado en MensajesCorreo, sin servicio externo ni cola duplicada
 - DOM focal **23/23**,nuevo detalle7+TareasNotificaciones9+AvisoInstitucional7. Frontend integral final **187/187**,lint/TypeScript/Vite correctos, repetidos después del ajuste de lectura histórica sin proveedor. Incluye texto escapado,recepciónsoloexpresa,revocación,respuesta tardía,sin transporte y rutaApp real con API doblada. No E2E físico/manual ni entrega real.
 - Auxiliar PowerShell parseado; aislamiento nativo con datadir/credenciales/puerto propios,no-defaults,binding/owner comprobados y cierre de procesos solo de campaña. No MySQLglobal/firewall/red/QA modificados.
 
-Evidencia privada campaña siger-build-4c652bfd9b7a41d5a8e0d659e180202d,logs correo-materializado-*,correo-sin-proveedor-* y correo-integridad-poscommit-h2.log. Sin exclusiones o timeouts relajados. CI propia todavía pendiente de publicación; no atribuir resultados del padre. No reversión de esquema destructiva; rollback de transacciones probado.
+Evidencia privada campaña siger-build-4c652bfd9b7a41d5a8e0d659e180202d,logs correo-materializado-*,correo-sin-proveedor-* y correo-integridad-poscommit-h2.log. Sin exclusiones o timeouts relajados. CI propia definitiva efdceed acreditada arriba; no atribuir resultados del padre. No reversión de esquema destructiva; rollback de transacciones probado.
 
-## Cadena y estado del corte
+## Cadena y estado acreditado
 
-Rama codex/siger-correos-trazables, hija creada con árbol limpio de PR15/5d9d3872427c6d7fdbbcc2f177fc304618329af2. PR15borrador basePR14,CI42353760616 aprobada en ocho jobs:90raíces/642métodos porOS,Windows633aprobados/9omitidos,Ubuntu618/24,cero fallos/errores;FE180/lint/TypeScript/Vite/package. Cobertura completa/disjunta del mismoHEAD/run y acta verificada. No cambiar padres/main. PR14/395a7b0 CI42351175167 completa:89raíces/626métodos porOS,Win617aprobados/9omitidos,Ubuntu602/24,FE176/lint/build/package,cero fallos/errores,ochojobs completos/disjuntos; acta cerrada. El hijo actual aún sin commit/upstream/PR al escribir este corte; checkpoint conserva siguiente acción.
+PR #16 en borrador, rama codex/siger-correos-trazables, basePR15/5d9d3872427c6d7fdbbcc2f177fc304618329af2. Commits b062a40 (capacidad) y **efdceed922ad5e85099419ee06298fa64c479bde** (migración histórica) publicados, upstream0/0 y árbol limpio al crear el hijo posterior. CI definitiva42372030854 aprobada en ocho jobs,92raíces/661métodos porOS,Windows652aprobados/9omitidos,Ubuntu637/24,cero fallos/errores,frontend187/lint/build/package. Acta del PR y logs verificados. PR15/5d9d387 CI42353760616 aprobada con642métodos/OS; no es la evidencia del hijo. Padres/main intactos.
+
+### Fallo anterior conservado
+
+Push b062a40 / **42356855634**: Windows3 y Ubuntu3 fallaron con188métodos/16fallos/0errores/0omitidos cada uno; AutoridadMigracionTest esperaba15.16 y obtuvo15.17. Otras cuatro partes aprobadas; agregación omitida. Se corrigió la expectativa a15.17, se amplió la ruta desde15.16 y comparaciónDDL, sin retirar igualdad histórica/concurrencia/revocación o cambiar aserciones a tolerar versiones arbitrarias. Calificación posterior24/24 H2 y24/24 MySQL, seguida de CI completa efdceed.
+
+Logs íntegros privados preservados:
+- ci16-b062a40-ubuntu-part3-fallida-completa.log:1411201bytes,SHA256797FE9ACDE288949F2E83300EF004317FF32CD964EC69F1FE6594F49966DB259.
+- ci16-b062a40-windows-part3-fallida-completa.log:1467170bytes,SHA25604D3615B3148BBA01E9E28F02E25C0C5E3CB4E14A5BC0D1BB9AEFB211C659BA3.
 
 ## Guion por roles — preparado, no ejecutado
 

@@ -32,6 +32,6 @@ public final class RecursosNotificacion {
  public void reapertura(Operador a,UUID id){core.autorizarReapertura(a,id);var r=fila("core_reopen",id.toString());var c=caso(a,UUID.fromString(r.get("case_id").toString()));if(!a.jefeEn(c.unidad(),c.sede(),c.area()))throw new FalloTecnico(404);}
  public void antecedente(Operador a,UUID id){core.autorizarAntecedente(a,id);}
  public void terminoColaboracion(Operador a,UUID id,boolean pendiente){actor(a);core.terminoColaboracion().autorizarAviso(a,id,pendiente);}
- public String href(String tipo,UUID id,UUID notificacion){return Set.of("AVISO_U2","AVISO_GESTION").contains(tipo)?"aviso-institucional/"+notificacion:href(tipo,id);}
+ public String href(String tipo,UUID id,UUID notificacion){return Set.of("AVISO_U2","AVISO_GESTION","AVISO_CLASIFICACION").contains(tipo)?"aviso-institucional/"+notificacion:href(tipo,id);}
  public String href(String tipo,UUID id){return switch(tipo){case "RESERVA_DOC"->"accesos-reservados/"+id;case "REV_CIERRE"->"revisiones-excepcionales/"+id;case "SUBROGANCIA"->"subrogancias";case "TERMINO_COLAB","TRASLADO_REQ_U2","DERIVACION_U2","REAPERTURA_U2"->"u2";case "EQUIPO"->"casos";case "COMUNICACION"->"comunicacion/"+id;case "CASO","CASO_CONSULTA"->"caso/"+id;case "SOLICITUD"->"solicitudes/"+id;case "TAREA"->"tareas/"+id;case "ANTECEDENTE"->"antecedentes";case "DESTINO"->{var d=fila("core_destination",id.toString());yield "comunicacion/"+d.get("communication_id");}case "DERIVACION","REAPERTURA"->"decisiones";default->"bandeja";};}
 }
