@@ -1,6 +1,6 @@
 # Acceso documental reservado · contrato 1.1
 
-Estado: C1 acreditado por CI Windows/Ubuntu; ampliación C2 acreditada en pruebas focalizadas H2/MockMvc, MySQL aislado y DOM, pendiente de su CI propia. Requisitos funcionales confirmados el06/11/2026; la calificación técnica se acredita por separado. Fuente: rector §§05.5–05.6,13.5,15–16, ACC-05/09/10 y SUB-CONT-01. Los apartados de contrato firmado1.6 y consulta del Caso describen el alcance conservado de1.0; la ampliación1.1 tiene un contrato firmado1.7 explícito.
+Estado: C1/c767ab7 y C2/2d98e21 acreditados por sus CI Windows/Ubuntu (42273313757 y42283881844), además de H2/MockMvc, MySQL aislado y DOM. Requisitos funcionales confirmados el06/11/2026; la calificación técnica se acredita por separado. Fuente: rector §§05.5–05.6,13.5,15–16, ACC-05/09/10 y SUB-CONT-01. Los apartados de contrato firmado1.6 y consulta del Caso describen el alcance conservado de1.0; la ampliación1.1 tiene un contrato firmado1.7 explícito.
 
 ## Dos respaldos institucionales
 

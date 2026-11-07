@@ -25,3 +25,27 @@ Selección local del padre: inventario limpio de 71 raíces, partición 1 con 33
 El hijo `codex/siger-continuidad-excepcional`, commit `60b25e9`, conserva SUB-CONT-01, V15.13 y la corrección de doble canal funcional. Su calificación integral/CI se realiza separadamente. El padre todavía conserva la emisión solo interna de algunos avisos: la corrección del hijo responde a §16, cuya última columna indica acuse, no dispensa de correo. No se enviaron correos reales ni se promovieron filas históricas.
 
 Sin migraciones por esta corrección de CI. Sin cambios de main, padres #2–#7, U4.4/U4.5, QA, servicios, proveedores, bases preservadas o contratos de transporte. Los PR siguen en borrador; no hay merge ni despliegue.
+
+## Evolución comprobada a tres particiones
+
+PR #10/2d98e2122f7bfdf08e102eaf84d7aa496a703371, CI42283881844: ambos OS aprobados con554 métodos/78raíces, frontend146/lint/build/package. Windows247+307 métodos, Maven11:34/26:40; Ubuntu09:21/23:47. El presupuesto30min no falló, pero la segunda partición quedó cerca de él. Se conservan ese éxito y sus logs; no se presenta como fallo.
+
+Al continuar en la rama hija bitácora, se agruparon los78 tiempos reales de clases Windows por el mismo SHA-256, sin cambiar el algoritmo de selección. Suma por dos particiones11,47/26,56min; distribución tres17,99/11,90/8,15min; cuatro7,31/7,29/4,16/19,27min. Se eligen tres por menor máximo previsto y menor costo de preparación que cuatro. Son estimaciones sobre ese corte, no tiempos acreditados del nuevo HEAD.
+
+Workflow declara tres particiones por OS y agregación obligatoria de las tres; presupuesto30min inalterado. Inventario, XML reales, HEAD/run, unión completa/disjunta, aserciones, transacciones y exclusiones permanecen iguales. Frontend se repite en cada parte sin sumarlo como cobertura única. La compilación integral ordinaria de Build-Siger sigue disponible.
+
+Harness local aprobado: conserva6raíces/dos partes/diez controles negativos y agrega7raíces/tres partes, rechazo de cantidad de partes incompatible y tercer manifiesto ausente;12controles negativos acumulados. Fixtures de bytecode/XML privados, no E2E ni nuevas pruebas físicas. El nuevo HEAD requiere su propia CI de ocho jobs (seis partes+dos agregados).
+
+## Incidencia CI Windows y corrección del fixture
+
+CI42311131299 de be2da99 completó ocho jobs aprobados. La del ajuste361e323 (42312378567) aprobó los tres Ubuntu y Windows1/3, pero Windows2 tuvo173 métodos,0 fallos y7 errores de conexión H2 en la inicialización de SubroganciasTest. Agregación omitida, no se declara verde. Falló al adquirir la primera conexión de negocio después de cerrar el pool migrador. Se preserva el log completo privado ci11-windows-part2-361e323-fallida-completa.log,1174780bytes,SHA25625beec3556986a08c66ee1eee11e34d48054f583461bee103db0f988dc803c10.
+
+Se elimina ese límite de ciclo de vida artificial solo en el fixture H2 local: migración y negocio comparten pool/credenciales como el arranque real. Destinos explícitos/MySQL conservan migrador separado; errores del constructor cierran el pool. BaseJdbc, adquisición3000ms, consulta4s, transacción5s, URL, aserciones y exclusiones sin cambios. No DB_CLOSE_DELAY=-1 ni nuevas migraciones. Una alternativa local de solapar pools y cerrar el migrador falló15/15 por restricciones sobre sesión/base cerrada, log ci11-handoff-focal.log; no se conserva esa implementación. Solución final15/15 H2 (Subrogancias13+actualizaciones reales1+1),02:13, log ci11-fixture-pool-unico.log. Requiere CI propia del nuevo HEAD; el éxito anterior no lo sustituye.
+
+MySQL nativo Windows8.0.46 FixtureJdbc final2/2 (actualizaciones Documento15.14 y Bitácora15.15), instancia67e708f123be4ce681ec5b455132e708 cerrada/proceso propio0; conserva pools separados. Log ci11-fixture-mysql.log. H2 final15/15; CI nueva pendiente.
+
+## Segundo incidente CI: reloj de prueba del adaptador de lectura
+
+CI42316699961 del35b27af: Ubuntu3 falló177 métodos/1aserción/0errores en NodoPiseeLecturaTest, esperado429/obtenido404. La primera respuesta HTTP local tomó más que la ventana250ms desde reserva, por lo que la segunda llamada ya estaba permitida y llegó a una ruta local sin handler. No se ejecutó PISEE real. Windows2/3 yUbuntu2 aprobaron, partes1 en curso al escribir; no CI integral verde.
+
+Evidencia completa preservada: ci11-ubuntu-part3-35b27af-fallida-completa.log,1268476bytes,SHA256dc8906feecb7a8c83912c0fb2d8a3177b454a6e2f79d7ed164573f5e26551b65. La corrección introduce fuente monotónica por constructor de paquete; el constructor público conserva System.nanoTime. El límite permanece250ms, petición65s/conexión5s y sololectura. Se calcula diferencia temporal para admitir origen negativo y wrap del contador. Prueba existente conserva aserciones de lectura/429/inyección/RUN inválido y ahora verifica frontera249999999ns/250000000ns y conteo de solicitudes; otra prueba cubre origen negativo/wrap. **2/2 aprobadas**,9.869s,ci11-pisee-reloj.log, servidorHTTPloopback/doble,nuncaPISEEreal. Sin sleeps, exclusiones nuevas o timeouts ampliados. Requiere CI propia del nuevo HEAD.

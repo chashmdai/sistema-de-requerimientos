@@ -49,4 +49,26 @@ Restore-Manifests;Change-Manifest 1 {$args[0].failures=1};Denied 'fallo de test'
 Restore-Manifests;Change-Manifest 1 {$args[0].all+=@('fixtures.OmittedTest')};Change-Manifest 2 {$args[0].all+=@('fixtures.OmittedTest')};Denied 'inventario ampliado sin ejecutar' {& $script -Mode Aggregate -Directory $coverage -Parts 2}
 Restore-Manifests
 Denied 'XML faltante' {& $script -Mode Validate -Directory $coverage -Part 1 -Parts 2 -ReportsDirectory $reports}
-Write-Output "Inventario compilado: 6 raíces, 2 particiones completas; $checks controles negativos aprobados. Fixtures de metadatos conservados: $directory"
+Write-Output "Inventario compilado: 6 raíces, 2 particiones completas; $checks controles negativos aprobados."
+# Comprueba también el reparto actual de CI con tres manifiestos reales del auxiliar.
+# La raíz adicional evita una partición vacía en este inventario sintético reducido.
+$extra=Join-Path $sources 'fixtures/ExtraTest.java'
+[IO.File]::WriteAllText($extra,'package fixtures; public class ExtraTest { @org.junit.jupiter.api.Test void extra(){} }')
+& $javac -cp $classes -d $classes $extra
+if($LASTEXITCODE){throw 'Fixture adicional no compilado'}
+$coverage3=Join-Path $directory 'coverage-three'
+foreach($part in 1..3){
+ $plan=& $script -Mode Plan -Directory $coverage3 -Part $part -Parts 3 -JavaHome $JavaHome -ClassesDirectory $classes
+ if(Compare-Object @($plan.all) @($expected+'fixtures.ExtraTest')){throw 'Inventario de tres particiones incompleto'}
+ $reports3=Join-Path $directory "reports-three-$part";[IO.Directory]::CreateDirectory($reports3)|Out-Null
+ foreach($name in $plan.selected){$suite=if($name -eq 'fixtures.NestedTest'){$name+'$Inside'}else{$name};[IO.File]::WriteAllText((Join-Path $reports3 "TEST-$name.xml"),"<testsuite name='$suite' tests='1' failures='0' errors='0' skipped='0'/>")}
+ & $script -Mode Validate -Directory $coverage3 -Part $part -Parts 3 -ReportsDirectory $reports3|Out-Null
+}
+& $script -Mode Aggregate -Directory $coverage3 -Parts 3|Out-Null
+Denied 'tres manifiestos con cantidad declarada incorrecta' {& $script -Mode Aggregate -Directory $coverage3 -Parts 2}
+$withheld=Join-Path $directory 'withheld-third.json';$third=Join-Path $coverage3 'coverage-3.json'
+Move-Item -LiteralPath $third -Destination $withheld
+try{Denied 'tercer manifiesto ausente' {& $script -Mode Aggregate -Directory $coverage3 -Parts 3}}
+finally{Move-Item -LiteralPath $withheld -Destination $third}
+& $script -Mode Aggregate -Directory $coverage3 -Parts 3|Out-Null
+Write-Output "Inventario adicional: 7 raíces, 3 particiones completas; $checks controles negativos acumulados aprobados. Fixtures de metadatos conservados: $directory"
