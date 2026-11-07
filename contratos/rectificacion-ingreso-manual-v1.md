@@ -1,0 +1,15 @@
+# Rectificación de captura manual · versión1.0
+
+ING-05/ING-04/ING-02 y rector§§06.6/06.7. Requisitos funcionales validados06/11/2026; no nueva aprobación de diseño. No habilita despliegue o cambios de históricos reales.
+
+`GET/POST /nucleo/comunicaciones/{id}/rectificaciones`, GET con pagina/tamanio1–100; consulta individual GET`/{secuencia}`. POST exige sesión individual/CSRF/Idempotency-Key y Solicitud(version1.0,revisionCOM,datos,motivo). Datos tipados: texto≤2000,canalDeclarado≤100,recibidaEnDeclarada UTCms,regionAsunto opcional existente. Motivo obligatorio≤2000. No admite versión desconocida, no-op, fecha futura/posterior al registro técnico o contradictoria con primera respuesta efectiva acreditada.
+
+Ámbito de esta versión: datos de captura de COM manual. Antes de distribución, autor registrador; con SOL pendiente, jefatura receptora vigente; con REQ, responsable de atención o jefatura principal vigentes. Respeta unidad/sede/área y no hereda facultad desde un Caso colaborador, rolTI, materia lectora o una cuenta alias de la misma persona. Tras distribuir, ser registrador original solo no permite consultar ni registrar rectificaciones, aunque conserve su original y avance ordinario autorizado. Legado sin conciliación explícita y fuentes públicas quedan cerrados para esta ruta; no se interpretan como manuales.
+
+Reutiliza institution_flow_history: constancia COM_DATOS_RECTIFICADOS con Cambio1.0 anterior/nuevo, motivo, autor/fecha del servidor/revisión; cadena desde captura original. Cadena inválida o esquema desconocido falla cerrado. Mismo cerrojo identidad→COM, revisión e idempotencia/transacción de núcleo; fallo revierte historia/evento/revisión/comando. Sin PUT/DELETE o una segunda tabla del relato.
+
+core_manual,communication_registry,communication_origin,folios/hashes/procedencia/operador y originales permanecen iguales; no altera domicilio de SOL, sede capturadora, principal REQ, atención efectiva, actuaciones, tareas, cierre o reapertura. Una corrección de captura tras cierre no es una gestión profesional nueva. El original sigue en su pestaña; datos vigentes y comparación anterior/nuevo se consultan en otra pestaña autorizada. No sustituye una rectificación de actuación ni vuelve a medir por sí sola un plazo histórico.
+
+Frontend conectado a APIs reales; reintento incierto conserva cuerpo/revisión/clave aun al recargar datos.4xx definitivo libera intento y conserva borrador para revisión; pérdida de autorización descarta valores/totales/constancia. Paginación y enlaces individuales se autorizan antes de revelar. Campos conservan segundos/ms al normalizar fecha del navegador.
+
+No DDL nuevo: V1–V15.16 intactas, sin outOfOrder/backfill. Extensiones pendientes: formularios públicos tipados y otros datos sectoriales/contacto, fuentes históricas conciliadas, integración con búsqueda/medición temporal de datos rectificados. Esta versión no declara ING-05 íntegra para todas las fuentes. Informe y guion LOGICA_RECTIFICACIONES_INGRESO_2026-11-07.md distinguen H2/MockMvc/DOM/MySQL de navegador físico.

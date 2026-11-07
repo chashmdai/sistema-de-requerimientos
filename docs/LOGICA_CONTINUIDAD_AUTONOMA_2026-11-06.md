@@ -10,11 +10,19 @@ Continuar bloques independientes mientras haya capacidad. Cuando las138 estén i
 
 ## Estado actual exacto y próxima acción
 
-Rama ACTUAL codex/siger-ingreso-territorio, HEAD propio d62b8c4 (territorio), sobrecd0adc9 (fecha primera gestión) y40bf7d2 (merge padre35b27af); nuevo merge del padre39df7b9ee55e651ba9c2686f996ed67ae3325bd4. Hijo todavía sin upstream/push/PR; consultar HEAD/status con Git. PR #11 sigue borrador base #10, publicado39df7b9; CI exacta42318438019 en curso. Padres #2–#10 intactos.
+Rama ACTUAL codex/siger-rectificaciones-ingreso, hija de PR #12/a3d74eb2a5516f28d81b009368b635f35fc17197. Sin upstream/PRpropio. Corte local de rectificaciones listo para commit preservador, no publicar todavía por falloCI del padre que hay que corregir primero. No Maven/MySQL activos.
 
-Incidente anterior CI42316699961/35b27af: Ubuntu3 falló177/1aserción/0errores en test PISEE por respuesta local mayor que250ms y esperado429/obtenido404. Log íntegro privado1268476bytes,SHA256dc8906feecb7a8c83912c0fb2d8a3177b454a6e2f79d7ed164573f5e26551b65. No proveedor real. El fix39df7b9 publicado conserva límite250ms y65s/5s, constructor públicoSystem.nanoTime; fuente monotónica por constructor de paquete solo permite pruebas deterministas. Diferencia temporal admite origen negativo/wrap. Dos pruebas2/2,9.869s,ci11-pisee-reloj.log. Sin sleeps/exclusiones/timeouts ampliados. CI propia nueva obligatoria.
+RectificacionesIngreso/Controller/API/UI reales: captura manual texto/canal/recepción/región del asunto, historia1.0 anterior/nuevo/autor/motivo/fecha, sin reescribir originales/folios/hashes/procedencia o principal/domicilioSOL/gestión. Ámbito por etapa, rechazo de alias/TI/otraárea/Caso colaborador, revocación, revisión/idempotencia/rollback. Se retiran de Comunicacion.tsx formularios privados inalcanzables con semántica provisional falsa; no APIs habilitadas. Sin migración nueva, V1–V15.16 intactas.
 
-SIGUIENTE: diff/check, confirmar el cierre local de territorio, push normal/upstream y crear PR hijo borrador base codex/siger-bitacora-gestion (#11/39df7b9). MySQL13/13 y H2final4/4, frontend163/163/lint/build ya completados, no Maven/MySQL activos; no repetir salvo cambios relevantes. Vigilar padre42318438019 y CI exacta del nuevo hijo (ocho jobs). Conservar intentos fallidos. Después, con árbol limpio/nueva rama dependiente, avanzar documentación/antecedentesREQsinCaso y demás bloques independientes; no candidata prematura.
+Pruebas locales terminadas: H2dominio9/9 y revocación1/1 separada; HTTP6/6 (nuevas2+ingreso2+territorio2); MySQL10/10 en024ce24f64644ecd860f4fba06afcf9f cerrado/proceso0; frontend final170/170/lint/TypeScript/Vite. Contrato rectificacion-ingreso-manual-v1.md e informe/guion LOGICA_RECTIFICACIONES_INGRESO_2026-11-07.md/matriz actualizados. Guion noejecutado, CI propia pendiente. No declarar ING-05 de todas las fuentes completa.
+
+PR #11/39df7b9 CI42318438019 APROBADA ocho jobs y logs:81raíces/575métodos,Win566/9omitidos,Ub551/24omitidos,cero fallos/errores,FE158/lint/build/package; partes224+173+178. Acta PR actualizada, padre intacto.
+
+PR #12/a3d74eb CI42319144670 NO aprobada: Ubuntu3 falló frontend162/163 en App.test.tsx test solo evaluador profesional...: pulsó Confirmar evaluación antes de revisionCaso asíncrona; la UI tenía botón deshabilitado y no llamó run. No fallo backend ejecutado en esa partición. Log completo ci12-ubuntu-part3-a3d74eb-fallida-completa.log,51438bytes,SHA25695e7b624da6e249e7903fea5ded9b01cd400f79ec8295844ff9e11de1adc0dc6. Otros4jobs verdes y partes1 en curso al revisar.
+
+SIGUIENTE PRIORITARIO: confirmar este corte local sin perder cambios, árbol limpio; volver a codex/siger-ingreso-territorio. Corregir prueba App para esperar explícitamente botón habilitado/revisión cargada antes de click, conservando aserción exacta y sin subir timeouts/sleeps. Añadir prueba con promesa controlada que verifica bloqueo mientras versión pendiente y envío válido tras resolver. Preservar evidencia fallida, focal/FEnecesarias, commit/push padrePR12 y CI exacta nueva. Después merge controlado del padre propio en rectificaciones conservando este commit; publicar PR hijo borrador base#12, CIexacta. No cambiar padre#11/main ni perder avances.
+
+Después continuar NOT paraSOL/REQ nuevos (EV03/04/05), documentación/antecedentesREQsinCaso/calendarios y demás bloques independientes. Nunca detener por validación funcional ya confirmada ni candidata prematura. ConservarQA/U4/SMR/servicios y cero correos/proveedores reales.
 
 ## Ingreso/territorio desarrollado en hijo
 

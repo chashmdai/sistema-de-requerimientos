@@ -43,6 +43,17 @@ public final class NucleoU2 {
     private boolean vigente(Map<String,Object> r){return r.get("area_id")==null||areas.vigente(s(r,"area_id"),s(r,"unit_code"),s(r,"site_id"));}
     private Map<String,Object> atencion(Map<String,Object> r){var saved=db.sql.queryForList("SELECT * FROM institution_req_attention WHERE requirement_id=?",r.get("id"));if(!saved.isEmpty())return saved.getFirst();var context=new LinkedHashMap<>(normal(r));context.put("actor_id",r.get("attention_actor"));return context;}
     private boolean encargado(Operador a,Map<String,Object> r){var context=atencion(r);return a.id().equals(context.get("actor_id"))&&vigente(context)&&habilitado(a,s(context,"unit_code"),s(context,"site_id"),s(context,"area_id"));}
+    /** Corrección del ingreso compartido: responsabilidad de REQ o jefatura SOL, nunca un Caso parcial. */
+    void rectificarIngreso(Operador a,UUID com){
+        guard(a);core.autorizarLectura(a,com);
+        var qs=db.sql.queryForList("SELECT i.requirement_id FROM institution_req i JOIN core_requirement q ON q.id=i.requirement_id WHERE q.communication_id=?",id(com));
+        if(qs.size()==1){lector(a,req(uuid(qs.getFirst().get("requirement_id"))));return;}
+        if(!qs.isEmpty())throw new FalloTecnico(409,"HISTORICO_REQUIERE_CONCILIACION");
+        var sols=db.sql.queryForList("SELECT id FROM institution_sol WHERE communication_id=?",id(com));
+        if(sols.size()==1){var sol=sol(uuid(sols.getFirst().get("id")));if(!"PENDIENTE".equals(sol.get("state")))throw new FalloTecnico(409);jefatura(a,sol);return;}
+        if(db.sql.queryForObject("SELECT COUNT(*) FROM core_destination WHERE communication_id=?",Long.class,id(com))>0||db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement WHERE communication_id=?",Long.class,id(com))>0)throw new FalloTecnico(409,"HISTORICO_REQUIERE_CONCILIACION");
+        if(db.sql.queryForObject("SELECT COUNT(*) FROM core_manual WHERE communication_id=? AND actor_id=?",Long.class,id(com),a.id())!=1)throw new FalloTecnico(404);
+    }
     private boolean habilitado(Operador a,String u,String sede,String ar){return a.jefeEn(u,sede,ar)||a.profesionalEn(u,sede,ar)||a.accesos().stream().anyMatch(x->x.rol().equals("ADMINISTRATIVO")&&Objects.equals(x.area(),ar)&&x.cubre(u,sede,ar));}
     void lector(Operador a,Map<String,Object> r){if(!(encargado(a,r)||vigente(r)&&a.jefeEn(s(r,"unit_code"),s(r,"site_id"),s(r,"area_id"))))throw new FalloTecnico(404);}
     Operador responsable(String actor,NuevoDestino d){if(actor==null)throw new FalloTecnico(400);var a=cat.operador(actor);boolean valid=a.jefeEn(d.unidad(),d.sede(),d.area())||a.profesionalEn(d.unidad(),d.sede(),d.area());if(!valid)throw new FalloTecnico(400,"RESPONSABLE_FUERA_AREA");return a;}
