@@ -11,8 +11,8 @@ public final class DocumentosGestion {
     public record Contexto(UUID caso,UUID actuacion){}
     public record Documento(UUID id,String origen,String nombre,long tamanio,String sha256,String tipo,String autor,Instant fecha,List<Contexto> contextos,String representacion,boolean consultable,boolean descargable,boolean administrable,String proteccion,boolean restringible,boolean referenciable){}
     private final BaseJdbc db;private final ArchivoInstitucional files;private final AutorizacionDocumental policy;
-    private final ProcesamientoDocumental.Antivirus antivirus;private final ProcesamientoDocumental.Inspector inspector;private final Clock clock;
-    public DocumentosGestion(BaseJdbc db,ArchivoInstitucional files,AutorizacionDocumental policy,ProcesamientoDocumental.Antivirus antivirus,ProcesamientoDocumental.Inspector inspector,Clock clock){this.db=db;this.files=files;this.policy=policy;this.antivirus=antivirus;this.inspector=inspector;this.clock=clock;}
+    private final OriginalesGestion originales;private final Clock clock;
+    public DocumentosGestion(BaseJdbc db,ArchivoInstitucional files,AutorizacionDocumental policy,ProcesamientoDocumental.Antivirus antivirus,ProcesamientoDocumental.Inspector inspector,Clock clock){this.db=db;this.files=files;this.policy=policy;this.originales=new OriginalesGestion(files,antivirus,inspector);this.clock=clock;}
     private static String sid(UUID id){if(id==null)throw new FalloTecnico(400);return id.toString();}
     private static String hash(Object value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(EntregaCompleta.lector().writeValueAsBytes(value)));}catch(GeneralSecurityException e){throw new IllegalStateException(e);}}
     public void evento(Operador actor,UUID documento,UUID caso,UUID action,String code){db.sql.update("INSERT INTO document_event(document_id,case_id,action_id,actor_id,at_ms,event_code) VALUES(?,?,?,?,?,?)",documento==null?null:sid(documento),caso==null?null:sid(caso),action==null?null:sid(action),actor.id(),clock.millis(),code);}
@@ -24,21 +24,17 @@ public final class DocumentosGestion {
     private void comando(UUID key,Operador a,UUID caso,String op,String digest,UUID document){db.sql.update("INSERT INTO document_command VALUES(?,?,?,?,?,?,?)",sid(key),a.id(),sid(caso),op,digest,sid(document),clock.millis());}
     private void actuacion(UUID caso,UUID action){if(action!=null&&db.sql.queryForObject("SELECT COUNT(*) FROM core_action WHERE id=? AND case_id=?",Integer.class,sid(action),sid(caso))!=1)throw new FalloTecnico(404);}
     public Documento cargar(Operador actor,UUID key,UUID caso,UUID action,String nombre,InputStream input){
-        policy.leerCaso(actor,caso);var ext=FormatosDocumento.extension(nombre);var tipo=FormatosDocumento.TIPOS.get(ext);
-        try(var temp=files.preparar(input,FormatosDocumento.MAX)){
-            var digest=hash(List.of("GESTION_CARGA_1",actor.id(),caso,Objects.toString(action,""),nombre,temp.size(),temp.sha256(),tipo));
+        policy.leerCaso(actor,caso);
+        try(var temp=originales.preparar(nombre,input)){
+            String tipo=temp.tipo();var digest=hash(List.of("GESTION_CARGA_1",actor.id(),caso,Objects.toString(action,""),nombre,temp.tamanio(),temp.sha256(),tipo));
             var old=anterior(key,actor,caso,"CARGAR",digest);if(old!=null){verificarArchivo(referencia(actor,caso,old));return documento(actor,caso,old);}
             var initial=db.transaction(()->{var c=policy.gestionarCaso(actor,caso);actuacion(caso,action);return c;});
-            try{
-                if(!antivirus.limpio(temp.path())){evento(actor,null,caso,null,"ANTIVIRUS_RECHAZADO");throw new FalloTecnico(422,"DOCUMENTO_RECHAZADO");}
-                var examined=inspector.examinar(temp.path(),ext);if(!tipo.equals(examined.tipo()))throw new IllegalArgumentException();
-            }catch(IllegalArgumentException rejected){evento(actor,null,caso,null,"FORMATO_RECHAZADO");throw new FalloTecnico(422,"DOCUMENTO_RECHAZADO");}
-            var id=UUID.nameUUIDFromBytes(("GESTION_DOC_1:"+actor.id()+":"+key).getBytes(StandardCharsets.UTF_8));var descriptor=new EntregaCompleta.Adjunto(id,nombre,temp.size(),temp.sha256(),tipo,"VALIDADO");String storage="gestion/"+id;
-            try(var bytes=java.nio.file.Files.newInputStream(temp.path())){files.guardarClave(storage,descriptor,bytes);}
+            try{temp.validar();}catch(OriginalesGestion.Rechazo rejected){evento(actor,null,caso,null,rejected.codigo);throw new FalloTecnico(422,"DOCUMENTO_RECHAZADO");}
+            var id=UUID.nameUUIDFromBytes(("GESTION_DOC_1:"+actor.id()+":"+key).getBytes(StandardCharsets.UTF_8));String storage=temp.conservar(id);
             try{return db.transaction(()->{
                 var same=anterior(key,actor,caso,"CARGAR",digest);if(same!=null)return documento(actor,caso,same);
                 var current=policy.gestionarCaso(actor,caso);actuacion(caso,action);if(!current.comunicacionId().equals(initial.comunicacionId()))throw new FalloTecnico(409);
-                db.sql.update("INSERT INTO institution_document(id,communication_id,origin,name,size_bytes,sha256,media_type,storage_key,created_ms,created_by) VALUES(?,?,'GESTION_INSTITUCIONAL',?,?,?,?,?,?,?)",sid(id),sid(current.comunicacionId()),nombre,temp.size(),temp.sha256(),tipo,storage,clock.millis(),actor.id());
+                db.sql.update("INSERT INTO institution_document(id,communication_id,origin,name,size_bytes,sha256,media_type,storage_key,created_ms,created_by) VALUES(?,?,'GESTION_INSTITUCIONAL',?,?,?,?,?,?,?)",sid(id),sid(current.comunicacionId()),nombre,temp.tamanio(),temp.sha256(),tipo,storage,clock.millis(),actor.id());
                 vinculo(id,caso,action,actor);policy.registrarDocumento(actor,caso,id);comando(key,actor,caso,"CARGAR",digest,id);evento(actor,id,caso,action,"DOCUMENTO_CREADO");return documento(actor,caso,id);
             });}catch(DuplicateKeyException race){var winner=anterior(key,actor,caso,"CARGAR",digest);if(winner==null)throw new FalloTecnico(409);return documento(actor,caso,winner);}
         }catch(IOException failure){evento(actor,null,caso,null,"CARGA_NO_COMPLETADA");throw new FalloTecnico(503,"DOCUMENTO_NO_DISPONIBLE");}

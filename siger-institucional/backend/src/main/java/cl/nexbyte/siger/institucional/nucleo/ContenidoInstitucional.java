@@ -128,7 +128,7 @@ public final class ContenidoInstitucional {
         db.sql.update("INSERT INTO document_content_policy VALUES(?,?,'SIN_CLASIFICAR',0)",id(doc),id(caso));
     }
     private Map<String,Object> documento(UUID doc){
-        var rows=db.sql.queryForList("SELECT * FROM institution_document WHERE id=?",id(doc));if(rows.isEmpty())throw new FalloTecnico(404);return rows.getFirst();
+        var rows=db.sql.queryForList("SELECT * FROM institution_document WHERE id=?",id(doc));if(rows.isEmpty()||"REQ".equals(rows.getFirst().get("owner_context")))throw new FalloTecnico(404);return rows.getFirst();
     }
     private Map<String,Object> politica(UUID doc){var rows=db.sql.queryForList("SELECT * FROM document_content_policy WHERE document_id=?",id(doc));return rows.isEmpty()?Map.of():rows.getFirst();}
     private boolean propietario(Operador a,UUID owner){var c=core.caseRow(owner);return areas.jefe(a,c)||a.id().equals(c.get("responsible_id"))&&areas.profesional(a,c);}

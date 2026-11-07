@@ -1,5 +1,9 @@
 # Supervisión nominal sin acceso a expedientes · 07/11/2026
 
+## Corte publicado acreditado
+
+PR #19, HEAD263729b267ecd2948de4befc1f2ba6628a87a876. CI42378024688 cerrada con ocho jobs aprobados. Inventario completo y disjunto:95 clases/691 métodos por OS;Windows682 aprobados/9 omitidos,Ubuntu667/24,cero fallos/errores. Frontend202/202 una vez por OS,lint/TypeScript/Vite; JAR final con tres archivos idénticos porSHA256. Logs de agregación128425774622/128425774488 verificados para ese HEAD/run. No acredita el hijo documentalREQ, ejecución manual, proveedores o despliegue. PR permanece borrador, sin merge.
+
 ## Implementación
 
 RegistroAutoridad1.9 incorpora concesiones por cuenta/persona,fuente de captura,vigencia y respaldo verificable bajo la confianza privada independiente existente. WEB_CENTRAL y MANUAL_SEDE son ámbitos explícitos; no herencia por TI,jefatura,unidad,área,materia o cuenta alias. Estados activos,suspendidos,revocados,retirada y expiración aplicados desde la raíz persistida y credencial actual. Se verifica una única raíz consistente por consulta.
