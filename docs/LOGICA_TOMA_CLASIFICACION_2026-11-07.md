@@ -1,5 +1,7 @@
 # Clasificación con toma individual y relevo · 07/11/2026
 
+**Cierre acreditado:** PR18/d1fea2a2e0047f8530b9589feb1d6e215056dcd2,CI42374808455,ochojobs aprobados,93raíces/677métodos porOS,Windows668aprobados/9omitidos,Ubuntu653/24,cero fallos/errores. Frontend196/196 porOS una vez,lint/TypeScript/Vite y JAR3archivosdist idénticosSHA256. Cobertura completa/disjunta del mismoHEAD/run/OS;actaPR ylogsverificados. Noatribuir alhijo supervisión1.9.
+
 ## Capacidad y decisión técnica
 
 Circuito vertical para reservar una COM,liberar con fundamento y recuperar tras revocación/vencimiento/relevo efectivo. Reutiliza los cerrojos de identidad/COM,idempotencia e historiales inmutables. El estado se deriva de eventos exclusivos de este contrato; los registros antiguos no se convierten en tomas por inferencia. No se añaden tablas o migraciones.

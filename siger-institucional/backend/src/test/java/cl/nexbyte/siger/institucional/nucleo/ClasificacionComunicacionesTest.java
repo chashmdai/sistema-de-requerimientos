@@ -64,4 +64,8 @@ class ClasificacionComunicacionesTest {
   var com=f.d.nuevaWeb();var keyToma=UUID.randomUUID();var body=new ClasificacionComunicaciones.Cambio(0,null);var toma=c.cambiar(f.a(f.dist),keyToma,com,"TOMAR",body);var keySol=UUID.randomUUID();var destino=envio(ver(f.dist,com).revisionCom());var sol=f.core.u2().distribuir(f.a(f.dist),keySol,com,destino);assertEquals(toma,c.cambiar(f.a(f.dist),keyToma,com,"TOMAR",body));assertEquals(sol,f.core.u2().distribuir(f.a(f.dist),keySol,com,destino));assertEquals("FINALIZADA",ver(f.dist,com).estado());assertEquals(2,ver(f.dist,com).historial().size());assertEquals(1,count("institution_sol"));assertEquals(0,count("core_requirement"));
  }
 
+ @Test void vencerUltimaCoordinacionNoReclasificaLaCapturaComoCentral(){
+  regional=regionalCuenta("regional.unica","DEMO_SEDE_A");revocar(regional);ConcesionFixture.otorgar(f.d.db,f.ids,f.ti,regional,new IdentidadInstitucional.Otorgar("COORDINADOR_REGIONAL","SEDE",null,"DEMO_SEDE_A",f.tiempo.instant().minusSeconds(1),f.tiempo.instant().plusSeconds(60)),f.tiempo);var com=f.manual();hacer(regional,com,"TOMAR",0,null);long revision=ver(regional,com).revisionCom();f.tiempo.avanzar(61);denied(404,()->ver(f.dist,com));denied(403,()->f.core.u2().distribuir(f.a(f.dist),UUID.randomUUID(),com,envio(revision)));assertEquals(0,count("institution_sol"));
+ }
+
 }
