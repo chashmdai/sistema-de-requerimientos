@@ -1,5 +1,9 @@
 name: Compilación y pruebas aisladas
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -20,15 +24,10 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: siger-institucional/front/package-lock.json
       - name: Comprobar inventario y rechazo de cobertura incompleta
         shell: pwsh
         run: ./siger-institucional/scripts/Test-CiCoverageHarness.ps1 -JavaHome "$env:JAVA_HOME"
-      - name: React y Spring Boot (partición completa H2, sin proveedores)
+      - name: Spring Boot (partición completa H2, sin proveedores)
         shell: pwsh
         run: ./siger-institucional/scripts/Build-Siger.ps1 -TestPart ${{ matrix.part }} -TestParts 3 -CoverageDirectory "${{ runner.temp }}/siger-coverage-${{ matrix.os }}-${{ matrix.part }}"
       - uses: actions/upload-artifact@v7
@@ -57,3 +56,18 @@ jobs:
       - name: Acreditar unión disjunta de todas las clases
         shell: pwsh
         run: ./siger-institucional/scripts/Test-CiCoverage.ps1 -Mode Aggregate -Directory "${{ runner.temp }}/siger-coverage-total" -Parts 3
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: siger-institucional/front/package-lock.json
+      - name: Frontend completo e integración compilable del mismo HEAD y OS
+        shell: pwsh
+        run: |
+          ./siger-institucional/scripts/Test-IntegracionWebHarness.ps1
+          ./siger-institucional/scripts/Build-Siger.ps1 -IntegrarParticiones -TestParts 3 -CoverageDirectory "${{ runner.temp }}/siger-coverage-total"
