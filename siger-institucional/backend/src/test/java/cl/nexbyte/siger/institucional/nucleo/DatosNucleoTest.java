@@ -18,9 +18,24 @@ final class DatosNucleoTest implements AutoCloseable {
         String url=supplied==null?"jdbc:h2:file:"+dir.resolve("nucleo").toAbsolutePath().toString().replace('\\','/')+";DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0":supplied;
         if(isolatedUrl!=null){if(supplied!=null||!isolatedUrl.matches("jdbc:mysql://127\\.0\\.0\\.1:[5-6][0-9]{4}/siger_u15_test_[a-f0-9]{32}_(?:area|materia|contenido|compartir|u2|subrog|excepcion|reserva|docsolo|docprev|bitprev)\\?.*"))throw new IllegalStateException("Destino aislado U16 requerido");url=isolatedUrl;}
         if(supplied!=null&&migrationTarget!=null)throw new IllegalStateException("Target histórico solo en destino descartable explícito");if(supplied!=null)cl.nexbyte.siger.institucional.robustez.DestinoJdbcPruebas.validar(url);
-        try(var migration=new BaseJdbc(url,isolatedUrl!=null?"root":supplied==null?"sa":System.getenv("ROBUST_DB_MIGRATION_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):supplied==null?"":System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){if(migrationTarget==null)migration.migrate("institucional");else org.flywaydb.core.Flyway.configure().dataSource(migration.sql.getDataSource()).locations("classpath:db/institucional/"+(isolatedUrl==null?"h2":"mysql")).target(migrationTarget).cleanDisabled(true).load().migrate();}
         historiaVersion=url.startsWith("jdbc:mysql:")?"SELECT COUNT(*) FROM flyway_schema_history WHERE version='15.16' AND success=TRUE":"SELECT COUNT(*) FROM \"flyway_schema_history\" WHERE \"version\"='15.16' AND \"success\"=TRUE";
-        db=new BaseJdbc(url,isolatedUrl!=null?"root":supplied==null?"sa":System.getenv("ROBUST_DB_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):supplied==null?"":System.getenv("ROBUST_DB_PASSWORD"),12);
+        BaseJdbc prepared=null;
+        try{
+            if(supplied==null&&isolatedUrl==null){
+                // H2 local usa las mismas credenciales sa y el mismo pool para migrar/gestionar,
+                // como el arranque real. No cierra las sesiones de las restricciones entre ambos.
+                prepared=new BaseJdbc(url,"sa","",12);
+                migrarFixture(prepared,migrationTarget,"h2");
+            }else{
+                // MySQL/entornos explícitos mantienen migrador y usuario de negocio separados.
+                try(var migration=new BaseJdbc(url,isolatedUrl!=null?"root":System.getenv("ROBUST_DB_MIGRATION_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):System.getenv("ROBUST_DB_MIGRATION_PASSWORD"),2)){
+                    migrarFixture(migration,migrationTarget,url.startsWith("jdbc:h2:")?"h2":"mysql");
+                }
+                prepared=new BaseJdbc(url,isolatedUrl!=null?"root":System.getenv("ROBUST_DB_USER"),isolatedUrl!=null?System.getenv("SIGER_U15_TEST_MYSQL_PASSWORD"):System.getenv("ROBUST_DB_PASSWORD"),12);
+            }
+        }catch(Exception|Error failure){cerrarPreparacion(prepared,failure);throw failure;}
+        db=Objects.requireNonNull(prepared);
+        try{
         if(supplied!=null)limpiar();catalogo.instalar(db);
         db.sql.update("UPDATE operation_control SET revision=0,accept_new=FALSE,pull_enabled=FALSE,contingency='SOLO_CONSULTA'");new ControlesOperacion(db).cambiar(0,true,true,"NORMAL","PRUEBA_LOCAL");
         publicKeys=KeyPairGenerator.getInstance("Ed25519").generateKeyPair();institutionKeys=KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
@@ -29,7 +44,10 @@ final class DatosNucleoTest implements AutoCloseable {
         recepcion=new RecepcionInstitucionalJdbc(db,mapper,trust,"institution-test",institutionKeys.getPrivate(),Map.of("institution-test",institutionKeys.getPublic()),"COM",6,Clock.systemUTC());
         core=new NucleoInstitucional(db,catalogo,recepcion,mapper,Clock.systemUTC());
         historica=mapper.readValue(getClass().getResourceAsStream("/contratos/entrega-v2.json"),EntregaVerificada.class);
+        }catch(Exception|Error failure){cerrarPreparacion(db,failure);throw failure;}
     }
+    private static void migrarFixture(BaseJdbc migration,String target,String vendor){if(target==null)migration.migrate("institucional");else org.flywaydb.core.Flyway.configure().dataSource(migration.sql.getDataSource()).locations("classpath:db/institucional/"+vendor).target(target).cleanDisabled(true).load().migrate();}
+    private static void cerrarPreparacion(BaseJdbc db,Throwable failure){if(db!=null)try{db.close();}catch(RuntimeException|Error close){failure.addSuppressed(close);}}
     void limpiar(){if(db.sql.queryForObject(historiaVersion,Long.class)>0){db.sql.update("DELETE FROM institution_case_action");db.sql.update("DELETE FROM institution_req_action");}db.sql.update("DELETE FROM institution_sensitive_access");db.sql.update("DELETE FROM institution_closure_exception");db.sql.update("DELETE FROM function_command");db.sql.update("UPDATE institution_substitution SET previous_id=NULL");db.sql.update("DELETE FROM institution_substitution");db.sql.update("DELETE FROM institution_function_scope");for(var x:List.of("institution_collaboration_end","case_team_access","case_team_member","case_wait_request","institution_task_attempt"))db.sql.update("DELETE FROM "+x);for(var t:List.of("institution_assignment_receipt","institution_assignment_current","institution_case_closure_request","institution_case_closure","institution_reopen","institution_case_derivation","institution_req_attention","institution_req_transfer","institution_flow_history","institution_collaboration","institution_case","institution_req","institution_sol"))db.sql.update("DELETE FROM "+t);db.sql.update("UPDATE case_evidence_assessment SET supersedes_seq=NULL");for(var t:List.of("document_case_consent","document_disclosure","document_content_history","document_content_policy","case_evidence_assessment","communication_pertinence_target","communication_pertinence_history","communication_pertinence","authority_requirement_principal","document_event","document_page","document_representation","document_command","management_document_link","institution_document_access","institution_document","matter_access_event","case_matter_history","case_matter","staff_assignment_matter","instruction_matter","authority_matter_mandate","matter_regional_site","institution_matter","case_area_history","case_area","destination_area","staff_assignment_area","instruction_area","authority_area_mandate","institution_area","authority_command","authority_event","approved_assignment","access_instruction","authority_mandate","authority_binding","authority_batch"))db.sql.update("DELETE FROM "+t);db.sql.update("UPDATE authority_registry SET revision=0 WHERE id=1");for(var table:LIMPIEZA){if(table.equals("core_reopen"))db.sql.update("UPDATE core_reopen SET supersedes_id=NULL");if(table.equals("core_case"))db.sql.update("UPDATE core_case SET origin_case_id=NULL");db.sql.update("DELETE FROM "+table);}}
     CatalogoLaboratorio.Operador actor(String name){return catalogo.operador(name);}
     UUID web(){return recepcion.guardar(historica).registro().comunicacionId();}
