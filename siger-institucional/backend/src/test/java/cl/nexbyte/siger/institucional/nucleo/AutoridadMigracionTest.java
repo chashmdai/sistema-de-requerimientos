@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Siempre H2 en CI. La misma prueba admite MySQL solo con destino nuevo, efímero y explícito. No limpia bases. */
 class AutoridadMigracionTest {
  @TempDir Path temp;
- @ParameterizedTest @ValueSource(strings={"14","15.1","15.2","15.3","15.4","15.5","15.6","15.7","15.8","15.9","15.10","15.11","15.12","15.13","15.14","15.15","15.16","15.17"})
+ @ParameterizedTest @ValueSource(strings={"14","15.1","15.2","15.3","15.4","15.5","15.6","15.7","15.8","15.9","15.10","15.11","15.12","15.13","15.14","15.15","15.16","15.17","15.18"})
  void expansionPreservaHistoriaYConcesionTransaccional(String previous)throws Exception{
   String mysql=System.getProperty("siger.test.autoridad.mysql");
   if(mysql!=null&&!mysql.matches("jdbc:mysql://127\\.0\\.0\\.1:(?:[5-6][0-9]{4})/siger_u15_test_[a-f0-9]{32}"))throw new IllegalStateException("Se exige una instancia MySQL descartable en puerto efímero y esquema exclusivo U15");
@@ -30,7 +30,7 @@ class AutoridadMigracionTest {
    String legacy=UUID.randomUUID().toString();db.sql.update("INSERT INTO staff_assignment(id,actor_id,role_code,scope_code,valid_from,granted_by) VALUES(?,?,'TI','INSTITUCION',1,?)",legacy,ti,ti);
    var before=db.sql.queryForMap("SELECT * FROM staff_account");var assignment=db.sql.queryForMap("SELECT * FROM staff_assignment");
    db.migrate("institucional");assertEquals(before,db.sql.queryForMap("SELECT * FROM staff_account"));assertEquals(assignment,db.sql.queryForMap("SELECT * FROM staff_assignment"));assertEquals(0,db.sql.queryForObject("SELECT COUNT(*) FROM authority_batch",Long.class));
-   assertEquals(0,db.sql.queryForObject("SELECT COUNT(*) FROM approved_assignment",Long.class));assertEquals("15.18",Flyway.configure().dataSource(db.sql.getDataSource()).locations("classpath:db/institucional/"+vendor).load().info().current().getVersion().toString());
+   assertEquals(0,db.sql.queryForObject("SELECT COUNT(*) FROM approved_assignment",Long.class));assertEquals("15.19",Flyway.configure().dataSource(db.sql.getDataSource()).locations("classpath:db/institucional/"+vendor).load().info().current().getVersion().toString());
    var clock=Clock.fixed(Instant.parse("2026-11-02T12:00:00Z"),ZoneOffset.UTC);var ids=new IdentidadInstitucional(db,clock);
    String target=ids.crear(ti,new IdentidadInstitucional.Crear("beneficiario.mysql","Persona sintética","beneficiario@example.invalid","Sin facultad por cargo",null,null,UUID.randomUUID()+"AZ")).id();
    var grant=new IdentidadInstitucional.Otorgar("PROFESIONAL","UNIDAD_SEDE","UPR","DEMO_SEDE_A",clock.instant(),clock.instant().plusSeconds(3600));
@@ -49,5 +49,7 @@ class AutoridadMigracionTest {
  @Test void bitacoraH2YMySqlConservanFuentesYFechasNoInferidas()throws Exception{try(var h=getClass().getResourceAsStream("/db/institucional/h2/V15_16__bitacora_comun_y_rectificaciones.sql");var m=getClass().getResourceAsStream("/db/institucional/mysql/V15_16__bitacora_comun_y_rectificaciones.sql")){assertNotNull(h);assertNotNull(m);assertArrayEquals(h.readAllBytes(),m.readAllBytes());}}
  @Test void constanciaCorreoH2YMySqlCompartenDdlAditivo()throws Exception{try(var h=getClass().getResourceAsStream("/db/institucional/h2/V15_17__constancia_correo_interno.sql");var m=getClass().getResourceAsStream("/db/institucional/mysql/V15_17__constancia_correo_interno.sql")){assertNotNull(h);assertNotNull(m);assertArrayEquals(h.readAllBytes(),m.readAllBytes());}}
  @Test void documentosReqH2YMySqlCompartenDdlSinCambiarOriginales()throws Exception{try(var h=getClass().getResourceAsStream("/db/institucional/h2/V15_18__documentos_de_requerimiento.sql");var m=getClass().getResourceAsStream("/db/institucional/mysql/V15_18__documentos_de_requerimiento.sql")){assertNotNull(h);assertNotNull(m);assertArrayEquals(h.readAllBytes(),m.readAllBytes());}}
+
+ @Test void versionesDocumentalesH2YMySqlCompartenDdlSinInferirFases()throws Exception{try(var h=getClass().getResourceAsStream("/db/institucional/h2/V15_19__versiones_documentales_de_gestion.sql");var m=getClass().getResourceAsStream("/db/institucional/mysql/V15_19__versiones_documentales_de_gestion.sql")){assertNotNull(h);assertNotNull(m);assertArrayEquals(h.readAllBytes(),m.readAllBytes());}}
 
 }
