@@ -22,6 +22,7 @@ public final class NucleoInstitucional {
     }
     public TerminoColaboracion terminoColaboracion(){return new TerminoColaboracion(db,this,catalogo,clock);}
     public BitacoraGestion bitacora(){return new BitacoraGestion(db,this,clock);}
+    public cl.nexbyte.siger.institucional.identidad.CatalogoTerritorial territorio(){return new cl.nexbyte.siger.institucional.identidad.CatalogoTerritorial(db,autoridad,mapper,clock);}
     public NucleoU2 u2(){return new NucleoU2(db,this,catalogo,clock,mapper);}
     public EquipoCaso equipo(){return new EquipoCaso(db,this,catalogo,clock,mapper);}
     public cl.nexbyte.siger.institucional.notificaciones.TareasPersonales tareas(){return new cl.nexbyte.siger.institucional.notificaciones.TareasPersonales(db,new cl.nexbyte.siger.institucional.notificaciones.RecursosNotificacion(db,catalogo,this),mapper,clock);}

@@ -16,14 +16,16 @@ Pruebas acreditadas por cortes:
 
 Contrato [primera-gestion-institucional-v1](../contratos/primera-gestion-institucional-v1.md). Evidencia privada en campaña siger-build-4c652bfd9b7a41d5a8e0d659e180202d, logs ingreso-gestion-*. No envíos reales, E2E físico ni cambios operacionales.
 
-## Territorio: siguiente capacidad, todavía no implementada
+## Territorio desarrollado en corte local
 
-Reutilizar org_coverage y OrganizacionInstitucional para propuestas técnicas de cobertura; estas no acreditan competencia por sí mismas. Diseñar acreditación firmada1.8 por ámbito/vigencia/ref/hash y constancia territorial al nacimiento de REQ. Conservar firmas1.0–1.7, historial y principal de REQ previamente asumido. Cobertura por domicilio del requiriente, nunca NNA/hechos/captura; central no se regionaliza por inferencia. Ausencia de domicilio utilizable exige decisión fundada de jefatura, sin reescribir declaración.
+CatalogoTerritorial y registro firmado1.8 acreditan propuesta org_coverage existente con huella semántica, región/sede/periodo/ref/hash/estado. Root1.0–1.7 no aceptan campo nuevo y conservan contratos. Sin cobertura vigente nueva asunción regional utilizable falla cerrada. Excepción fundada tipada por domicilio ausente/contradictorio/extranjero/inutilizable exige fundamento y referencias, sin borrar declaración. Central no se regionaliza por domicilio. Asunción de SOL y propia jefatura conectadas a API/UI, preflight propio comprueba autor/jefatura/área. TI/materia/otraárea no deciden.
 
-Validación institucional confirmada, datos concretos no cargados. La restricción actual de crear solo sedes LAB en organización debe tratarse mediante configuración institucional acreditada en preparación operativa; no inventar IDs o titulares. No se declara esta parte desarrollada ni se crea V15.17 antes de revisar referencias concurrentes.
+La constancia territorial inicial usa historial transaccional existente, formato1.0, mismo REQ; no modifica Casos ni recalcula principal al cambiar catálogo. Se reutiliza authority_batch para certificados firmados y institution_flow_history para constancia, sin tabla/index/catálogo duplicado. Decisión técnica posterior al diseño preliminar: NO V15.17, conservaV1–V15.16 y evita migración innecesaria. Ningún backfill de histórico; ausencia de constancia explícita.
 
-## Dependencia y bloqueo técnico localizado
+H2 focal29/29 (territorio11+U2 17+upgradeBitácora1),02:45. HTTP posterior4/4 (territorio2+ingreso2),31s. DOM14/14 (territorio5+distribución9). Faltan MySQL territorio, compatibilidad documental1.7→1.8, integral frontend/lint/build y CI propia. No se declaran ejecutados.
 
-Rama codex/siger-ingreso-territorio hija de PR #11/361e323. Fecha de primera gestión lista en corte local; falta consolidación/publicación del bloque. CI del padre42312378567: Windowspart2 falló con7 errores en inicio de fixture H2 después de cerrar pool de migración; no aserciones fallidas. Se conserva log completo privado de1174780bytes, SHA25beec3556986a08c66ee1eee11e34d48054f583461bee103db0f988dc803c10. Hay que corregir el traspaso de conexión del fixture, manteniendo timeouts/contratos y sin reintentos que oculten fallos, antes de acreditar el padre. No es una incidencia de QA o MySQL operativo.
+## Dependencia CI del padre
 
-Al completar las138 reglas o identificar sus límites concretos, se ejecutará revisión transversal/consolidación/candidata según instrucción vigente; todavía hay capacidades independientes implementables. Sin merge a main, despliegue o intervención operacional.
+PR #11/35b27af corrigió límite de ciclo de vida H2:15/15 local y MySQLupgrades2/2. NuevaCI42316699961 aprobó Windows2/3 yUbuntu2; Ubuntu3 falló177/1aserción/0errores en fixture PISEE que esperaba429 aunque la respuesta anterior excedió250ms desde reserva. Sin PISEE real. Log completo privado1268476bytes,SHA256dc8906feecb7a8c83912c0fb2d8a3177b454a6e2f79d7ed164573f5e26551b65. Se preserva este corte local antes de volver al padre para hacer determinista la fuente temporal sin cambiar límite funcional. CI padre e hijo nuevas obligatorias.
+
+Al completar138 o límites concretos se ejecutará revisión transversal/consolidación/candidata. Todavía hay funciones independientes programables; sinmerge/despliegue/operaciónreal.

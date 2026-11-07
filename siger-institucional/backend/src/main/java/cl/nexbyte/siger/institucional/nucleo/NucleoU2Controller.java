@@ -15,11 +15,14 @@ public class NucleoU2Controller {
  @PostMapping("/primera-atencion") Resultado primera(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@RequestBody PrimeraAtencion r){var actor=a(a);return core.soloReintentoGestion(actor,key,()->flow.primeraAtencion(actor,key,r));}
  @PostMapping("/primera-atencion/gestion") Resultado primeraGestion(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@RequestBody PrimeraGestion r){return flow.primeraGestion(a(a),key,r);}
  @PostMapping("/comunicaciones/{id}/asumir-propia") Resultado propia(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody AsumirPropia r){return flow.asumirPropia(a(a),key,id,r);}
+ @PostMapping("/comunicaciones/{id}/asumir-propia/territorio") Resultado propiaTerritorial(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody AsuncionPropiaTerritorial r){return flow.asumirPropiaTerritorial(a(a),key,id,r);}
+ @GetMapping("/comunicaciones/{id}/territorio") cl.nexbyte.siger.institucional.identidad.CatalogoTerritorial.Orientacion territorioPropio(Authentication a,@PathVariable UUID id,@RequestParam String unidad,@RequestParam String sede,@RequestParam(required=false) String area,@RequestParam(required=false) String region){return flow.territorioPropio(a(a),id,unidad,sede,area,region);}
  @PostMapping("/comunicaciones/{id}/distribuir") Resultado distribuir(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Encaminar r){return flow.distribuir(a(a),key,id,r);}
  @GetMapping("/solicitudes") List<Map<String,Object>> solicitudes(Authentication a){return flow.solicitudes(a(a));}
  @GetMapping("/solicitudes/{id}") Map<String,Object> solicitud(Authentication a,@PathVariable UUID id){return flow.solicitud(a(a),id);}
  @PostMapping("/solicitudes/{id}/redirigir") Resultado redirigir(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Encaminar r){return flow.redirigir(a(a),key,id,r);}
  @PostMapping("/solicitudes/{id}/asumir") Resultado asumir(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Asumir r){return flow.asumir(a(a),key,id,r);}
+ @PostMapping("/solicitudes/{id}/asumir/territorio") Resultado asumirTerritorial(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody AsuncionTerritorial r){return flow.asumirTerritorial(a(a),key,id,r);}
  @GetMapping("/requerimientos") List<Map<String,Object>> requerimientos(Authentication a){return flow.requerimientos(a(a));}
  @GetMapping("/requerimientos/referencia") List<Map<String,Object>> referencias(Authentication a,@RequestParam String folio){return flow.referencias(a(a),folio);}
  @GetMapping("/requerimientos/{id}") Map<String,Object> requerimiento(Authentication a,@PathVariable UUID id){return flow.requerimiento(a(a),id);}
