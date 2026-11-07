@@ -8,6 +8,7 @@ public class NotificacionesController {
  private CatalogoLaboratorio.Operador actor(Authentication a){return SesionFuncionario.actual(a,cat);}
  private CorreosInstitucionales correo(){var c=correos.getIfAvailable();if(c==null)throw new FalloTecnico(409,"CORREO_DESACTIVADO");return c;}
  @GetMapping("/notificaciones") NotificacionesInstitucionales.Bandeja listar(Authentication a,@RequestParam(defaultValue="0")long despues,@RequestParam(defaultValue="30")int limite){return notices.listar(actor(a),despues,limite);}
+ @GetMapping("/notificaciones/{id}/contexto-institucional") AvisosNucleo.Vista contextoInstitucional(Authentication a,@PathVariable UUID id){return notices.contextoInstitucional(actor(a),id);}
  @GetMapping("/notificaciones/contador") Map<String,Long> contador(Authentication a){return Map.of("pendientes",notices.pendientes(actor(a)));}
  @PostMapping("/notificaciones/{id}/leer") void leer(Authentication a,@PathVariable UUID id){notices.leer(actor(a),id);}
  @GetMapping("/notificaciones/{id}/correo") CorreosInstitucionales.Estado status(Authentication a,@PathVariable UUID id){return correo().consultar(actor(a),id);}

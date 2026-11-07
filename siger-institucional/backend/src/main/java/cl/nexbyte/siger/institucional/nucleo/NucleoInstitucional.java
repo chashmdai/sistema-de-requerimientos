@@ -21,6 +21,7 @@ public final class NucleoInstitucional {
         this.materias=new PoliticaMaterias(db,clock);this.autoridad=autoridad;this.areas=new PoliticaAreas(db,clock);this.lectura=new org.springframework.transaction.support.TransactionTemplate(db.tx.getTransactionManager());this.lectura.setIsolationLevelName("ISOLATION_REPEATABLE_READ");this.lectura.setReadOnly(true);this.lectura.setTimeout(5);this.db=db;this.catalogo=catalogo;this.recepcion=recepcion;this.mapper=mapper;this.clock=clock;this.prefix=prefix;this.width=width;
     }
     public TerminoColaboracion terminoColaboracion(){return new TerminoColaboracion(db,this,catalogo,clock);}
+    public AvisosNucleo avisosNucleo(){return new AvisosNucleo(db,this,catalogo,mapper,clock);}
     public RectificacionesIngreso rectificacionesIngreso(){return new RectificacionesIngreso(db,this,mapper,clock);}
     public BitacoraGestion bitacora(){return new BitacoraGestion(db,this,clock);}
     public cl.nexbyte.siger.institucional.identidad.CatalogoTerritorial territorio(){return new cl.nexbyte.siger.institucional.identidad.CatalogoTerritorial(db,autoridad,mapper,clock);}
