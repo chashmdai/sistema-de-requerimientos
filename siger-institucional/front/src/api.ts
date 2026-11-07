@@ -65,14 +65,14 @@ export const reopenings = (caso = '', pendientes = false, pagina = 0) => request
 export const periods = (id: string) => request<{ id: string; autorizacion: string; inicio: string; autorizadoPor: string }[]>(`/nucleo/casos/${id}/periodos`);
 export const reopening = (id: string) => request<Reopening>(`/nucleo/reaperturas/${id}`);
 
-export interface DocumentoIngreso {consultable?:boolean;administrable?:boolean;proteccion?:string;restringible?:boolean;id:string;origen:'INGRESO_CIUDADANO';original:{id:string;nombre:string;tamanio:number;sha256:string;tipo:string;estado:string};representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS';descargable:boolean}
+export interface DocumentoIngreso {cuarentena?:boolean;consultable?:boolean;administrable?:boolean;proteccion?:string;restringible?:boolean;id:string;origen:'INGRESO_CIUDADANO';original:{id:string;nombre:string;tamanio:number;sha256:string;tipo:string;estado:string};representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS';descargable:boolean}
 export const documentosIngreso=(id:string,caso?:string)=>request<DocumentoIngreso[]>(`/nucleo/comunicaciones/${encodeURIComponent(id)}/documentos${caso?`?caso=${encodeURIComponent(caso)}`:''}`);
 export const documentoUrl=(com:string,doc:string,preview:boolean,caso?:string)=>`/nucleo/comunicaciones/${encodeURIComponent(com)}/documentos/${encodeURIComponent(doc)}/${preview?'representacion':'original'}${caso?`?caso=${encodeURIComponent(caso)}`:''}`;
 
 export interface VistaDocumento {representacion:'PAGINAS'|'DESCARGA';paginas:number;perfil:string;originalInline:false;descargable:boolean}
 export const documentoAccionUrl=(base:string,accion:string,caso?:string)=>`${base}/${accion}${caso?`?caso=${encodeURIComponent(caso)}`:''}`;
 export const vistaDocumento=(base:string,caso?:string,signal?:AbortSignal)=>request<VistaDocumento>(documentoAccionUrl(base,'vista',caso),{signal});
-export interface DocumentoGestion {referenciable?:boolean;consultable?:boolean;descargable?:boolean;administrable?:boolean;proteccion?:string;restringible?:boolean;id:string;origen:'GESTION_INSTITUCIONAL';nombre:string;tamanio:number;sha256:string;tipo:string;autor:string;fecha:string;contextos:{caso:string;actuacion:string|null}[];representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS'}
+export interface DocumentoGestion {cuarentena?:boolean;referenciable?:boolean;consultable?:boolean;descargable?:boolean;administrable?:boolean;proteccion?:string;restringible?:boolean;id:string;origen:'GESTION_INSTITUCIONAL';nombre:string;tamanio:number;sha256:string;tipo:string;autor:string;fecha:string;contextos:{caso:string;actuacion:string|null}[];representacion:'DESCARGA'|'AUDIO'|'VIDEO'|'PAGINAS'}
 export const baseDocumentosGestion=(caso:string)=>`/nucleo/casos/${encodeURIComponent(caso)}/documentos-gestion`;
 export type DocumentoReq=Omit<DocumentoGestion,'origen'|'contextos'> & {revision:number;proteccion:string;contextos:{requerimiento:string;gestionSeq:number|null}[]};
 export interface ListaDocumentosReq {editable:boolean;documentos:DocumentoReq[]}
@@ -158,3 +158,9 @@ export const cambiarTomaClasificacion=(id:string,accion:AccionToma,body:{revisio
 export interface BandejaSupervision {items:{comunicacion:string;folio:string;titular:string;tomadaEn:string;revision:number;sede:string|null}[];total:number;cursor:number}
 export const supervisionClasificacion=(despues=0,limite=20)=>u2Get<BandejaSupervision>('/clasificacion/supervision?despues='+despues+'&limite='+limite);
 export const detalleSupervisionClasificacion=(id:string)=>u2Get<TomaClasificacion>('/clasificacion/supervision/'+encodeURIComponent(id));
+
+export interface IncidenteTecnico {id:string;documento:string;sha256:string;revision:number;estado:'RETENIDO'|'LIBERADO';retenidoPor:string;retenidoEn:string;referencia:string;fundamento:string;liberadoPor:string|null;liberadoEn:string|null;verificable:boolean;historial:{secuencia:number;actor:string;fecha:string;tipo:string;fundamento:string|null}[]}
+export interface Cuarentenas {items:IncidenteTecnico[];total:number;pagina:number;limite:number}
+export const cuarentenas=(estado:string,pagina:number,signal?:AbortSignal)=>request<Cuarentenas>(`/nucleo/ti/cuarentena-documental?estado=${encodeURIComponent(estado)}&pagina=${pagina}&limite=25`,{signal});
+export const cuarentena=(id:string)=>request<IncidenteTecnico>('/nucleo/ti/cuarentena-documental/'+encodeURIComponent(id));
+export async function cuarentenaMutacion(path:string,body:object,key:string,actorId:string,signal?:AbortSignal){const c=await csrf();signal?.throwIfAborted();return request<IncidenteTecnico>('/nucleo/ti/cuarentena-documental'+path,{method:'POST',signal,headers:{'Content-Type':'application/json',[c.headerName]:c.token,'Idempotency-Key':key,'X-Siger-Actor':actorId},body:JSON.stringify(body)});}

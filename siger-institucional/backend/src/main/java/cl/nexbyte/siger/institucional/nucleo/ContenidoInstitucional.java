@@ -141,8 +141,11 @@ public final class ContenidoInstitucional {
         }
         if(!relation)throw new FalloTecnico(404);
     }
-    public Permisos permisos(Operador a,UUID caso,UUID doc){
-        var result=db.transaction(()->{guard(a);try{return evaluarPermisos(a,caso,doc);}catch(FalloTecnico e){if(e.status==404)return null;throw e;}});
+    public Permisos permisos(Operador a,UUID caso,UUID doc){return permisos(a,caso,doc,true);}
+    /** Vigencia de una concesión institucional: una barrera técnica no la reinterpreta ni la revoca. */
+    Permisos permisosInstitucionales(Operador a,UUID caso,UUID doc){return permisos(a,caso,doc,false);}
+    private Permisos permisos(Operador a,UUID caso,UUID doc,boolean disponibilidad){
+        var result=db.transaction(()->{guard(a);try{var p=evaluarPermisos(a,caso,doc);return disponibilidad&&cl.nexbyte.siger.institucional.documental.DisponibilidadDocumental.retenido(db,doc)?new Permisos(false,false,p.administrar(),p.clasificacion(),p.restringir()):p;}catch(FalloTecnico e){if(e.status==404)return null;throw e;}});
         if(result==null)throw new FalloTecnico(404);return result;
     }
     private Permisos evaluarPermisos(Operador a,UUID caso,UUID doc){
@@ -198,6 +201,7 @@ public final class ContenidoInstitucional {
     private void comprobarAccion(Operador a,UUID caso,UUID doc,String accion){
         var p=permisos(a,caso,doc);
         if(!Set.of("METADATOS","CONTENIDO","DESCARGA","HISTORIAL").contains(accion))throw new FalloTecnico(400);
+        if(!accion.equals("METADATOS"))cl.nexbyte.siger.institucional.documental.DisponibilidadDocumental.contenido(db,doc);
         if(accion.equals("CONTENIDO")&&!p.contenido()||accion.equals("DESCARGA")&&!p.descarga()||accion.equals("HISTORIAL")&&(!p.contenido()||caso==null||!gestor(a,caso)))throw new FalloTecnico(404);
     }
     private UUID ownerAcreditable(Operador a,UUID caso,UUID doc){

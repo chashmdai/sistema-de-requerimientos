@@ -1,5 +1,9 @@
 # Metadatos y versiones documentales · 07/11/2026
 
+## Corte publicado acreditado
+
+PR21 /HEADe57bd847778d7bf34d72287f42491c3cdc751168,CI42399170765 cerrada8jobs.101clases/735métodosporOS,Win726aprobados/9omitidos,Ubuntu711/24,cero fallos/errores. Particiones completas/disjuntas,mismoHEAD/run/OS;FE218/218 una vezporOS,lint/TypeScript/Vite yJARfinal3archivosidénticosSHA256. Logs128490337214/128490337203 verificados,actaPRactualizada,borradorsinmerge/despliegue. No acredita el hijo de cuarentena.
+
 ## Capacidad desarrollada
 
 VersionesDocumentales reutiliza autorización y custodia de documentos de Caso y REQ. Permite declarar/corregir título y tipo descriptivo, distinguir BORRADOR/FINAL declarados, conservar antecedente y sucesora como originales separados y consultar las declaraciones autorizadas. API autenticada/CSRF y componente real VersionDocumento integrado en ambas vistas. Consulta diferida al abrir el control; reintentos inciertos congelan operación/cuerpo/clave y se descartan respuestas tardías por contexto.

@@ -17,7 +17,7 @@ public final class DocumentosRequerimiento {
     public record Contexto(UUID requerimiento,Long gestionSeq){}
     public record Documento(UUID id,String nombre,long tamanio,String sha256,String tipo,String autor,Instant fecha,
                             List<Contexto> contextos,String representacion,boolean consultable,boolean descargable,
-                            boolean administrable,boolean restringible,String proteccion,long revision){}
+                            boolean administrable,boolean restringible,String proteccion,long revision,boolean cuarentena){}
     public record Lista(boolean editable,List<Documento> documentos){}
     public record Proteccion(long revision,String clasificacion,String fundamento){}
     public record Vinculo(Long gestionSeq){}
@@ -42,6 +42,7 @@ public final class DocumentosRequerimiento {
         if(bloqueado&&!(accion.equals("METADATOS")&&c.jefatura()))throw new FalloTecnico(404);
         // FIR exige responsabilidad profesional o jefatura efectiva; ningún rol administrativo, técnico o de consulta la hereda.
         if("FIR".equals(p.get("classification"))&&!c.jefatura()&&!c.profesional())throw new FalloTecnico(404);
+        if(!accion.equals("METADATOS"))DisponibilidadDocumental.contenido(db,doc);
         return p;
     }
     private void gestion(UUID req,Long seq){if(seq!=null&&(seq<=0||db.sql.queryForObject("SELECT COUNT(*) FROM institution_req_action d JOIN institution_flow_history h ON h.seq=d.history_seq WHERE d.history_seq=? AND d.requirement_id=? AND h.resource_id=? AND h.resource_kind='REQ'",Long.class,seq,id(req),id(req))!=1))throw new FalloTecnico(404);}
@@ -54,13 +55,13 @@ public final class DocumentosRequerimiento {
         try(var temp=originales.preparar(nombre,input)){
             String digest=hash(List.of("GESTION_REQ_CARGA_1",a.id(),req,Objects.toString(seq,""),nombre,temp.tamanio(),temp.sha256(),temp.tipo()));
             UUID old=db.transaction(()->{contexto(a,req,false);return anterior(a,key,req,"CARGAR",digest);});
-            if(old!=null){verificarArchivo(referencia(a,req,old,"DESCARGA"));return documento(a,req,old);}
-            var initial=db.transaction(()->{var c=contexto(a,req,true);gestion(req,seq);return c;});
+            if(old!=null){verificarArchivo(referencia(a,req,old,"METADATOS"));return documento(a,req,old);}
+            var initial=db.transaction(()->{var c=contexto(a,req,true);gestion(req,seq);DisponibilidadDocumental.huella(db,temp.sha256());return c;});
             try{temp.validar();}catch(OriginalesGestion.Rechazo e){auditar(a,req,null,e.codigo);throw new FalloTecnico(422,"DOCUMENTO_RECHAZADO");}
             UUID doc=UUID.nameUUIDFromBytes(("GESTION_REQ_DOC_1:"+a.id()+":"+key).getBytes(StandardCharsets.UTF_8));String storage=temp.conservar(doc);
             try{return db.transaction(()->{
                 var c=contexto(a,req,false);lock(c);UUID previous=anterior(a,key,req,"CARGAR",digest);if(previous!=null)return documento(a,req,previous);
-                c=contexto(a,req,true);gestion(req,seq);if(!c.comunicacion().equals(initial.comunicacion())||!c.unidad().equals(initial.unidad())||!c.sede().equals(initial.sede())||!Objects.equals(c.area(),initial.area()))throw new FalloTecnico(409,"AMBITO_DOCUMENTAL_CAMBIO");
+                c=contexto(a,req,true);gestion(req,seq);DisponibilidadDocumental.huella(db,temp.sha256());if(!c.comunicacion().equals(initial.comunicacion())||!c.unidad().equals(initial.unidad())||!c.sede().equals(initial.sede())||!Objects.equals(c.area(),initial.area()))throw new FalloTecnico(409,"AMBITO_DOCUMENTAL_CAMBIO");
                 db.sql.update("INSERT INTO institution_document(id,communication_id,origin,name,size_bytes,sha256,media_type,storage_key,created_ms,created_by,owner_context) VALUES(?,?,'GESTION_INSTITUCIONAL',?,?,?,?,?,?,?,'REQ')",id(doc),id(c.comunicacion()),nombre,temp.tamanio(),temp.sha256(),temp.tipo(),storage,clock.millis(),a.id());
                 db.sql.update("INSERT INTO requirement_document_policy VALUES(?,'REQ',?,?,?,?,'SIN_CLASIFICAR',0)",id(doc),id(req),c.unidad(),c.sede(),c.area());vinculo(a,req,doc,seq);comando(a,key,req,"CARGAR",digest,doc);historia(a,c,doc,0,"REQ_DOCUMENTO_CREADO","Original de gestión conservado",Map.of("requerimiento",req,"version","1.0","gestionSeq",seq==null?0:seq));return documento(a,req,doc);
             });}catch(DuplicateKeyException race){UUID winner=db.transaction(()->{contexto(a,req,false);return anterior(a,key,req,"CARGAR",digest);});if(winner==null)throw new FalloTecnico(409);return documento(a,req,winner);}
@@ -75,10 +76,10 @@ public final class DocumentosRequerimiento {
     });}
     public Documento documento(Operador a,UUID req,UUID doc){return db.transaction(()->documentoActual(a,req,doc));}
     private Documento documentoActual(Operador a,UUID req,UUID doc){
-        var p=permitir(a,req,doc,"METADATOS");var c=contexto(a,req,false);var d=original(doc);boolean contenido=!"BLOQUEADO".equals(p.get("classification"));var x=d.original();
+        var p=permitir(a,req,doc,"METADATOS");var c=contexto(a,req,false);var d=original(doc);boolean held=DisponibilidadDocumental.retenido(db,doc),contenido=!held&&!"BLOQUEADO".equals(p.get("classification"));var x=d.original();
         var links=db.sql.queryForList("SELECT activity_seq FROM requirement_document_link WHERE document_id=? AND requirement_id=? ORDER BY context_key",id(doc),id(req)).stream().map(r->new Contexto(req,r.get("activity_seq")==null?null:n(r,"activity_seq"))).toList();
         String view=FormatosDocumento.paginable(x.tipo())?"PAGINAS":x.tipo().startsWith("audio/")?"AUDIO":x.tipo().startsWith("video/")?"VIDEO":"DESCARGA";
-        return new Documento(doc,x.nombre(),x.tamanio(),x.sha256(),x.tipo(),d.autor(),d.fecha(),links,view,contenido,contenido,c.jefatura(),c.jefatura()||c.profesional(),s(p,"classification"),n(p,"revision"));
+        return new Documento(doc,x.nombre(),x.tamanio(),x.sha256(),x.tipo(),d.autor(),d.fecha(),links,view,contenido,contenido,c.jefatura(),c.jefatura()||c.profesional(),s(p,"classification"),n(p,"revision"),held);
     }
     private DocumentoPrivado original(UUID doc){var rows=db.sql.queryForList("SELECT * FROM institution_document WHERE id=? AND owner_context='REQ' AND origin='GESTION_INSTITUCIONAL'",id(doc));if(rows.size()!=1)throw new FalloTecnico(404);var r=rows.getFirst();if(!("gestion/"+doc).equals(r.get("storage_key"))||r.get("created_by")==null)throw new FalloTecnico(409);return new DocumentoPrivado(doc,UUID.fromString(s(r,"communication_id")),"GESTION_INSTITUCIONAL",s(r,"storage_key"),new EntregaCompleta.Adjunto(doc,s(r,"name"),n(r,"size_bytes"),s(r,"sha256"),s(r,"media_type"),"VALIDADO"),s(r,"created_by"),Instant.ofEpochMilli(n(r,"created_ms")));}
     public DocumentoPrivado referencia(Operador a,UUID req,UUID doc,String accion){return db.transaction(()->{permitir(a,req,doc,accion);return original(doc);});}
