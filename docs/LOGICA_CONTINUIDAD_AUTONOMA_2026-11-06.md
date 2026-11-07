@@ -10,11 +10,19 @@ Continuar bloques independientes mientras haya capacidad. Cuando las138 estén i
 
 ## Estado actual exacto y próxima acción
 
-Rama ACTUAL codex/siger-ingreso-territorio, HEAD propio d62b8c4 (territorio), sobrecd0adc9 (fecha primera gestión) y40bf7d2 (merge padre35b27af); nuevo merge del padre39df7b9ee55e651ba9c2686f996ed67ae3325bd4. Hijo todavía sin upstream/push/PR; consultar HEAD/status con Git. PR #11 sigue borrador base #10, publicado39df7b9; CI exacta42318438019 en curso. Padres #2–#10 intactos.
+Rama ACTUAL codex/siger-ingreso-territorio, PR #12 borrador base #11/39df7b9, HEAD de procedencia a3d74eb2a5516f28d81b009368b635f35fc17197. Código posterior de rectificaciones PRESERVADO en commit local d379298, rama codex/siger-rectificaciones-ingreso, todavía sin push/upstream/PR. Ningún trabajo perdido o descartado.
 
-Incidente anterior CI42316699961/35b27af: Ubuntu3 falló177/1aserción/0errores en test PISEE por respuesta local mayor que250ms y esperado429/obtenido404. Log íntegro privado1268476bytes,SHA256dc8906feecb7a8c83912c0fb2d8a3177b454a6e2f79d7ed164573f5e26551b65. No proveedor real. El fix39df7b9 publicado conserva límite250ms y65s/5s, constructor públicoSystem.nanoTime; fuente monotónica por constructor de paquete solo permite pruebas deterministas. Diferencia temporal admite origen negativo/wrap. Dos pruebas2/2,9.869s,ci11-pisee-reloj.log. Sin sleeps/exclusiones/timeouts ampliados. CI propia nueva obligatoria.
+CI #12/a3d74eb42319144670 terminada: cinco partes aprobadas y Ubuntu3 fallida por frontend162/163, ninguna prueba backend en esa parte, agregación omitida. App.test pulsó Confirmar evaluación antes de revisionCaso asíncrona; UI tenía botón deshabilitado y no llamó run. Log íntegro privado ci12-ubuntu-part3-a3d74eb-fallida-completa.log,51438bytes,SHA25695e7b624da6e249e7903fea5ded9b01cd400f79ec8295844ff9e11de1adc0dc6. No se reetiqueta como verde.
 
-SIGUIENTE: diff/check, confirmar el cierre local de territorio, push normal/upstream y crear PR hijo borrador base codex/siger-bitacora-gestion (#11/39df7b9). MySQL13/13 y H2final4/4, frontend163/163/lint/build ya completados, no Maven/MySQL activos; no repetir salvo cambios relevantes. Vigilar padre42318438019 y CI exacta del nuevo hijo (ocho jobs). Conservar intentos fallidos. Después, con árbol limpio/nueva rama dependiente, avanzar documentación/antecedentesREQsinCaso y demás bloques independientes; no candidata prematura.
+Ajuste actual: test espera botón efectivamente habilitado/revisión antes de click, misma aserción exacta. Nuevo test usa promesa controlada: versión pendiente mantiene bloqueo y ni submit directo envía comando; al resolver envía revisionCaso2. Evaluation además protege onSubmit si no hay revisión, reinicia revisión al cambiar contexto y descarta promesa tardía de otro contexto/unmount. Sin timeout/sleep/exclusiones cambiados, backend/persistencia intactos. FocalApp18/18 aprobado; frontend completo164/164,lint/TypeScript/Vite aprobados (ci12-antecedentes-*),sesión15267terminada. No Maven/MySQL activos.
+
+Siguiente acción: frontend164/lint/build concluidos; commit/push arregloPR12 y nuevaCI HEADexacto (ochojobs) sin reutilizar cinco partes del anterior. Con árbol limpio volver a rectificaciones d379298, merge controlado de este padre propio preservando ambos. Recalificar frontend por cambio heredado y publicar PR hijo borrador base#12 con CIpropia. No alterar padre#11/main.
+
+Rectificaciones local d379298: H2dominio9+revocación1 separados, HTTP6/6 (2nuevas+4regresión), MySQL10/10 en024ce24f64644ecd860f4fba06afcf9f cerrado/proceso0,frontend170/170/lint/build. Original/folio/hash/procedencia intactos, ámbito por etapa y cadena1.0 anterior/nuevo; UI/consulta/paginación/individual reales y retiro de formularios privados inalcanzables. No nueva migración ni ING05completa parafuentespúblicas. Informe/guion/contrato/matriz ya en su commit, no volver a construirlo.
+
+PR #11/39df7b9 CI42318438019 APROBADA ocho jobs/logs:81raíces575métodos,Win566/9omitidos,Ub551/24omitidos,ceroerrores/fallos,frontend158/lint/build/package. Partes224+173+178,30min/aserciones intactos. Acta PR actualizada; rama/padres/main preservados.
+
+Después seguir NOT deSOL/REQ(EV03/04/05), documentos/antecedentesREQsinCaso/calendarios y demás bloques independientes; no candidata prematura. Mantener138IDs/orden/validación funcionalconfirmada, guiones preparados/noejecutados y QA/U4/SMR/servicios/proveedores preservados.
 
 ## Ingreso/territorio desarrollado en hijo
 

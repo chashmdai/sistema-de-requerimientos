@@ -48,3 +48,11 @@ Matriz138 conserva IDs/orden/validación06/11: ING-03,SOL-02/03,DIS-02,REG-TER-0
 8. Cambiar/finalizar propuesta TI después de firmar: nueva asunción queda cerrada hasta acreditación nueva del contenido. Expirar/retirar certificado también. Nuevo registro1.8 conserva registros/firma1.7 y accesos documentales expresos; ninguna facultad documental se transforma en Caso/territorio.
 
 Las pruebas automatizadas usan H2, MockMvc, DOM y MySQL real aislado; este guion no acredita navegador físico. No Formulario real, proveedores, correo ni bases preservadas. Carga nominal, catálogos oficiales, conciliación histórica explícita y recorridos físicos siguen pendientes técnicos/operacionales separados.
+
+## Incidencia de CI y corrección de revisión asíncrona
+
+CI42319144670 del HEADa3d74eb terminó con cinco partes aprobadas y Ubuntu3 fallida al ejecutar frontend162/163. La prueba App de evaluación de antecedente pulsaba Confirmar antes de que llegara la revisión del Caso; el botón seguía correctamente deshabilitado y no se invocó run. Backend de esa partición no ejecutado, agregación omitida: no CI integral verde. Evidencia completa privada51438bytes,ci12-ubuntu-part3-a3d74eb-fallida-completa.log,SHA25695e7b624da6e249e7903fea5ded9b01cd400f79ec8295844ff9e11de1adc0dc6.
+
+La prueba espera explícitamente la habilitación antes de click manteniendo aserción exacta. Un nuevo caso con promesa controlada demuestra que revisión pendiente impide enviar incluso un submit directo, y que al resolver se envía revisionCaso2. Evaluation añade guardia onSubmit, reinicio de revisión/cancelación de respuesta tardía al cambiar contexto; sin cambiar backend, SQL, timeouts, transacciones, exclusiones o sleeps. FocalApp18/18 aprobado, integralfrontend164/164/lint/TypeScript/Vite aprobados; nueva CI del HEAD corregido obligatoria. No se repiten las13MySQL/migraciones por un cambio exclusivo de frontend.
+
+El bloque siguiente se conserva en rama local codex/siger-rectificaciones-ingreso/d379298 con H29+1/HTTP6/MySQL10/FE170 acreditados; se integrará el padre corregido mediante merge controlado. No reconstruir ni descartar ese trabajo.
