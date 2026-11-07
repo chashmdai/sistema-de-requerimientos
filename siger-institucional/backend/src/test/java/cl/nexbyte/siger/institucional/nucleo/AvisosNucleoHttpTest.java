@@ -46,4 +46,14 @@ class AvisosNucleoHttpTest {
   http.perform(get(path).secure(true).session(head)).andExpect(status().isOk()).andExpect(jsonPath("$.correoHabilitado").value(false));http.perform(get(path+"/correo").secure(true).session(head)).andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("ACCEPTED_BY_GRAPH"));http.perform(get(path+"/intentos/"+intento+"/mensaje").secure(true).session(head)).andExpect(status().isOk()).andExpect(jsonPath("$.acreditada").value(true));
   http.perform(post(path+"/correo").secure(true).session(head).with(csrf())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CORREO_DESACTIVADO"));http.perform(post(path+"/confirmar-recepcion").secure(true).session(head)).andExpect(status().isForbidden());http.perform(post(path+"/confirmar-recepcion").secure(true).session(head).with(csrf())).andExpect(status().isOk());http.perform(get(path).secure(true).session(head)).andExpect(jsonPath("$.aviso.leida").value(false)).andExpect(jsonPath("$.aviso.confirmacionCorreo").value("CONFIRMADA_POR_USUARIO"));assertEquals("PENDIENTE",f.core.u2().solicitud(f.a(f.headA),sol).get("state"));
  }
+ @Test void tomaAutenticadaCsrfVersionYConsultaSinGestion()throws Exception{
+  var com=f.d.nuevaWeb();String path="/nucleo/institucional/comunicaciones/"+com+"/clasificacion";var dist=login("distribuidor");var ti=login("ti.areas");String key=UUID.randomUUID().toString();
+  http.perform(get(path).secure(true)).andExpect(status().isUnauthorized());http.perform(get(path).secure(true).session(ti)).andExpect(status().isNotFound());http.perform(get(path).secure(true).session(dist)).andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("SIN_TOMA")).andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("no-store")));
+  http.perform(post(path+"/TOMAR").secure(true).session(dist).header("Idempotency-Key",key).contentType("application/json").content("{\"revision\":0,\"fundamento\":null}")).andExpect(status().isForbidden());
+  http.perform(post(path+"/TOMAR").secure(true).session(dist).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content("{\"revision\":0,\"fundamento\":null}")).andExpect(status().isOk());
+  http.perform(get(path).secure(true).session(dist)).andExpect(status().isOk()).andExpect(jsonPath("$.propia").value(true)).andExpect(jsonPath("$.puedeLiberar").value(true));
+  http.perform(post(path+"/TOMAR").secure(true).session(dist).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content("{\"revision\":0,\"fundamento\":null}")).andExpect(status().isOk());
+  assertEquals(0,f.d.db.sql.queryForObject("SELECT COUNT(*) FROM institution_sol WHERE communication_id=?",Long.class,com.toString()));assertEquals(1,f.d.db.sql.queryForObject("SELECT COUNT(*) FROM core_event WHERE communication_id=? AND code='CLASIFICACION_TOMADA'",Long.class,com.toString()));
+ }
+
 }

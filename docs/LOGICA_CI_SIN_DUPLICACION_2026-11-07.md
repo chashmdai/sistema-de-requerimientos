@@ -1,5 +1,7 @@
 # CI sin ejecuciones duplicadas · 07/11/2026
 
+**Equivalencia acreditada:** PR #17 / bc27f2de825f2ecfe0aa0258459a40aa4d422377,CI42372396506,ocho jobs aprobados.92raíces/661métodos porOS,Windows652aprobados/9omitidos,Ubuntu637/24,cero fallos/errores. Frontend187/187 porOS una sola vez,lint/TypeScript/Vite;JAR real con3archivosdist idénticosSHA256. Manifiestos completos/disjuntos del mismoHEAD/run/OS. Consulta de todas las ejecuciones del HEAD:una sola pull_request,sin duplicado push. Logs/acta verificados;Windows1Maven26:22,30min intacto. No se deduce una mejora de duración comparando cargas distintas de runners.
+
 ## Diseño y equivalencia exigida
 
 Rama hija de PR #16 / efdceed922ad5e85099419ee06298fa64c479bde. Se conserva la matriz de ocho jobs: seis particiones backend (tres Windows y tres Ubuntu) y dos agregaciones por OS. No se cambian pruebas, aserciones, exclusiones ni tiempos funcionales. El presupuesto de cada job sigue en30 minutos.

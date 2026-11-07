@@ -16,7 +16,7 @@ final class DatosNucleoTest implements AutoCloseable {
     DatosNucleoTest(Path dir,String isolatedUrl,String migrationTarget)throws Exception{
         String supplied=System.getenv("ROBUST_DB_URL");
         String url=supplied==null?"jdbc:h2:file:"+dir.resolve("nucleo").toAbsolutePath().toString().replace('\\','/')+";DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0":supplied;
-        if(isolatedUrl!=null){if(supplied!=null||!isolatedUrl.matches("jdbc:mysql://127\\.0\\.0\\.1:[5-6][0-9]{4}/siger_u15_test_[a-f0-9]{32}_(?:area|materia|contenido|compartir|u2|subrog|excepcion|reserva|docsolo|docprev|bitprev|correo|correoprev)\\?.*"))throw new IllegalStateException("Destino aislado U16 requerido");url=isolatedUrl;}
+        if(isolatedUrl!=null){if(supplied!=null||!isolatedUrl.matches("jdbc:mysql://127\\.0\\.0\\.1:[5-6][0-9]{4}/siger_u15_test_[a-f0-9]{32}_(?:area|materia|contenido|compartir|u2|subrog|excepcion|reserva|docsolo|docprev|bitprev|correo|correoprev|clasificacion)\\?.*"))throw new IllegalStateException("Destino aislado U16 requerido");url=isolatedUrl;}
         if(supplied!=null&&migrationTarget!=null)throw new IllegalStateException("Target histórico solo en destino descartable explícito");if(supplied!=null)cl.nexbyte.siger.institucional.robustez.DestinoJdbcPruebas.validar(url);
         historiaVersion=url.startsWith("jdbc:mysql:")?"SELECT COUNT(*) FROM flyway_schema_history WHERE version='15.16' AND success=TRUE":"SELECT COUNT(*) FROM \"flyway_schema_history\" WHERE \"version\"='15.16' AND \"success\"=TRUE";
         historiaCorreo=historiaVersion.replace("15.16","15.17");
