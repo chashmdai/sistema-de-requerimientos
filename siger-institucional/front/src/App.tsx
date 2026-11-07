@@ -1,4 +1,5 @@
 import {AvisoInstitucional} from "./AvisoInstitucional";
+import {DetalleNotificacion} from './DetalleNotificacion';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import * as api from './api';
@@ -39,6 +40,7 @@ export default function App() {
  {section === 'ti' && api.has(actor,'TI') && <AdministracionTI actorId={actor.id} catalog={catalog} changed={async()=>setCatalog(await api.catalog())} />}
  {section === 'aviso-institucional' && id && session?.notificacionesHabilitadas && <AvisoInstitucional key={id} id={id} version={version} catalog={catalog}/>}
  {section === 'notificaciones' && session?.notificacionesHabilitadas && <Notificaciones actor={actor}/>}
+ {section === 'notificacion' && id && session?.notificacionesHabilitadas && <DetalleNotificacion key={id} id={id} version={version}/>}
  {section === 'tareas' && session?.notificacionesHabilitadas && <MisTareas actor={actor} id={id}/>}
  {section === 'solicitudes' && session?.solicitudesHabilitadas && <Solicitudes key={id??'lista'} id={id} catalog={catalog}/>}
  {section === 'documento-reservado' && id && <DocumentoReservado id={id} version={version}/>}

@@ -4,24 +4,25 @@ import java.net.URI;import java.time.*;import java.util.*;import java.util.funct
 /** Outbox con intento durable previo a red. Un estado ambiguo jamás se reenvía automáticamente. */
 public final class CorreosInstitucionales {
  private final BaseJdbc db;private final CatalogoLaboratorio catalogo;private final NotificacionesInstitucionales notices;private final TransporteCorreo transporte;private final Set<String> permitidos;private final Clock clock;private final String campaign;
- private final Consumer<TransporteCorreo.Resultado> despuesDeRed;private final URI enlaceBase;
+ private final Consumer<TransporteCorreo.Resultado> despuesDeRed;private final URI enlaceBase;private final MensajesCorreo mensajes;
  public CorreosInstitucionales(BaseJdbc db,CatalogoLaboratorio catalogo,NotificacionesInstitucionales notices,TransporteCorreo transporte,Set<String> permitidos,Clock clock,String campaign){this(db,catalogo,notices,transporte,permitidos,clock,campaign,r->{});}
  public CorreosInstitucionales(BaseJdbc db,CatalogoLaboratorio catalogo,NotificacionesInstitucionales notices,TransporteCorreo transporte,Set<String> permitidos,Clock clock,String campaign,Consumer<TransporteCorreo.Resultado> despuesDeRed){this(db,catalogo,notices,transporte,permitidos,clock,campaign,despuesDeRed,null);}
- public CorreosInstitucionales(BaseJdbc db,CatalogoLaboratorio catalogo,NotificacionesInstitucionales notices,TransporteCorreo transporte,Set<String> permitidos,Clock clock,String campaign,Consumer<TransporteCorreo.Resultado> despuesDeRed,URI enlaceBase){this.db=db;this.catalogo=catalogo;this.notices=notices;this.transporte=transporte;this.permitidos=Set.copyOf(permitidos);this.clock=clock;this.campaign=campaign;this.despuesDeRed=despuesDeRed;this.enlaceBase=enlaceBase;if(enlaceBase!=null&&(!"https".equals(enlaceBase.getScheme())||enlaceBase.getHost()==null||enlaceBase.getUserInfo()!=null||enlaceBase.getQuery()!=null||enlaceBase.getFragment()!=null))throw new IllegalArgumentException("Base HTTPS institucional requerida");if(!campaign.matches("[a-zA-Z0-9_-]{1,64}")||permitidos.size()!=1)throw new IllegalArgumentException("Campaña acotada y allowlist única requeridas");}
+ public CorreosInstitucionales(BaseJdbc db,CatalogoLaboratorio catalogo,NotificacionesInstitucionales notices,TransporteCorreo transporte,Set<String> permitidos,Clock clock,String campaign,Consumer<TransporteCorreo.Resultado> despuesDeRed,URI enlaceBase){this.db=db;this.catalogo=catalogo;this.notices=notices;this.transporte=transporte;this.permitidos=Set.copyOf(permitidos);this.clock=clock;this.campaign=campaign;this.despuesDeRed=despuesDeRed;this.enlaceBase=enlaceBase;this.mensajes=new MensajesCorreo(db,clock);if(enlaceBase!=null&&(enlaceBase.toString().length()>2048||!"https".equals(enlaceBase.getScheme())||enlaceBase.getHost()==null||enlaceBase.getUserInfo()!=null||enlaceBase.getQuery()!=null||enlaceBase.getFragment()!=null))throw new IllegalArgumentException("Base HTTPS institucional requerida");if(!campaign.matches("[a-zA-Z0-9_-]{1,64}")||permitidos.size()!=1)throw new IllegalArgumentException("Campaña acotada y allowlist única requeridas");}
  public record Estado(UUID notificacion,String estado,String confirmacion,UUID correlacion,String asunto,int intentos){}
- private record Intento(String claim,String attempt,String recipient,String address,String category,String correlation,String enlace){}
+ private record Intento(String claim,String attempt,String recipient,String address){@Override public String toString(){return "IntentoCorreo[reservado]";}}
  private void lock(){db.sql.queryForObject("SELECT id FROM identity_guard WHERE id=1 FOR UPDATE",Integer.class);db.sql.queryForObject("SELECT id FROM notification_guard WHERE id=1 FOR UPDATE",Integer.class);}
- private String subject(String category,String correlation){return "[SIGER LAB] "+category+" · "+correlation;}
- private Estado estado(UUID id){var r=db.sql.queryForMap("SELECT o.*,n.category FROM notification_outbox o JOIN institution_notification n ON n.id=o.notification_id WHERE o.notification_id=?",id.toString());return new Estado(id,r.get("state").toString(),r.get("human_state").toString(),UUID.fromString(r.get("correlation_id").toString()),subject(r.get("category").toString(),r.get("correlation_id").toString()),((Number)r.get("attempt_count")).intValue());}
- private void state(UUID id,String state){db.sql.update("UPDATE notification_outbox SET state=?,claim_id=NULL,lease_until=NULL WHERE notification_id=?",state,id.toString());}
- public Estado consultar(Operador a,UUID id){notices.propia(a,id);return estado(id);}
- public Estado enviar(Operador a,UUID id){
+ private String subject(String category,String correlation){return MensajesCorreo.asunto(category,correlation);}
+ private Estado estado(UUID id){return notices.estado(id);}
+ private void state(UUID id,String state){notices.suprimirCorreo(id,state);}
+ public Estado consultar(Operador a,UUID id){return notices.estadoCorreo(a,id);}
+ public Estado enviar(Operador a,UUID id){return enviar(a,id,false);}
+ private Estado enviar(Operador a,UUID id,boolean automatico){
   var claim=db.transaction(()->{
    lock();var n=notices.propia(a,id);var out=db.sql.queryForMap("SELECT * FROM notification_outbox WHERE notification_id=? FOR UPDATE",id.toString());String old=out.get("state").toString();
    if(!Set.of("PENDIENTE","REINTENTABLE").contains(old))return null;
    if(((Number)out.get("next_attempt_ms")).longValue()>clock.millis())throw new FalloTecnico(409,"ESPERAR_REINTENTO");
    if(!notices.enviable(a,n)){state(id,"SUPRIMIDO_CONTEXTO");return null;}
-   boolean institucional=Set.of("AVISO_U2","AVISO_GESTION").contains(n.get("resource_type"));if(institucional&&transporte.real()&&enlaceBase==null)throw new FalloTecnico(409,"ENLACE_INSTITUCIONAL_NO_CONFIGURADO");
+   if(transporte.real()&&enlaceBase==null)throw new FalloTecnico(409,"ENLACE_INSTITUCIONAL_NO_CONFIGURADO");
    // Solo filas PENDIENTE/REINTENTABLE emitidas por la proyección funcional.
    // NO_APLICA previo no se promueve ni se envía retrospectivamente.
    var account=db.sql.queryForMap("SELECT email,enabled FROM staff_account WHERE actor_id=?",a.id());if(!Boolean.TRUE.equals(account.get("enabled")))throw new FalloTecnico(401);
@@ -32,19 +33,21 @@ public final class CorreosInstitucionales {
     db.sql.update("UPDATE mail_campaign SET sends_started=sends_started+1 WHERE id=?",campaign);
    }
    String c=UUID.randomUUID().toString(),attempt=UUID.randomUUID().toString();db.sql.update("UPDATE notification_outbox SET state='RESERVADO',claim_id=?,lease_until=?,attempt_count=attempt_count+1 WHERE notification_id=?",c,clock.millis()+90000,id.toString());
-   db.sql.update("INSERT INTO mail_attempt(id,notification_id,recipient_id,resolved_email,started_ms,state,stage_code) VALUES(?,?,?,?,?,'RESERVADO','NINGUNA')",attempt,id.toString(),a.id(),address,clock.millis());return new Intento(c,attempt,a.id(),address,n.get("category").toString(),out.get("correlation_id").toString(),institucional?(enlaceBase==null?"#aviso-institucional/"+id:enlaceBase.toString()+"#aviso-institucional/"+id):null);
+   db.sql.update("INSERT INTO mail_attempt(id,notification_id,recipient_id,resolved_email,started_ms,state,stage_code) VALUES(?,?,?,?,?,'RESERVADO','NINGUNA')",attempt,id.toString(),a.id(),address,clock.millis());String correlacion=out.get("correlation_id").toString(),enlace=(enlaceBase==null?"":enlaceBase.toString())+"#notificacion/"+id;
+   String texto="Hay un aviso institucional en SIGER. Accede con tu sesión funcionaria: "+enlace+"\n\nEste mensaje no confirma una asignación, una gestión ni la entrega de este correo. Correlación: "+correlacion;
+   mensajes.guardar(id,UUID.fromString(attempt),automatico?null:a.id(),new TransporteCorreo.Mensaje(address,subject(n.get("category").toString(),correlacion),texto,correlacion));return new Intento(c,attempt,a.id(),address);
   });
   if(claim==null)return estado(id);
-  boolean valid=db.transaction(()->{
+  TransporteCorreo.Mensaje message=db.transaction(()->{
    lock();var current=catalogo.operador(claim.recipient());var rows=db.sql.queryForList("SELECT * FROM institution_notification WHERE id=?",id.toString());
-   if(rows.isEmpty()||!notices.enviable(current,rows.getFirst())){state(id,"SUPRIMIDO_PERMISOS");db.sql.update("UPDATE mail_attempt SET state='SUPRIMIDO_PERMISOS',finished_ms=? WHERE id=?",clock.millis(),claim.attempt());return false;}
-   if(!db.sql.queryForObject("SELECT email FROM staff_account WHERE actor_id=?",String.class,current.id()).equalsIgnoreCase(claim.address())){state(id,"SUPRIMIDO_PERMISOS");db.sql.update("UPDATE mail_attempt SET state='SUPRIMIDO_PERMISOS',finished_ms=? WHERE id=?",clock.millis(),claim.attempt());return false;}
+   if(rows.isEmpty()||!notices.enviable(current,rows.getFirst())){state(id,"SUPRIMIDO_PERMISOS");db.sql.update("UPDATE mail_attempt SET state='SUPRIMIDO_PERMISOS',finished_ms=? WHERE id=?",clock.millis(),claim.attempt());return null;}
+   if(!db.sql.queryForObject("SELECT email FROM staff_account WHERE actor_id=?",String.class,current.id()).equalsIgnoreCase(claim.address())){state(id,"SUPRIMIDO_PERMISOS");db.sql.update("UPDATE mail_attempt SET state='SUPRIMIDO_PERMISOS',finished_ms=? WHERE id=?",clock.millis(),claim.attempt());return null;}
+   TransporteCorreo.Mensaje materializado;
+   try{materializado=mensajes.paraEnvio(id,UUID.fromString(claim.attempt()));}catch(FalloTecnico invalid){if(!Set.of(404,409).contains(invalid.status))throw invalid;state(id,"BLOQUEADO_INTEGRIDAD");db.sql.update("UPDATE mail_attempt SET state='BLOQUEADO_INTEGRIDAD',stage_code='CONSTANCIA',finished_ms=? WHERE id=?",clock.millis(),claim.attempt());return null;}
    if(db.sql.update("UPDATE notification_outbox SET state='EN_INTENTO' WHERE notification_id=? AND claim_id=? AND state='RESERVADO'",id.toString(),claim.claim())!=1)throw new FalloTecnico(409);
-   db.sql.update("UPDATE mail_attempt SET state='EN_INTENTO',stage_code='PREVIO_RED' WHERE id=?",claim.attempt());return true;
+   db.sql.update("UPDATE mail_attempt SET state='EN_INTENTO',stage_code='PREVIO_RED' WHERE id=?",claim.attempt());return materializado;
   });
-  if(!valid)return estado(id);
-  String texto=claim.enlace()==null?"Prueba sintética de notificaciones SIGER. Hay una gestión o recordatorio disponible en tu sesión institucional. Este correo no contiene datos del ingreso ni confirma una gestión. Correlación: "+claim.correlation():"Hay un aviso institucional en SIGER. Consulta con tu sesión funcionaria: "+claim.enlace()+" . La lectura del aviso no confirma una asignación ni una gestión. Correlación: "+claim.correlation();
-  var message=new TransporteCorreo.Mensaje(claim.address(),subject(claim.category(),claim.correlation()),texto,claim.correlation());
+  if(message==null)return estado(id);
   TransporteCorreo.Resultado result;
   try{result=transporte.enviar(message);}catch(Exception failure){result=new TransporteCorreo.Resultado("AMBIGUO","GRAPH",null,0,null);}
   despuesDeRed.accept(result); // punto de fallo controlado de persistencia, nunca registra el objeto HTTP.
@@ -54,13 +57,9 @@ public final class CorreosInstitucionales {
    db.sql.update("UPDATE mail_attempt SET state=?,stage_code=?,http_status=?,remote_request_id=?,finished_ms=? WHERE id=?",outcome.estado(),outcome.fase(),outcome.http(),outcome.requestId(),clock.millis(),claim.attempt());return null;});
   return estado(id);
  }
- public void recuperar(){db.transaction(()->{lock();
- for(var pending:db.sql.queryForList("SELECT n.* FROM notification_outbox o JOIN institution_notification n ON n.id=o.notification_id WHERE o.state IN ('PENDIENTE','REINTENTABLE') ORDER BY n.seq LIMIT 50")){
-  try{var a=catalogo.operador(pending.get("recipient_id").toString());if(!notices.enviable(a,pending))state(UUID.fromString(pending.get("id").toString()),"SUPRIMIDO_CONTEXTO");}
-  catch(FalloTecnico denied){if(Set.of(401,403,404).contains(denied.status))state(UUID.fromString(pending.get("id").toString()),"SUPRIMIDO_PERMISOS");else throw denied;}
- }
- var rows=db.sql.queryForList("SELECT notification_id,state,claim_id FROM notification_outbox WHERE state IN ('RESERVADO','EN_INTENTO') AND lease_until<?",clock.millis());for(var r:rows){boolean ambiguous=r.get("state").equals("EN_INTENTO");db.sql.update("UPDATE mail_attempt SET state=?,stage_code='RECUPERACION',finished_ms=? WHERE notification_id=? AND state IN ('RESERVADO','EN_INTENTO')",ambiguous?"AMBIGUO":"REINTENTABLE",clock.millis(),r.get("notification_id"));db.sql.update("UPDATE notification_outbox SET state=?,human_state=?,claim_id=NULL,lease_until=NULL,next_attempt_ms=? WHERE notification_id=?",ambiguous?"AMBIGUO":"REINTENTABLE",ambiguous?"PENDIENTE_CONFIRMACION_USUARIO":"NO_ENVIADO",clock.millis(),r.get("notification_id"));}return null;});}
- public void confirmar(Operador a,UUID id){db.transaction(()->{lock();notices.propia(a,id);if(db.sql.update("UPDATE notification_outbox SET human_state='CONFIRMADA_POR_USUARIO',confirmed_ms=?,confirmed_by=? WHERE notification_id=? AND state IN ('ACCEPTED_BY_GRAPH','AMBIGUO') AND human_state='PENDIENTE_CONFIRMACION_USUARIO'",clock.millis(),a.id(),id.toString())!=1)throw new FalloTecnico(409);return null;});}
- public List<Map<String,Object>> intentos(Operador a,UUID id){notices.propia(a,id);return db.sql.queryForList("SELECT id,recipient_id,resolved_email,started_ms,finished_ms,state,stage_code,http_status,remote_request_id FROM mail_attempt WHERE notification_id=? ORDER BY started_ms,id",id.toString());}
- public int automaticos(int max){recuperar();int count=0;for(var r:db.sql.queryForList("SELECT o.notification_id,n.recipient_id FROM notification_outbox o JOIN institution_notification n ON n.id=o.notification_id WHERE o.state IN ('PENDIENTE','REINTENTABLE') AND o.next_attempt_ms<=? ORDER BY n.seq LIMIT ?",clock.millis(),Math.min(max,4)))try{enviar(catalogo.operador(r.get("recipient_id").toString()),UUID.fromString(r.get("notification_id").toString()));count++;}catch(FalloTecnico denied){if(!Set.of(401,403,404,409).contains(denied.status))throw denied;}return count;}
+ public void recuperar(){notices.recuperarCorreos();}
+ public void confirmar(Operador a,UUID id){notices.confirmarCorreo(a,id);}
+ public List<Map<String,Object>> intentos(Operador a,UUID id){return notices.intentosCorreo(a,id);}
+ public MensajesCorreo.Copia copia(Operador a,UUID aviso,UUID intento){return notices.copiaCorreo(a,aviso,intento);}
+ public int automaticos(int max){recuperar();int count=0;for(var r:db.sql.queryForList("SELECT o.notification_id,n.recipient_id FROM notification_outbox o JOIN institution_notification n ON n.id=o.notification_id WHERE o.state IN ('PENDIENTE','REINTENTABLE') AND o.next_attempt_ms<=? ORDER BY n.seq LIMIT ?",clock.millis(),Math.min(max,4)))try{enviar(catalogo.operador(r.get("recipient_id").toString()),UUID.fromString(r.get("notification_id").toString()),true);count++;}catch(FalloTecnico denied){if(!Set.of(401,403,404,409).contains(denied.status))throw denied;}return count;}
 }
