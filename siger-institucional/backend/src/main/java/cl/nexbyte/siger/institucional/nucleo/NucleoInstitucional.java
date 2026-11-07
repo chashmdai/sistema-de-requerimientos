@@ -23,6 +23,7 @@ public final class NucleoInstitucional {
     public TerminoColaboracion terminoColaboracion(){return new TerminoColaboracion(db,this,catalogo,clock);}
     public AvisosNucleo avisosNucleo(){return new AvisosNucleo(db,this,catalogo,mapper,clock);}
     public AvisosGestion avisosGestion(){return new AvisosGestion(db,this,catalogo,clock);}
+    public SupervisionClasificacion supervisionClasificacion(){return new SupervisionClasificacion(db,this,autoridad,clock);}
     public ClasificacionComunicaciones clasificacion(){return new ClasificacionComunicaciones(db,this,catalogo,clock);}
     void identidadParaAviso(Operador a){if(autoridad==null)throw new FalloTecnico(409,"AUTORIDAD_NO_ACREDITADA");autoridad.identidadParaAviso(a.id());}
     public RectificacionesIngreso rectificacionesIngreso(){return new RectificacionesIngreso(db,this,mapper,clock);}

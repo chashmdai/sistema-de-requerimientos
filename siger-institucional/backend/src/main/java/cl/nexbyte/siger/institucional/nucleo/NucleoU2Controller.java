@@ -20,6 +20,8 @@ public class NucleoU2Controller {
  @PostMapping("/comunicaciones/{id}/distribuir") Resultado distribuir(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Encaminar r){return flow.distribuir(a(a),key,id,r);}
  @GetMapping("/comunicaciones/{id}/clasificacion") ClasificacionComunicaciones.Vista toma(Authentication a,@PathVariable UUID id){return core.clasificacion().consultar(a(a),id);}
  @PostMapping("/comunicaciones/{id}/clasificacion/{accion}") Resultado tomar(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@PathVariable String accion,@RequestBody ClasificacionComunicaciones.Cambio r){return core.clasificacion().cambiar(a(a),key,id,accion,r);}
+ @GetMapping("/clasificacion/supervision") SupervisionClasificacion.Bandeja supervision(Authentication a,@RequestParam(defaultValue="0")long despues,@RequestParam(defaultValue="30")int limite){return core.supervisionClasificacion().listar(a(a),despues,limite);}
+ @GetMapping("/clasificacion/supervision/{id}") ClasificacionComunicaciones.Vista supervisionDetalle(Authentication a,@PathVariable UUID id){return core.supervisionClasificacion().consultar(a(a),id);}
  @GetMapping("/solicitudes") List<Map<String,Object>> solicitudes(Authentication a){return flow.solicitudes(a(a));}
  @GetMapping("/solicitudes/{id}") Map<String,Object> solicitud(Authentication a,@PathVariable UUID id){return flow.solicitud(a(a),id);}
  @PostMapping("/solicitudes/{id}/redirigir") Resultado redirigir(Authentication a,@RequestHeader("Idempotency-Key")UUID key,@PathVariable UUID id,@RequestBody Encaminar r){return flow.redirigir(a(a),key,id,r);}

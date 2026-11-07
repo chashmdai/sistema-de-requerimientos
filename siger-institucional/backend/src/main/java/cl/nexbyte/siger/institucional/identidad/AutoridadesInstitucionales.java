@@ -33,8 +33,11 @@ public final class AutoridadesInstitucionales {
     public record ContextoReserva(String persona,List<FacultadReserva> facultades,long revision){}
     public record Registro17(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedesRegionales,List<AmbitoMateria> ambitosMateria,List<PrincipalReq> principales,List<Funcion> funciones,List<FacultadCierre> autorizantesCierre,List<FacultadReserva> autorizantesReserva,List<FacultadReserva> autorizantesDocumentoAislado){@Override public String toString(){return "RegistroAutoridad17[reservado]";}}
     public record Registro18(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedesRegionales,List<AmbitoMateria> ambitosMateria,List<PrincipalReq> principales,List<Funcion> funciones,List<FacultadCierre> autorizantesCierre,List<FacultadReserva> autorizantesReserva,List<FacultadReserva> autorizantesDocumentoAislado,List<CatalogoTerritorial.Acreditacion> coberturas){@Override public String toString(){return "RegistroAutoridad18[reservado]";}}
+    public record SupervisorBandeja(String id,String actor,String persona,String bandeja,String sede,Instant desde,Instant hasta,String referencia,String sha256,String estado){}
+    public record Registro19(String version,long revision,Instant emitida,Instant expira,List<Vinculo> vinculos,List<Mandato> mandatos,List<Area> areas,List<AmbitoMandato> ambitos,List<CambioArea> cambiosArea,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedesRegionales,List<AmbitoMateria> ambitosMateria,List<PrincipalReq> principales,List<Funcion> funciones,List<FacultadCierre> autorizantesCierre,List<FacultadReserva> autorizantesReserva,List<FacultadReserva> autorizantesDocumentoAislado,List<CatalogoTerritorial.Acreditacion> coberturas,List<SupervisorBandeja> supervisoresClasificacion){@Override public String toString(){return "RegistroAutoridad19[reservado]";}}
     public record ContextoTerritorial(long revision,List<CatalogoTerritorial.Acreditacion> coberturas){}
-    private record Leido(Registro base,List<Area> areas,Map<String,String> ambitos,List<CambioArea> cambios,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedes,Map<String,String> ambitosMateria,List<Funcion> funciones,List<FacultadCierre> facultadesCierre,List<FacultadReserva> facultadesReserva,List<FacultadReserva> facultadesDocumento,List<CatalogoTerritorial.Acreditacion> coberturas){
+    private record Leido(Registro base,List<Area> areas,Map<String,String> ambitos,List<CambioArea> cambios,List<CatalogoMaterias.Materia> materias,List<CatalogoMaterias.SedeRegional> sedes,Map<String,String> ambitosMateria,List<Funcion> funciones,List<FacultadCierre> facultadesCierre,List<FacultadReserva> facultadesReserva,List<FacultadReserva> facultadesDocumento,List<CatalogoTerritorial.Acreditacion> coberturas,List<SupervisorBandeja> supervisores){
+        Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c,List<CatalogoMaterias.Materia> mat,List<CatalogoMaterias.SedeRegional> s,Map<String,String> am,List<Funcion> f,List<FacultadCierre> caps,List<FacultadReserva> reservas,List<FacultadReserva> docs,List<CatalogoTerritorial.Acreditacion> cob){this(r,a,m,c,mat,s,am,f,caps,reservas,docs,cob,List.of());}
         Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c,List<CatalogoMaterias.Materia> mat,List<CatalogoMaterias.SedeRegional> s,Map<String,String> am,List<Funcion> f,List<FacultadCierre> caps,List<FacultadReserva> reservas,List<FacultadReserva> docs){this(r,a,m,c,mat,s,am,f,caps,reservas,docs,List.of());}
         Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c,List<CatalogoMaterias.Materia> mat,List<CatalogoMaterias.SedeRegional> s,Map<String,String> am,List<Funcion> f,List<FacultadCierre> caps,List<FacultadReserva> reservas){this(r,a,m,c,mat,s,am,f,caps,reservas,List.of());}
         Leido(Registro r,List<Area> a,Map<String,String> m,List<CambioArea> c,List<CatalogoMaterias.Materia> mat,List<CatalogoMaterias.SedeRegional> s,Map<String,String> am,List<Funcion> f,List<FacultadCierre> caps){this(r,a,m,c,mat,s,am,f,caps,List.of());}
@@ -135,7 +138,7 @@ public final class AutoridadesInstitucionales {
         actualizarFunciones();return installed;
     }
     private void validar(Registro r){
-        if(r==null||!Set.of("1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.7","1.8").contains(r.version())||r.revision()<1||r.emitida()==null||r.expira()==null||r.emitida().isAfter(clock.instant())||!r.expira().isAfter(clock.instant())||r.vinculos()==null||r.mandatos()==null||r.vinculos().size()>128||r.mandatos().size()>32)throw new FalloTecnico(400);
+        if(r==null||!Set.of("1.0","1.1","1.2","1.3","1.4","1.5","1.6","1.7","1.8","1.9").contains(r.version())||r.revision()<1||r.emitida()==null||r.expira()==null||r.emitida().isAfter(clock.instant())||!r.expira().isAfter(clock.instant())||r.vinculos()==null||r.mandatos()==null||r.vinculos().size()>128||r.mandatos().size()>32)throw new FalloTecnico(400);
         intervalo(r.emitida(),r.expira(),r.expira());Set<String> actors=new HashSet<>(),mandates=new HashSet<>();
         for(var v:r.vinculos()){
             if(v==null)throw new FalloTecnico(400);codigo(v.actor());codigo(v.persona());intervalo(v.desde(),v.hasta(),r.expira());if(v.autenticacion()==null||!v.autenticacion().matches("[a-f0-9]{64}")||!actors.add(v.actor()))throw new FalloTecnico(400);
@@ -150,12 +153,12 @@ public final class AutoridadesInstitucionales {
         var reader=lectorPrivado();String version=reader.readTree(bytes).path("version").asString();
         if(version.equals("1.0")){var r=reader.readValue(bytes,Registro.class);validar(r);if(r.mandatos().stream().anyMatch(m->Set.of("AREA","MATERIA").contains(m.alcance())))throw new FalloTecnico(400);return new Leido(r,List.of(),Map.of(),List.of());}
         if(version.equals("1.2"))return decodificar12(reader.readValue(bytes,Registro12.class));
-        if(version.equals("1.8")){
-            var r=reader.readValue(bytes,Registro18.class);
-            var r17=new Registro17(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria(),r.principales(),r.funciones(),r.autorizantesCierre(),r.autorizantesReserva(),r.autorizantesDocumentoAislado());
-            var b=decodificar17(r17);CatalogoTerritorial.validar(r.coberturas(),r.sedesRegionales(),r.expira());
-            return new Leido(b.base(),b.areas(),b.ambitos(),b.cambios(),b.materias(),b.sedes(),b.ambitosMateria(),b.funciones(),b.facultadesCierre(),b.facultadesReserva(),b.facultadesDocumento(),r.coberturas());
+        if(version.equals("1.9")){
+            var r=reader.readValue(bytes,Registro19.class);
+            var b=decodificar18(new Registro18(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria(),r.principales(),r.funciones(),r.autorizantesCierre(),r.autorizantesReserva(),r.autorizantesDocumentoAislado(),r.coberturas()));
+            validarSupervisores(r);return new Leido(b.base(),b.areas(),b.ambitos(),b.cambios(),b.materias(),b.sedes(),b.ambitosMateria(),b.funciones(),b.facultadesCierre(),b.facultadesReserva(),b.facultadesDocumento(),b.coberturas(),r.supervisoresClasificacion());
         }
+        if(version.equals("1.8"))return decodificar18(reader.readValue(bytes,Registro18.class));
         if(version.equals("1.7"))return decodificar17(reader.readValue(bytes,Registro17.class));
         if(version.equals("1.6"))return decodificar16(reader.readValue(bytes,Registro16.class));
         if(version.equals("1.5"))return decodificar15(reader.readValue(bytes,Registro15.class));
@@ -164,6 +167,23 @@ public final class AutoridadesInstitucionales {
         }
         if(version.equals("1.3")){var r=reader.readValue(bytes,Registro13.class);validarPrincipales(r);return decodificar12(new Registro12(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria()));}
         if(!version.equals("1.1"))throw new FalloTecnico(400);var r=reader.readValue(bytes,Registro11.class);var result=decodificar11(r);if(r.mandatos().stream().anyMatch(m->m.alcance().equals("MATERIA")))throw new FalloTecnico(400);return result;
+    }
+    private Leido decodificar18(Registro18 r){
+        var r17=new Registro17(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria(),r.principales(),r.funciones(),r.autorizantesCierre(),r.autorizantesReserva(),r.autorizantesDocumentoAislado());
+        var b=decodificar17(r17);CatalogoTerritorial.validar(r.coberturas(),r.sedesRegionales(),r.expira());
+        return new Leido(b.base(),b.areas(),b.ambitos(),b.cambios(),b.materias(),b.sedes(),b.ambitosMateria(),b.funciones(),b.facultadesCierre(),b.facultadesReserva(),b.facultadesDocumento(),r.coberturas());
+    }
+    private void validarSupervisores(Registro19 r){
+        if(r.supervisoresClasificacion()==null||r.supervisoresClasificacion().size()>32)throw new FalloTecnico(400);var vistos=new HashSet<String>();
+        for(var f:r.supervisoresClasificacion()){
+            if(f==null)throw new FalloTecnico(400);codigo(f.id());codigo(f.actor());codigo(f.persona());texto(f.referencia(),180);intervalo(f.desde(),f.hasta(),r.expira());
+            if(f.bandeja()==null||f.estado()==null||!vistos.add(f.id())||!Set.of("WEB_CENTRAL","MANUAL_SEDE").contains(f.bandeja())||!Set.of("ACTIVA","SUSPENDIDA","REVOCADA").contains(f.estado())||f.sha256()==null||!f.sha256().matches("[a-f0-9]{64}")||r.vinculos().stream().noneMatch(v->v.actor().equals(f.actor())&&v.persona().equals(f.persona())&&!v.desde().isAfter(f.desde())&&!v.hasta().isBefore(f.hasta())))throw new FalloTecnico(400);
+            if(f.bandeja().equals("WEB_CENTRAL")){if(f.sede()!=null)throw new FalloTecnico(400);}
+            else{codigo(f.sede());if(db.sql.queryForObject("SELECT COUNT(*) FROM core_site WHERE id=?",Long.class,f.sede())!=1)throw new FalloTecnico(400);}
+        }
+    }
+    public List<SupervisorBandeja> supervisionesClasificacion(String actor){
+        ids.exigirCuentaHabilitada(actor);var r=vigenteCompleto();String person=persona(actor,r.base());String fingerprint=sha(db.sql.queryForObject("SELECT password_hash FROM staff_account WHERE actor_id=?",String.class,actor).getBytes(StandardCharsets.UTF_8));if(r.base().vinculos().stream().noneMatch(v->v.actor().equals(actor)&&v.persona().equals(person)&&v.autenticacion().equals(fingerprint)))throw new FalloTecnico(409,"ACREDITACION_CREDENCIAL_OBSOLETA");return r.supervisores().stream().filter(f->f.actor().equals(actor)&&f.persona().equals(person)&&f.estado().equals("ACTIVA")&&!f.desde().isAfter(clock.instant())&&f.hasta().isAfter(clock.instant())).toList();
     }
     private Leido decodificar17(Registro17 r){
         var base=new Registro16(r.version(),r.revision(),r.emitida(),r.expira(),r.vinculos(),r.mandatos(),r.areas(),r.ambitos(),r.cambiosArea(),r.materias(),r.sedesRegionales(),r.ambitosMateria(),r.principales(),r.funciones(),r.autorizantesCierre(),r.autorizantesReserva());var b=decodificar16(base);validarReservas(r.autorizantesDocumentoAislado(),base);
@@ -189,7 +209,7 @@ public final class AutoridadesInstitucionales {
             codigo(f.id());codigo(f.persona());codigo(f.unidad());codigo(f.sede());texto(f.referencia(),180);intervalo(f.desde(),f.hasta(),r.expira());
             if(!seen.add(f.id())||!Set.of("ACTIVA","SUSPENDIDA").contains(f.estado())||f.sha256()==null||!f.sha256().matches("[a-f0-9]{64}")||r.vinculos().stream().noneMatch(v->v.persona().equals(f.persona())))throw new FalloTecnico(400);
             if(f.area()!=null&&r.areas().stream().noneMatch(a->a.id().equals(f.area())&&a.unidad().equals(f.unidad())&&a.sede().equals(f.sede())&&!a.desde().isAfter(f.desde())&&!a.hasta().isBefore(f.hasta())))throw new FalloTecnico(400);
-            if(f.materia()!=null&&r.materias().stream().noneMatch(m->m.id().equals(f.materia())&&(Set.of("1.7","1.8").contains(r.version())||m.competencia().equals(f.unidad()))&&!m.desde().isAfter(f.desde())&&!m.hasta().isBefore(f.hasta())))throw new FalloTecnico(400);
+            if(f.materia()!=null&&r.materias().stream().noneMatch(m->m.id().equals(f.materia())&&(Set.of("1.7","1.8","1.9").contains(r.version())||m.competencia().equals(f.unidad()))&&!m.desde().isAfter(f.desde())&&!m.hasta().isBefore(f.hasta())))throw new FalloTecnico(400);
         }
     }
     public ContextoCierre contextoCierre(String actor){var identity=contextoFunciones(actor);return new ContextoCierre(identity.persona(),vigenteCompleto().facultadesCierre(),identity.revision());}
@@ -251,8 +271,8 @@ public final class AutoridadesInstitucionales {
         for(var p:r.principales()){if(p==null||p.requerimiento()==null||!seen.add(p.requerimiento())||!Set.of("ACTIVA","SUSPENDIDA").contains(p.estado())||p.sha256()==null||!p.sha256().matches("[a-f0-9]{64}"))throw new FalloTecnico(400);codigo(p.unidad());codigo(p.sede());if(p.area()!=null)codigo(p.area());texto(p.referencia(),180);intervalo(p.desde(),p.hasta(),r.expira());}
     }
     private void importarPrincipales(byte[] bytes,Registro base){
-        if(!Set.of("1.3","1.4","1.5","1.6","1.7","1.8").contains(base.version()))return;
-        var principales=base.version().equals("1.8")?lectorPrivado().readValue(bytes,Registro18.class).principales():base.version().equals("1.7")?lectorPrivado().readValue(bytes,Registro17.class).principales():base.version().equals("1.6")?lectorPrivado().readValue(bytes,Registro16.class).principales():base.version().equals("1.5")?lectorPrivado().readValue(bytes,Registro15.class).principales():base.version().equals("1.4")?lectorPrivado().readValue(bytes,Registro14.class).principales():lectorPrivado().readValue(bytes,Registro13.class).principales();
+        if(!Set.of("1.3","1.4","1.5","1.6","1.7","1.8","1.9").contains(base.version()))return;
+        var principales=base.version().equals("1.9")?lectorPrivado().readValue(bytes,Registro19.class).principales():base.version().equals("1.8")?lectorPrivado().readValue(bytes,Registro18.class).principales():base.version().equals("1.7")?lectorPrivado().readValue(bytes,Registro17.class).principales():base.version().equals("1.6")?lectorPrivado().readValue(bytes,Registro16.class).principales():base.version().equals("1.5")?lectorPrivado().readValue(bytes,Registro15.class).principales():base.version().equals("1.4")?lectorPrivado().readValue(bytes,Registro14.class).principales():lectorPrivado().readValue(bytes,Registro13.class).principales();
         for(var p:principales){
             if(db.sql.queryForObject("SELECT COUNT(*) FROM core_requirement WHERE id=?",Long.class,p.requerimiento().toString())!=1)throw new FalloTecnico(409,"REQ_NO_ACREDITABLE");
             var old=db.sql.queryForList("SELECT unit_code,site_id,area_id FROM authority_requirement_principal WHERE requirement_id=? ORDER BY batch_revision DESC LIMIT 1",p.requerimiento().toString());
