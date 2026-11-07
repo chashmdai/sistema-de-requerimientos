@@ -1,5 +1,7 @@
 # Avisos de asignación, cierre y reactivación · 07/11/2026
 
+**Cierre acreditado:** PR15/5d9d3872427c6d7fdbbcc2f177fc304618329af2,CI42353760616,ocho jobsWindows/Ubuntu aprobados.90raíces/642métodos porOS,Win633aprobados/9omitidos,Ubuntu618/24,cero fallos/errores; agregación completa/disjunta del HEADexacto. Front180/lint/TypeScript/Vite/package. Logs y actaPR15 verificados. Cortes locales y fallos intermedios conservados abajo; no se atribuye este resultado al hijo posterior.
+
 ## Implementación
 
 AvisosGestion integra EV-06/11/18 con apertura y reasignación efectiva, devolución/cierre de Caso, cierre explícito de REQ y reactivación efectiva coordinada. Incluye primera atención finalizada sinCaso, sin crear una asignación pendiente ficticia. Backend, API y pantalla de aviso reutilizan proyector/outbox/bandeja/contador/correo del bloque anterior; enrutamiento visible en Caso/REQ, acuse manual separado. No nuevo servicio externo o tabla de mensajes duplicada.

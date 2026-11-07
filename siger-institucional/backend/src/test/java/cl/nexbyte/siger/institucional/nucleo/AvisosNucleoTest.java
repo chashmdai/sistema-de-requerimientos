@@ -79,7 +79,7 @@ class AvisosNucleoTest {
         var sol=sol();n.proyectar();UUID id=notice("SOL_DISTRIBUIDA",sol,f.headA);var messages=new ArrayList<TransporteCorreo.Mensaje>();
         var transport=new TransporteCorreo(){public Resultado enviar(Mensaje m){messages.add(m);return new Resultado("SIMULADO","SIMULADO",null,0,null);}public boolean real(){return false;}};
         var mail=new CorreosInstitucionales(d.db,f.cat,n,transport,Set.of("jefe.a@example.invalid"),clock,"u2_sintetico",r->{},URI.create("https://siger.example.invalid/"));
-        assertEquals("SIMULADO",mail.enviar(f.a(f.headA),id).estado());mail.enviar(f.a(f.headA),id);assertEquals(1,messages.size());assertTrue(messages.getFirst().texto().contains("https://siger.example.invalid/#aviso-institucional/"+id));assertFalse(messages.getFirst().texto().contains("Clasificación con antecedente"));assertFalse(messages.getFirst().texto().contains("Relato sintético"));assertEquals("PENDIENTE",u.solicitud(f.a(f.headA),sol).get("state"));
+        assertEquals("SIMULADO",mail.enviar(f.a(f.headA),id).estado());mail.enviar(f.a(f.headA),id);assertEquals(1,messages.size());assertTrue(messages.getFirst().texto().contains("https://siger.example.invalid/#notificacion/"+id));assertFalse(messages.getFirst().texto().contains("Clasificación con antecedente"));assertFalse(messages.getFirst().texto().contains("Relato sintético"));assertEquals("PENDIENTE",u.solicitud(f.a(f.headA),sol).get("state"));
     }
 
     @Test void transporteQueDeclaraRealSinBaseHttpsNoLlamaProveedor(){
