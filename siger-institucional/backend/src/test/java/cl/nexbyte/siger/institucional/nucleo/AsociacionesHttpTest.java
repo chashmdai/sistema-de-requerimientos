@@ -1,0 +1,27 @@
+package cl.nexbyte.siger.institucional.nucleo;
+import cl.nexbyte.siger.institucional.*;import cl.nexbyte.siger.institucional.documental.*;
+import java.util.*;import java.time.*;import org.junit.jupiter.api.*;import org.springframework.beans.factory.annotation.Autowired;import org.springframework.boot.SpringBootConfiguration;import org.springframework.boot.autoconfigure.EnableAutoConfiguration;import org.springframework.boot.test.context.SpringBootTest;import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;import org.springframework.context.annotation.*;import org.springframework.test.annotation.DirtiesContext;import org.springframework.test.web.servlet.MockMvc;import org.springframework.mock.web.MockHttpSession;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+@SpringBootTest(classes=AsociacionesHttpTest.Application.class,properties={"institucional.nucleo.habilitado=true","institucional.identidad.habilitada=true","institucional.documental.habilitada=true"}) @AutoConfigureMockMvc @DirtiesContext
+class AsociacionesHttpTest {
+ @SpringBootConfiguration @EnableAutoConfiguration @Import({SeguridadInstitucional.class,NucleoController.class,DocumentosRequerimientoController.class,AsociacionesDocumentalesController.class,cl.nexbyte.siger.institucional.robustez.ErroresTecnicos.class,cl.nexbyte.siger.institucional.robustez.JsonEstricto.class,DocumentosReqHttpTest.Fixture.class,Beans.class})static class Application{}
+ @Configuration static class Beans{
+  @Bean DocumentosGestion casos(DocumentosReqFixture x){return new DocumentosGestion(x.d.db,x.files,new AutorizacionNucleo(x.f.core),p->true,x.inspector,x.clock);}
+  @Bean AsociacionesDocumentales asociaciones(DocumentosReqFixture x,DocumentosGestion casos){return new AsociacionesDocumentales(x.d.db,x.f.core,x.f.cat,casos,x.docs,x.clock);}
+ }
+ @Autowired MockMvc http;@Autowired DocumentosReqFixture x;
+ MockHttpSession login(String actor)throws Exception{String name=x.d.db.sql.queryForObject("SELECT username FROM staff_account WHERE actor_id=?",String.class,actor);var s=new MockHttpSession();http.perform(post("/nucleo/login").secure(true).session(s).with(csrf()).param("username",name).param("password",x.f.passwords.get(name))).andExpect(status().isNoContent());return s;}
+ @Test void sesionCsrfCuentaPinRetiradaHeadYRevocacionNoCreanUnAccesoAlternativo()throws Exception{
+  x.clock.now=Instant.parse("2026-10-25T03:00:00Z");UUID doc=x.cargar().id();String url="/nucleo/requerimientos/"+x.req+"/documentos-gestion/"+doc;var owner=login(x.f.profA);var ti=login(x.f.ti);var head=login(x.f.headA);UUID key=x.key();String body=x.d.mapper.writeValueAsString(new AsociacionesDocumentales.Rectificar(-1,List.of(),"Retirada sintética por error"));
+  http.perform(get(url+"/asociaciones").secure(true).session(owner)).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.revision").value(-1)).andExpect(jsonPath("$.actor").value(x.f.profA));
+  http.perform(get(url+"/asociaciones").secure(true).session(ti)).andExpect(status().isNotFound());
+  http.perform(post(url+"/asociaciones").secure(true).session(owner).header("Idempotency-Key",key).header("X-Siger-Actor",x.f.profA).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  http.perform(post(url+"/asociaciones").secure(true).session(owner).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body)).andExpect(status().isBadRequest());
+  http.perform(post(url+"/asociaciones").secure(true).session(owner).with(csrf()).header("Idempotency-Key",key).header("X-Siger-Actor",x.f.headA).contentType("application/json").content(body)).andExpect(status().isConflict());
+  for(int i=0;i<2;i++)http.perform(post(url+"/asociaciones").secure(true).session(owner).with(csrf()).header("Idempotency-Key",key).header("X-Siger-Actor",x.f.profA).contentType("application/json").content(body)).andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("RETIRADA")).andExpect(jsonPath("$.historial.length()").value(1));
+  http.perform(head(url+"/original").secure(true).session(owner)).andExpect(status().isNotFound());http.perform(get(url+"/original").secure(true).session(owner).header("Range","bytes=0-7")).andExpect(status().isNotFound());
+  http.perform(get("/nucleo/requerimientos/"+x.req+"/documentos-gestion").secure(true).session(owner)).andExpect(status().isOk()).andExpect(jsonPath("$.documentos[0].asociacionRetirada").value(true)).andExpect(jsonPath("$.documentos[0].consultable").value(false));
+  http.perform(get(url+"/asociaciones").secure(true).session(head)).andExpect(status().isOk()).andExpect(jsonPath("$.historial[0].anteriores[0]").value("REQ"));x.clock.avanzar(1801);
+  http.perform(get(url+"/asociaciones").secure(true).session(owner)).andExpect(status().isNotFound());http.perform(post(url+"/asociaciones").secure(true).session(owner).with(csrf()).header("Idempotency-Key",x.key()).header("X-Siger-Actor",x.f.profA).contentType("application/json").content(x.d.mapper.writeValueAsString(new AsociacionesDocumentales.Rectificar(0,List.of("REQ"),"No revive una cuenta vencida")))).andExpect(status().isNotFound());
+ }
+}

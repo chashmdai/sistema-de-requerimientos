@@ -145,7 +145,7 @@ public final class ContenidoInstitucional {
     /** Vigencia de una concesión institucional: una barrera técnica no la reinterpreta ni la revoca. */
     Permisos permisosInstitucionales(Operador a,UUID caso,UUID doc){return permisos(a,caso,doc,false);}
     private Permisos permisos(Operador a,UUID caso,UUID doc,boolean disponibilidad){
-        var result=db.transaction(()->{guard(a);try{var p=evaluarPermisos(a,caso,doc);return disponibilidad&&cl.nexbyte.siger.institucional.documental.DisponibilidadDocumental.retenido(db,doc)?new Permisos(false,false,p.administrar(),p.clasificacion(),p.restringir()):p;}catch(FalloTecnico e){if(e.status==404)return null;throw e;}});
+        var result=db.transaction(()->{guard(a);try{var p=evaluarPermisos(a,caso,doc);if(cl.nexbyte.siger.institucional.documental.AsociacionesVigentes.retiradaCaso(db,caso,doc)){if(!p.restringir())throw new FalloTecnico(404);return new Permisos(false,false,p.administrar(),p.clasificacion(),p.restringir());}return disponibilidad&&cl.nexbyte.siger.institucional.documental.DisponibilidadDocumental.retenido(db,doc)?new Permisos(false,false,p.administrar(),p.clasificacion(),p.restringir()):p;}catch(FalloTecnico e){if(e.status==404)return null;throw e;}});
         if(result==null)throw new FalloTecnico(404);return result;
     }
     private Permisos evaluarPermisos(Operador a,UUID caso,UUID doc){

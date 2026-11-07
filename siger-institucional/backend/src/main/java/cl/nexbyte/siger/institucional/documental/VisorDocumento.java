@@ -15,7 +15,7 @@ public final class VisorDocumento {
     private Path original(DocumentoPrivado d){try{return files.verificar(d.clave(),d.original());}catch(IOException corrupt){throw new FalloTecnico(409,"INTEGRIDAD_DOCUMENTAL_INVALIDA");}}
     private Map<String,Object> metadata(DocumentoPrivado d){var rows=db.sql.queryForList("SELECT * FROM document_representation WHERE document_id=? AND profile=?",d.id().toString(),PERFIL);if(rows.isEmpty())return null;var row=rows.getFirst();if(!d.original().sha256().equals(row.get("source_sha256")))throw new FalloTecnico(409);return row;}
     public Vista vista(DocumentoPrivado d){
-        DisponibilidadDocumental.contenido(db,d.id());
+        AsociacionesVigentes.contenido(db,d.id());DisponibilidadDocumental.contenido(db,d.id());
         if(!FormatosDocumento.paginable(d.original().tipo()))return new Vista("DESCARGA",0,PERFIL,false,true);
         var source=original(d);var existing=metadata(d);if(existing!=null)return new Vista("PAGINAS",((Number)existing.get("pages")).intValue(),PERFIL,false,true);
         if(!trabajo.tryAcquire())throw new FalloTecnico(429);
@@ -31,7 +31,7 @@ public final class VisorDocumento {
         }catch(IllegalArgumentException bad){throw new FalloTecnico(422,"VISTA_NO_DISPONIBLE");}catch(IOException unavailable){throw new FalloTecnico(503,"VISTA_NO_DISPONIBLE");}finally{trabajo.release();}
     }
     public Pagina pagina(DocumentoPrivado d,int number){
-        DisponibilidadDocumental.contenido(db,d.id());
+        AsociacionesVigentes.contenido(db,d.id());DisponibilidadDocumental.contenido(db,d.id());
         var view=vista(d);if(!view.representacion().equals("PAGINAS")||number<1||number>view.paginas())throw new FalloTecnico(404);
         var found=buscar(d,number);if(found!=null)return found;
         if(!trabajo.tryAcquire())throw new FalloTecnico(429);
