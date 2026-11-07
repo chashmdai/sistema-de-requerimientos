@@ -1,3 +1,4 @@
+import {VersionDocumento} from './VersionDocumento';
 import {useEffect,useRef,useState} from 'react';
 import * as api from './api';
 import type {EntradaGestion,VistaBitacora} from './BitacoraGestion';
@@ -52,6 +53,7 @@ export function DocumentosRequerimiento({requerimiento,version}:{requerimiento:s
    {d.consultable===true&&d.descargable===true&&d.representacion==='AUDIO'&&<audio controls preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
    {d.consultable===true&&d.descargable===true&&d.representacion==='VIDEO'&&<video controls playsInline preload="none" src={`${api.baseDocumentosReq(requerimiento)}/${d.id}/representacion`}/>}
    {d.descargable===true&&<a href={`${api.baseDocumentosReq(requerimiento)}/${d.id}/original`}>Descargar {d.nombre}</a>}
+   {d.consultable===true&&<VersionDocumento base={`${api.baseDocumentosReq(requerimiento)}/${d.id}`} documento={d} documentos={data.documentos} version={`${version}:${refresh}:${d.revision}`} denegado={()=>{D(null);R(null);}}/>}
    {d.consultable===true&&<Historia req={requerimiento} doc={d.id} denegado={()=>{D(null);R(null);}}/>}
    {(d.administrable||d.restringible)&&<Proteger req={requerimiento} doc={d} changed={changed} denegado={()=>{D(null);R(null);}}/>}
    {data.editable&&d.descargable===true&&<Asociar req={requerimiento} doc={d.id} entries={entries} changed={changed} denegado={()=>{D(null);R(null);}}/>}

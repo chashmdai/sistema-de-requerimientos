@@ -8,7 +8,8 @@ final class DocumentosReqFixture implements AutoCloseable {
  final ArchivoInstitucional files;final DocumentosRequerimiento docs;final UUID req;
  final ProcesamientoDocumental.Inspector inspector=(p,e)->new ProcesamientoDocumental.Examen(FormatosDocumento.TIPOS.get(e),"DESCARGA",null);
  DocumentosReqFixture(Path p)throws Exception{this(p,null);}
- DocumentosReqFixture(Path p,String target)throws Exception{String mysql=System.getProperty("siger.test.autoridad.mysql");d=new DatosNucleoTest(p,mysql==null?null:mysql+(target==null?"_reqdoc":"_reqdocprev")+"?sslMode=DISABLED&allowPublicKeyRetrieval=true&connectTimeout=3000&socketTimeout=10000",target);
+ DocumentosReqFixture(Path p,String target)throws Exception{this(p,target,target==null?"_reqdoc":"_reqdocprev");}
+ DocumentosReqFixture(Path p,String target,String suffix)throws Exception{String mysql=System.getProperty("siger.test.autoridad.mysql");d=new DatosNucleoTest(p,mysql==null?null:mysql+suffix+"?sslMode=DISABLED&allowPublicKeyRetrieval=true&connectTimeout=3000&socketTimeout=10000",target);
   if(mysql!=null){d.limpiar();for(var t:List.of("staff_profile_history","identity_event","staff_assignment","staff_account","org_coverage"))d.db.sql.update("DELETE FROM "+t);}
   f=new AreasFixture(d,clock);files=new ArchivoInstitucional(p.resolve("privados"));docs=servicio(path->true,inspector);req=nuevoReq();
  }

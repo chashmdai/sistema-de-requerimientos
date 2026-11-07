@@ -1,5 +1,9 @@
 # Documentos de Requerimiento sin Caso · 07/11/2026
 
+## Corte publicado acreditado
+
+PR #20 /HEAD29d653a359cacac089b229e53f69d571b69c0ed9. CI42381732338: ochojobs aprobados,98clases/716métodosporOS;Windows707aprobados/9omitidos,Ubuntu692/24,cero fallos/errores. Inventario completo/disjunto,mismoHEAD/run/OS;FE210/210 una vezporOS,lint/TypeScript/Vite yJARfinal3archivosidénticosSHA256. Logs agregaciones128437444939/128437445145 verificados. Borrador sinmerge/despliegue. No acredita al hijo de metadatos/versiones ni pruebas manuales/proveedores.
+
 ## Capacidad desarrollada
 
 Un profesional asignado a la atención o la jefatura principal puede conservar un original de gestión en un REQ activo sin Caso. Puede asociarlo al REQ o a una gestión realmente registrada en su bitácora, y consultar el original, sus derivados y la historia correspondiente. No se crea un Caso ficticio ni una actuación por cargar o referenciar. Interfaz integrada en Requerimiento institucional y API privada autenticada/CSRF, sin controles simulados.
