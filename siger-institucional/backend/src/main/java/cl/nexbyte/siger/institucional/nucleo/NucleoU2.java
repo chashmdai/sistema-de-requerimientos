@@ -64,7 +64,7 @@ public final class NucleoU2 {
     /** Una jefatura competente puede asumir su propio ingreso, sin remitirlo artificialmente a central. */
     public CatalogoTerritorial.Orientacion territorioPropio(Operador a,UUID com,String unidad,String sede,String area,String region){return db.transaction(()->{
         guard(a);core.autorizarLectura(a,com);if(db.sql.queryForObject("SELECT COUNT(*) FROM core_manual WHERE communication_id=? AND actor_id=?",Long.class,id(com),a.id())!=1)throw new FalloTecnico(404);
-        var target=new NuevoDestino(unidad,sede,a.id(),area);ambito(target);if(!a.jefeEn(unidad,sede,area))throw new FalloTecnico(404);return core.territorio().orientar(regional(sede),sede,region);
+        var target=new NuevoDestino(unidad,sede,a.id(),area);ambito(target);if(!a.jefeEn(unidad,sede,area))throw new FalloTecnico(404);var result=core.territorio().orientar(regional(sede),sede,region);new PoliticaMaterias(db,clock).auditar(a,id(com),"TERRITORIO_PROPUESTO_CONSULTADO");return result;
     });}
     public Resultado asumirPropia(Operador a,UUID key,UUID com,AsumirPropia r){if(r==null)throw new FalloTecnico(400);return core.execute(key,a,"U2_ASUMIR_INGRESO_PROPIO",List.of(com,r),()->asumirPropia(a,com,r,null,"AUSENTE",null,false));}
     public Resultado asumirPropiaTerritorial(Operador a,UUID key,UUID com,AsuncionPropiaTerritorial r){if(r==null||!"1.0".equals(r.version()))throw new FalloTecnico(400);return core.execute(key,a,"ASUNCION_PROPIA_TERRITORIAL_1",List.of(com,r),()->asumirPropia(a,com,new AsumirPropia(r.revision(),r.destino(),r.responsable(),r.fundamento(),r.fundamentoTerritorial()),r.domicilioRegion(),r.condicionDomicilio(),r.referenciasTerritoriales(),true));}

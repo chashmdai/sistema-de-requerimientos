@@ -14,7 +14,7 @@ Rama ACTUAL codex/siger-ingreso-territorio, HEAD propio d62b8c4 (territorio), so
 
 Incidente anterior CI42316699961/35b27af: Ubuntu3 falló177/1aserción/0errores en test PISEE por respuesta local mayor que250ms y esperado429/obtenido404. Log íntegro privado1268476bytes,SHA256dc8906feecb7a8c83912c0fb2d8a3177b454a6e2f79d7ed164573f5e26551b65. No proveedor real. El fix39df7b9 publicado conserva límite250ms y65s/5s, constructor públicoSystem.nanoTime; fuente monotónica por constructor de paquete solo permite pruebas deterministas. Diferencia temporal admite origen negativo/wrap. Dos pruebas2/2,9.869s,ci11-pisee-reloj.log. Sin sleeps/exclusiones/timeouts ampliados. CI propia nueva obligatoria.
 
-SIGUIENTE: completar MySQL territorio (añadir selector al auxiliar), prueba de compatibilidad documental1.7→1.8, regresión frontend/lint/build, contrato territorial/matriz y publicar PR hijo borrador base #11. Focal29H2/4HTTP/14DOM ya aprobados; no repetir salvo cambios relevantes. No Maven/MySQL activos al escribir. Vigilar padre42318438019 y conservar intentos fallidos. Después avanzar documentación/antecedentesREQsinCaso y demás bloques independientes; no candidata prematura.
+SIGUIENTE: diff/check, confirmar el cierre local de territorio, push normal/upstream y crear PR hijo borrador base codex/siger-bitacora-gestion (#11/39df7b9). MySQL13/13 y H2final4/4, frontend163/163/lint/build ya completados, no Maven/MySQL activos; no repetir salvo cambios relevantes. Vigilar padre42318438019 y CI exacta del nuevo hijo (ocho jobs). Conservar intentos fallidos. Después, con árbol limpio/nueva rama dependiente, avanzar documentación/antecedentesREQsinCaso y demás bloques independientes; no candidata prematura.
 
 ## Ingreso/territorio desarrollado en hijo
 
@@ -28,8 +28,9 @@ Constancia territorial tipada1.0 se añade a institution_flow_history en la mism
 
 Pruebas hijo, cortes separados:
 - Ingreso dominio8/8 H2, HTTP2/2 final, DOM9/9; MySQL Windows8.0.46 nuevo8/8 en228cd3236bc74daf80bde3fb43337e63 cerrado/proceso0. Ampliación anterior27 tuvo25aprobados/1fallo+1error de fixture de sede/columna; corregidos sin cambiar permisos.
-- Territorio focal29/29 H2:11dominio+17U2+1upgradeBitácora,02:45. HTTP posterior4/4 (territorio2+ingreso2),31s. DOM14/14 (territorio5+distribución9). Compilación Java correcta; primer comando desde raíz sinPOM no ejecutó build, corregida ruta explícita. No nativo territorio ni integral/CI hija todavía.
-- Informes LOGICA_INGRESO_TERRITORIO_2026-11-06.md y contratos/primera-gestion-institucional-v1.md; contrato territorial y matriz pendientes de consolidación al terminar calificación.
+- Territorio focal29/29 H2:11dominio+17U2+1upgradeBitácora,02:45. HTTP posterior4/4 (territorio2+ingreso2),31s. DOM14/14 (territorio5+distribución9). Compilación Java correcta; primer comando desde raíz sinPOM no ejecutó build, corregida ruta explícita. Al primer corte no nativo territorio; calificación final separada abajo, CI hija pendiente.
+- Cierre territorio: MySQL nativo Windows8.0.46 **13/13** (12territorio+1compatibilidaddocumental1.7→1.8) en instanciapropiaf606251577c84852987fb16ef936d4e8 cerrada/proceso0. H2focalfinal4/4 (central1+compatibilidad1+HTTPterritorio2),37s, logterritorio-compat-final.log. Frontend completo163/163, lint/TypeScript/Vite correctos.
+- Informes LOGICA_INGRESO_TERRITORIO_2026-11-06.md, contratos/primera-gestion-institucional-v1.md y territorio-institucional-v1.md actualizados; matriz138 preservada en IDs/orden/validación06/11 y evidencia actual. CI propia pendiente, guionmanual preparado/noejecutado.
 
 ## PR #11: evidencia, fallos y correcciones preservados
 

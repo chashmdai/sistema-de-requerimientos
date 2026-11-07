@@ -80,4 +80,9 @@ class TerritorioInstitucionalTest {
         t.publicar();var com=f.core.registrarManual(f.a(f.headA),UUID.randomUUID(),new Manual("Ingreso directo de jefatura","PRESENCIAL",clock.instant().minusSeconds(10),f.a(f.headA).sede(),null)).id();
         var body=new NucleoU2.AsuncionPropiaTerritorial("1.0",0,new NuevoDestino("UPR","DEMO_SEDE_A",f.headA,"AREA_A"),f.profA,"Evaluación propia","REG_LAB_1","UTILIZABLE",null,null);var key=UUID.randomUUID();var result=u.asumirPropiaTerritorial(f.a(f.headA),key,com,body);assertEquals(result,u.asumirPropiaTerritorial(f.a(f.headA),key,com,body));assertEquals(1,reqs());assertEquals(0,d.db.sql.queryForObject("SELECT COUNT(*) FROM institution_case",Long.class));assertEquals("REG_LAB_1",((CatalogoTerritorial.Decision)u.requerimiento(f.a(f.headA),result.id()).get("territorioInicial")).regionDeclarada());
     }
+    @Test void competenciaCentralNoSeRegionalizaPorDomicilioNiExigeCobertura(){
+        var decision=f.core.territorio().resolver(false,"DEMO_SEDE_A","REG_LAB_2","UTILIZABLE",null,null,true);
+        assertEquals("COMPETENCIA_CENTRAL",decision.modo());assertNull(decision.cobertura());assertEquals("DEMO_SEDE_A",decision.sedeInicial());assertEquals("REG_LAB_2",decision.regionDeclarada());
+    }
+
 }
