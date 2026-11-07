@@ -10,13 +10,19 @@ Continuar bloques independientes mientras haya capacidad. Cuando las138 estén i
 
 ## Estado actual exacto y próxima acción
 
-Rama ACTUAL codex/siger-bitacora-gestion, PR #11 borrador base #10, HEAD de procedencia35b27aff6d818147477649b560470805e69c60b7. El siguiente commit confirma el arreglo de reloj PISEE. Hijo preservado localmente en codex/siger-ingreso-territorio, HEAD d62b8c4 (territorio), sobrecd0adc9 (fecha primera gestión) y40bf7d2 (merge del padre35b27af); todavía sin upstream/push/PR. Padres #2–#10 intactos.
+Rama ACTUAL codex/siger-ingreso-territorio, PR #12 borrador base #11/39df7b9, HEAD de procedencia a3d74eb2a5516f28d81b009368b635f35fc17197. Código posterior de rectificaciones PRESERVADO en commit local d379298, rama codex/siger-rectificaciones-ingreso, todavía sin push/upstream/PR. Ningún trabajo perdido o descartado.
 
-CI42316699961 del padre35b27af: Windows2/3 y Ubuntu2 aprobados, Ubuntu3 falló177 métodos/1aserción/0errores en NodoPiseeLecturaTest; partes1 todavía en curso al escribir. La prueba exige429 inmediatamente después de una respuesta HTTP, pero el límite250ms se mide desde la solicitud y esa respuesta tardó más en Ubuntu, por lo que obtuvo404 de la ruta local sin handler. No es PISEE real ni fallo de autorización institucional. Mantener límite250ms y timeouts. Log completo privado ci11-ubuntu-part3-35b27af-fallida-completa.log,1268476bytes,SHA256dc8906feecb7a8c83912c0fb2d8a3177b454a6e2f79d7ed164573f5e26551b65.
+CI #12/a3d74eb42319144670 terminada: cinco partes aprobadas y Ubuntu3 fallida por frontend162/163, ninguna prueba backend en esa parte, agregación omitida. App.test pulsó Confirmar evaluación antes de revisionCaso asíncrona; UI tenía botón deshabilitado y no llamó run. Log íntegro privado ci12-ubuntu-part3-a3d74eb-fallida-completa.log,51438bytes,SHA25695e7b624da6e249e7903fea5ded9b01cd400f79ec8295844ff9e11de1adc0dc6. No se reetiqueta como verde.
 
-Arreglo PISEE terminado localmente: constructor público conserva System.nanoTime, límite250ms, HTTP65s/conexión5s y ninguna ruta de envío. Fuente monotónica inyectable solo por constructor de paquete para pruebas. Rechazo hasta249999999ns y aceptación exacta250000000ns sin depender de demora HTTP; admite origen negativo y wrap del contador mediante diferencia temporal. Dos pruebas aprobadas/0omisiones,9.869s, ci11-pisee-reloj.log; servidor HTTP únicamente loopback. Sin sleeps, cambios de exclusiones o proveedores reales.
+Ajuste actual: test espera botón efectivamente habilitado/revisión antes de click, misma aserción exacta. Nuevo test usa promesa controlada: versión pendiente mantiene bloqueo y ni submit directo envía comando; al resolver envía revisionCaso2. Evaluation además protege onSubmit si no hay revisión, reinicia revisión al cambiar contexto y descarta promesa tardía de otro contexto/unmount. Sin timeout/sleep/exclusiones cambiados, backend/persistencia intactos. FocalApp18/18 aprobado; frontend completo164/164,lint/TypeScript/Vite aprobados (ci12-antecedentes-*),sesión15267terminada. No Maven/MySQL activos.
 
-Siguiente acción PRIORITARIA: commit/push del arreglo PISEE y acta de incidente a PR #11, exigir CI nueva exacta. Luego con árbol limpio volver a hijo d62b8c4 y merge controlado del padre propio, resolver checkpoint preservando estado real. Completar MySQL territorio, compatibilidad documental1.7→1.8, integral frontend/lint/build, contrato/matriz y publicación PR hijo base #11. No repetir29H2/4HTTP/14DOM salvo cambios relevantes. No Maven/MySQL activo una vez termine sesión30907; focal PISEE ya terminó según log.
+Siguiente acción: frontend164/lint/build concluidos; commit/push arregloPR12 y nuevaCI HEADexacto (ochojobs) sin reutilizar cinco partes del anterior. Con árbol limpio volver a rectificaciones d379298, merge controlado de este padre propio preservando ambos. Recalificar frontend por cambio heredado y publicar PR hijo borrador base#12 con CIpropia. No alterar padre#11/main.
+
+Rectificaciones local d379298: H2dominio9+revocación1 separados, HTTP6/6 (2nuevas+4regresión), MySQL10/10 en024ce24f64644ecd860f4fba06afcf9f cerrado/proceso0,frontend170/170/lint/build. Original/folio/hash/procedencia intactos, ámbito por etapa y cadena1.0 anterior/nuevo; UI/consulta/paginación/individual reales y retiro de formularios privados inalcanzables. No nueva migración ni ING05completa parafuentespúblicas. Informe/guion/contrato/matriz ya en su commit, no volver a construirlo.
+
+PR #11/39df7b9 CI42318438019 APROBADA ocho jobs/logs:81raíces575métodos,Win566/9omitidos,Ub551/24omitidos,ceroerrores/fallos,frontend158/lint/build/package. Partes224+173+178,30min/aserciones intactos. Acta PR actualizada; rama/padres/main preservados.
+
+Después seguir NOT deSOL/REQ(EV03/04/05), documentos/antecedentesREQsinCaso/calendarios y demás bloques independientes; no candidata prematura. Mantener138IDs/orden/validación funcionalconfirmada, guiones preparados/noejecutados y QA/U4/SMR/servicios/proveedores preservados.
 
 ## Ingreso/territorio desarrollado en hijo
 
@@ -30,8 +36,9 @@ Constancia territorial tipada1.0 se añade a institution_flow_history en la mism
 
 Pruebas hijo, cortes separados:
 - Ingreso dominio8/8 H2, HTTP2/2 final, DOM9/9; MySQL Windows8.0.46 nuevo8/8 en228cd3236bc74daf80bde3fb43337e63 cerrado/proceso0. Ampliación anterior27 tuvo25aprobados/1fallo+1error de fixture de sede/columna; corregidos sin cambiar permisos.
-- Territorio focal29/29 H2:11dominio+17U2+1upgradeBitácora,02:45. HTTP posterior4/4 (territorio2+ingreso2),31s. DOM14/14 (territorio5+distribución9). Compilación Java correcta; primer comando desde raíz sinPOM no ejecutó build, corregida ruta explícita. No nativo territorio ni integral/CI hija todavía.
-- Informes LOGICA_INGRESO_TERRITORIO_2026-11-06.md y contratos/primera-gestion-institucional-v1.md; contrato territorial y matriz pendientes de consolidación al terminar calificación.
+- Territorio focal29/29 H2:11dominio+17U2+1upgradeBitácora,02:45. HTTP posterior4/4 (territorio2+ingreso2),31s. DOM14/14 (territorio5+distribución9). Compilación Java correcta; primer comando desde raíz sinPOM no ejecutó build, corregida ruta explícita. Al primer corte no nativo territorio; calificación final separada abajo, CI hija pendiente.
+- Cierre territorio: MySQL nativo Windows8.0.46 **13/13** (12territorio+1compatibilidaddocumental1.7→1.8) en instanciapropiaf606251577c84852987fb16ef936d4e8 cerrada/proceso0. H2focalfinal4/4 (central1+compatibilidad1+HTTPterritorio2),37s, logterritorio-compat-final.log. Frontend completo163/163, lint/TypeScript/Vite correctos.
+- Informes LOGICA_INGRESO_TERRITORIO_2026-11-06.md, contratos/primera-gestion-institucional-v1.md y territorio-institucional-v1.md actualizados; matriz138 preservada en IDs/orden/validación06/11 y evidencia actual. CI propia pendiente, guionmanual preparado/noejecutado.
 
 ## PR #11: evidencia, fallos y correcciones preservados
 
