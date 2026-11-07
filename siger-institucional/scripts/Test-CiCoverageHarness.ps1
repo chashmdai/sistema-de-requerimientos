@@ -26,7 +26,7 @@ foreach($part in 1..2){
  $plan=& $script -Mode Plan -Directory $coverage -Part $part -Parts 2 -JavaHome $JavaHome -ClassesDirectory $classes
  $plans+=,$plan
  foreach($name in $plan.selected){$suite=if($name -eq 'fixtures.NestedTest'){$name+'$Inside'}else{$name};[IO.File]::WriteAllText((Join-Path $reports "TEST-$name.xml"),"<testsuite name='$suite' tests='1' failures='0' errors='0' skipped='0'/>")}
- & $script -Mode Validate -Directory $coverage -Part $part -Parts 2 -ReportsDirectory $reports|Out-Null
+ & $script -Mode Validate -Directory $coverage -Part $part -Parts 2 -ReportsDirectory $reports -JavaHome $JavaHome -ClassesDirectory $classes|Out-Null
  # Each partition gets an independent report directory; never reuse stale reports.
  $reports=Join-Path $directory "reports-$part-next";[IO.Directory]::CreateDirectory($reports)|Out-Null
  $saved[$part]=Get-Content -LiteralPath (Join-Path $coverage "coverage-$part.json") -Raw
@@ -37,8 +37,8 @@ if(Compare-Object @($plans[0].all) $expected){throw 'Inventario no reconoce here
 function Restore-Manifests {foreach($part in 1..2){[IO.File]::WriteAllText((Join-Path $coverage "coverage-$part.json"),$saved[$part])}}
 function Change-Manifest([int]$part,[scriptblock]$change){$file=Join-Path $coverage "coverage-$part.json";$value=Get-Content -LiteralPath $file -Raw|ConvertFrom-Json -AsHashtable;& $change $value;$value|ConvertTo-Json -Depth 12|Set-Content -LiteralPath $file}
 $checks=0
-function Denied([string]$name,[scriptblock]$action){$denied=$false;try{& $action|Out-Null}catch{$denied=$true};if(-not $denied){throw "Control aceptó evidencia inválida: $name"};$script:checks++}
-foreach($field in @('head','run','schema','status','platform')){
+function Denied([string]$name,[scriptblock]$action,[string]$expected=''){$denied=$false;try{& $action|Out-Null}catch{if($expected -and $_.Exception.Message -notmatch $expected){throw "Rechazo por causa inesperada ($name): $($_.Exception.Message)"};$denied=$true};if(-not $denied){throw "Control aceptó evidencia inválida: $name"};$script:checks++}
+foreach($field in @('head','run','schema','status','platform','allocation_algorithm','allocation_sha256')){
  Restore-Manifests;Change-Manifest 1 {$args[0][$field]='INVALID'}
  Denied $field {& $script -Mode Aggregate -Directory $coverage -Parts 2}
 }
@@ -46,9 +46,11 @@ Restore-Manifests;Change-Manifest 2 {$args[0].part=1};Denied 'partición duplica
 Restore-Manifests;Change-Manifest 1 {$args[0].selected=@()};Denied 'clases omitidas' {& $script -Mode Aggregate -Directory $coverage -Parts 2}
 Restore-Manifests;Change-Manifest 1 {$args[0].reports=@()};Denied 'clases sin ejecutar' {& $script -Mode Aggregate -Directory $coverage -Parts 2}
 Restore-Manifests;Change-Manifest 1 {$args[0].failures=1};Denied 'fallo de test' {& $script -Mode Aggregate -Directory $coverage -Parts 2}
+Restore-Manifests;Change-Manifest 1 {$args[0].reports[0].skipped=-1};Denied 'contador negativo' {& $script -Mode Aggregate -Directory $coverage -Parts 2} 'Contadores de tests inválidos'
+Restore-Manifests;Change-Manifest 1 {$args[0].estimated_ms=0};Denied 'estimación alterada' {& $script -Mode Aggregate -Directory $coverage -Parts 2} 'Pesos o algoritmo'
 Restore-Manifests;Change-Manifest 1 {$args[0].all+=@('fixtures.OmittedTest')};Change-Manifest 2 {$args[0].all+=@('fixtures.OmittedTest')};Denied 'inventario ampliado sin ejecutar' {& $script -Mode Aggregate -Directory $coverage -Parts 2}
 Restore-Manifests
-Denied 'XML faltante' {& $script -Mode Validate -Directory $coverage -Part 1 -Parts 2 -ReportsDirectory $reports}
+Denied 'XML faltante' {& $script -Mode Validate -Directory $coverage -Part 1 -Parts 2 -ReportsDirectory $reports -JavaHome $JavaHome -ClassesDirectory $classes} 'Partición incompleta'
 Write-Output "Inventario compilado: 6 raíces, 2 particiones completas; $checks controles negativos aprobados."
 # Comprueba también el reparto actual de CI con tres manifiestos reales del auxiliar.
 # La raíz adicional evita una partición vacía en este inventario sintético reducido.
@@ -62,7 +64,7 @@ foreach($part in 1..3){
  if(Compare-Object @($plan.all) @($expected+'fixtures.ExtraTest')){throw 'Inventario de tres particiones incompleto'}
  $reports3=Join-Path $directory "reports-three-$part";[IO.Directory]::CreateDirectory($reports3)|Out-Null
  foreach($name in $plan.selected){$suite=if($name -eq 'fixtures.NestedTest'){$name+'$Inside'}else{$name};[IO.File]::WriteAllText((Join-Path $reports3 "TEST-$name.xml"),"<testsuite name='$suite' tests='1' failures='0' errors='0' skipped='0'/>")}
- & $script -Mode Validate -Directory $coverage3 -Part $part -Parts 3 -ReportsDirectory $reports3|Out-Null
+ & $script -Mode Validate -Directory $coverage3 -Part $part -Parts 3 -ReportsDirectory $reports3 -JavaHome $JavaHome -ClassesDirectory $classes|Out-Null
 }
 & $script -Mode Aggregate -Directory $coverage3 -Parts 3|Out-Null
 Denied 'tres manifiestos con cantidad declarada incorrecta' {& $script -Mode Aggregate -Directory $coverage3 -Parts 2}
@@ -72,3 +74,21 @@ try{Denied 'tercer manifiesto ausente' {& $script -Mode Aggregate -Directory $co
 finally{Move-Item -LiteralPath $withheld -Destination $third}
 & $script -Mode Aggregate -Directory $coverage3 -Parts 3|Out-Null
 Write-Output "Inventario adicional: 7 raíces, 3 particiones completas; $checks controles negativos acumulados aprobados. Fixtures de metadatos conservados: $directory"
+
+. (Join-Path $PSScriptRoot 'CiTestAllocation.ps1')
+$names=@('fixtures.HeavyA','fixtures.HeavyB','fixtures.LightA','fixtures.LightB')
+$hints=@{'fixtures.HeavyA'=1000;'fixtures.HeavyB'=900;'fixtures.LightA'=100;'fixtures.LightB'=100}
+$a=New-CiTestAllocation -All $names -Parts 2 -Hints $hints -SourceHash 'SINTETICO'
+if($a.estimatedMilliseconds[0] -ne 1100 -or $a.estimatedMilliseconds[1] -ne 1000){throw 'Reparto por duración no equilibrado'}
+$reverse=[string[]]$names.Clone();[Array]::Reverse($reverse)
+$b=New-CiTestAllocation -All $reverse -Parts 2 -Hints $hints -SourceHash 'SINTETICO'
+if($a.fingerprint -ne $b.fingerprint -or @($names|Where-Object {$a.byRoot[$_] -ne $b.byRoot[$_]}).Count){throw 'Reparto no determinista ante otro orden de inventario'}
+$new=New-CiTestAllocation -All ($names+'fixtures.NewTest') -Parts 2 -Hints $hints -SourceHash 'SINTETICO'
+if(-not $new.byRoot.ContainsKey('fixtures.NewTest') -or ($new.estimatedMilliseconds[0]+$new.estimatedMilliseconds[1]) -ne 3100){throw 'Clase nueva omitida o sin peso conservador'}
+Denied 'peso cero' {New-CiTestAllocation -All $names -Parts 2 -Hints @{'fixtures.HeavyA'=0} -SourceHash 'SINTETICO'} 'Peso de duración inválido'
+Denied 'peso textual' {New-CiTestAllocation -All $names -Parts 2 -Hints @{'fixtures.HeavyA'='1000'} -SourceHash 'SINTETICO'} 'Peso de duración inválido'
+Denied 'inventario duplicado' {New-CiTestAllocation -All @('fixtures.Same','fixtures.Same') -Parts 2 -Hints $hints -SourceHash 'SINTETICO'} 'Inventario duplicado'
+Write-Output "Reparto LPT: equilibrio, orden ordinal, clase nueva conservada y $checks controles negativos acumulados aprobados. No ejecuta pruebas backend ni E2E."
+
+Denied 'peso lógico' {New-CiTestAllocation -All $names -Parts 2 -Hints @{'fixtures.HeavyA'=$true} -SourceHash 'SINTETICO'} 'Peso de duración inválido'
+Write-Output "Total de controles negativos aprobados: $checks"

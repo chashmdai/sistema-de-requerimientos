@@ -44,6 +44,7 @@ try{
    $coverageScript=Join-Path $PSScriptRoot 'Test-CiCoverage.ps1'
    $plan=& $coverageScript -Mode Plan -Directory $CoverageDirectory -Part $TestPart -Parts $TestParts -JavaHome $JavaHome
    $selectors=@($plan.selected|ForEach-Object {$_.Replace('.','/')+'.java'}) -join ','
+   Write-Output "Reparto $($plan.allocation_algorithm), huella $($plan.allocation_sha256); estimación heurística $($plan.estimated_ms) ms, sin omitir clases ni cambiar límites."
    Write-Output "Ejecutando partición $TestPart/${TestParts}: $($plan.selected.Count) de $($plan.all.Count) clases JUnit."
    & $Maven -B -ntp ('-DargLine='+$argLine) ('-Djava.io.tmpdir='+$TestDirectory) ('-Dtest='+$selectors) verify
    $buildExit=$LASTEXITCODE

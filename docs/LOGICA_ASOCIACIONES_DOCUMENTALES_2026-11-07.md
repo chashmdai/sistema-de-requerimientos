@@ -37,3 +37,8 @@ Antivirus/inspector y algunos límites HTTP usan dobles; H2, MockMvc, DOM y MySQ
 DOC-07 compuesta sigue parcial: este bloque rectifica asociaciones dentro del propietario y retira sus publicaciones, no traslada propiedad entre expedientes ni reescribe asociaciones del sobre ciudadano. Pertinencia de COM/documento y publicación por recurso conservan circuitos anteriores. Política versionada de retención, bloqueo por investigación, purga autorizada y conciliación histórica explícita siguen programables. No requieren pedir otra validación funcional del levantamiento. Sin catálogos sectoriales/nominales reales cargados ni prueba manual/browser en este corte.
 
 Matriz138 actualizada por evidencia específica; no se declara U2–U9 completa ni candidata final. Siguiente bloque recomendado: medición de registro48h y motor de políticas/calendarios configurables, manteniendo el cómputo normativo cerrado si faltan parámetros efectivos.
+
+
+## Cierre de CI y preservación posterior
+
+CI42406996840/25678fd se interrumpió en Windows1 a30min (278métodos registrados,0fallos/0errores/9omitidos);las otras cinco particiones aprobaron yla agregación fue omitida. No se declara ese HEAD aprobado. Evidencia completa/hash ydiagnóstico en LOGICA_CIERRE_CI_PR23_2026-11-07.md. Se optimiza reparto manteniendo109raíces,ochojobs y todos los controles,sin cambios de dominio/frontend/migración. El acta ylos checks actuales del [PR23](https://github.com/chashmdai/sistema-de-requerimientos/pull/23/checks) identifican HEAD/CI definitivos;no se reutilizaCI22. Trabajo funcional posterior54b31ff preservado localmente fuera dePR23,pendiente de desarrollo/verificación propios.
